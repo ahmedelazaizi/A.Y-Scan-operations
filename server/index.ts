@@ -1,10 +1,13 @@
 import { createServer } from 'node:http'
+import { Pool } from 'pg'
 import { createApp } from './app.js'
 import { ConfigError, loadServerConfig } from './config.js'
-import { createRepository } from './storage/factory.js'
+import { runMigrations } from './migrations.js'
+import { createStores } from './storage/factory.js'
 
 const REQUEST_TIMEOUT_MS = 30_000
 const SHUTDOWN_GRACE_MS = 10_000
+const SESSION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -21,8 +24,31 @@ try {
   throw error
 }
 
-const repository = createRepository(config.databaseUrl)
-const server = createServer(createApp(repository))
+if (config.databaseUrl && config.migrateOnStart) {
+  const migrationPool = new Pool({ connectionString: config.databaseUrl, max: 1 })
+  try {
+    await runMigrations(migrationPool)
+  } catch (error) {
+    console.error(`Database migration failed: ${describeError(error)}`)
+    process.exit(1)
+  } finally {
+    await migrationPool.end()
+  }
+}
+
+const stores = createStores(config.databaseUrl)
+try {
+  if ((await stores.auth.bootstrapAdmin()) === 'created') console.log('Created the first admin account from AUTH_ADMIN_EMAIL.')
+} catch (error) {
+  console.error(`Could not create the first admin account: ${describeError(error)}`)
+  await stores.close()
+  process.exit(1)
+}
+const server = createServer(createApp({ repository: stores.repository, auth: stores.auth, webRoot: config.webRoot ?? undefined }))
+const sessionPruner = setInterval(() => {
+  stores.auth.pruneSessions().catch((error: unknown) => console.error('Session cleanup failed:', describeError(error)))
+}, SESSION_PRUNE_INTERVAL_MS)
+sessionPruner.unref()
 server.requestTimeout = REQUEST_TIMEOUT_MS
 server.headersTimeout = REQUEST_TIMEOUT_MS
 
@@ -39,8 +65,9 @@ async function shutdown(signal: string): Promise<void> {
   forceExit.unref()
   server.close()
   server.closeIdleConnections()
+  clearInterval(sessionPruner)
   try {
-    await repository.close?.()
+    await stores.close()
   } catch (error) {
     console.error('Failed to close the repository cleanly:', describeError(error))
   }
@@ -55,5 +82,6 @@ server.on('error', (error) => {
 })
 
 server.listen(config.port, config.host, () => {
-  console.log(`A.Y Scan API listening on http://${config.host}:${config.port}`)
+  const displayHost = config.host === '0.0.0.0' ? 'localhost' : config.host
+  console.log(`A.Y Scan is running: http://${displayHost}:${config.port}${config.webRoot ? '' : ' (API only)'}`)
 })

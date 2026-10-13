@@ -43,7 +43,7 @@ import {
   type HomeVisitStatus,
 } from '../home-visits.js'
 import { checkDeviceConnection as evaluateDeviceConnection, isDeviceUuid, validateCreateDeviceInput, type DeviceConnectionResult, type LabDevice } from '../devices.js'
-import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './repository.js'
+import { normalizeActor, RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './repository.js'
 
 const ORDER_STATUS = 'awaiting_sample'
 
@@ -655,13 +655,13 @@ async function reportRadiologyStudy(pool: Pool, id: string, reportText: string, 
   `, 'Radiology study can only be reported from in_progress status.', [reportText.trim(), impression.trim()])
 }
 
-async function verifyRadiologyStudy(pool: Pool, id: string): Promise<RadiologyStudy> {
+async function verifyRadiologyStudy(pool: Pool, id: string, verifiedBy: string): Promise<RadiologyStudy> {
   validateRadiologyId(id)
   return updateRadiologyStudy(pool, id, 'reported', `
-    SET status = 'verified', verified_by = 'system', updated_at = now()
+    SET status = 'verified', verified_by = $3, updated_at = now()
     WHERE id = $1 AND status = $2 AND report_text IS NOT NULL AND btrim(report_text) <> ''
       AND impression IS NOT NULL AND btrim(impression) <> ''
-  `, 'Radiology study can only be verified from reported status.')
+  `, 'Radiology study can only be verified from reported status.', [normalizeActor(verifiedBy)])
 }
 
 async function updateRadiologyStudy(
@@ -729,14 +729,13 @@ async function recordInventoryMovement(
   type: InventoryMovementType,
   quantity: number,
   reason: string,
-  reference?: string,
-  adjustmentDirection?: InventoryAdjustmentDirection,
-  createdBy?: string,
+  reference: string | undefined,
+  adjustmentDirection: InventoryAdjustmentDirection | undefined,
+  createdBy: string,
 ): Promise<InventoryMovementResult> {
   validateInventoryId(itemId)
   const input = validateInventoryMovementInput(type, quantity, reason, reference, adjustmentDirection)
-  const normalizedCreatedBy = createdBy?.trim() || 'system'
-  if (normalizedCreatedBy.length > 200) throw new RepositoryInputError('createdBy is invalid.')
+  const normalizedCreatedBy = normalizeActor(createdBy)
   const delta = movementDelta(input.type, input.quantity, input.adjustmentDirection)
   const client = await pool.connect()
   try {
@@ -852,15 +851,15 @@ async function listResults(pool: Pool, orderId: string | undefined): Promise<Lab
   return result.rows.map(formatLabResult)
 }
 
-async function enterResult(pool: Pool, orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag): Promise<LabResult> {
+async function enterResult(pool: Pool, orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag, enteredBy: string): Promise<LabResult> {
   try {
     const orderItem = await pool.query('SELECT id FROM order_items WHERE id = $1', [orderItemId])
     if (!orderItem.rows[0]) throw new RepositoryNotFoundError('Order item was not found.')
     const result = await pool.query(
-      `INSERT INTO lab_results (order_item_id, result_value, unit, reference_range, flag)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO lab_results (order_item_id, result_value, unit, reference_range, flag, entered_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${RESULT_COLUMNS}`,
-      [orderItemId, value, unit ?? null, referenceRange ?? null, flag],
+      [orderItemId, value, unit ?? null, referenceRange ?? null, flag, normalizeActor(enteredBy)],
     )
     return formatLabResult(result.rows[0])
   } catch (error) {
@@ -870,15 +869,15 @@ async function enterResult(pool: Pool, orderItemId: string, value: string, unit:
   }
 }
 
-async function reviewResult(pool: Pool, id: string): Promise<LabResult> {
+async function reviewResult(pool: Pool, id: string, reviewedBy: string): Promise<LabResult> {
   try {
     const updated = await pool.query(
       `UPDATE lab_results
        SET status = CASE status WHEN 'draft' THEN 'in_review' WHEN 'in_review' THEN 'approved' END,
-           reviewed_by = 'system', updated_at = now()
+           reviewed_by = $2, updated_at = now()
        WHERE id = $1 AND status IN ('draft', 'in_review')
        RETURNING ${RESULT_COLUMNS}`,
-      [id],
+      [id, normalizeActor(reviewedBy)],
     )
     if (updated.rows[0]) return formatLabResult(updated.rows[0])
     const existing = await pool.query('SELECT status FROM lab_results WHERE id = $1', [id])
@@ -955,10 +954,11 @@ async function createInvoice(pool: Pool, orderId: string, items: InvoiceItemInpu
   }
 }
 
-async function recordPayment(pool: Pool, invoiceId: string, amount: number, method: PaymentMethod, reference?: string): Promise<Invoice> {
+async function recordPayment(pool: Pool, invoiceId: string, amount: number, method: PaymentMethod, reference: string | undefined, receivedBy: string): Promise<Invoice> {
   if (typeof invoiceId !== 'string' || !UUID_PATTERN.test(invoiceId)) throw new RepositoryInputError('id must be a valid UUID.')
   if (!isPaymentMethod(method)) throw new RepositoryInputError('method is invalid.')
   const normalizedAmount = normalizePaymentAmount(amount)
+  const receiver = normalizeActor(receivedBy)
   if (reference !== undefined && (typeof reference !== 'string' || reference.trim().length === 0 || reference.trim().length > 200)) {
     throw new RepositoryInputError('reference is invalid.')
   }
@@ -985,8 +985,8 @@ async function recordPayment(pool: Pool, invoiceId: string, amount: number, meth
     if (normalizedAmount > roundMoney(total - paidBefore)) throw new RepositoryConflictError('Payment exceeds the invoice balance.')
     await client.query(
       `INSERT INTO payments (invoice_id, amount, method, reference, received_by)
-       VALUES ($1, $2, $3, $4, 'system')`,
-      [invoiceId, normalizedAmount, method, reference?.trim() || null],
+       VALUES ($1, $2, $3, $4, $5)`,
+      [invoiceId, normalizedAmount, method, reference?.trim() || null, receiver],
     )
     const paidAfter = roundMoney(paidBefore + normalizedAmount)
     await client.query(
@@ -1103,18 +1103,10 @@ async function getOperationsReport(pool: Pool, from?: string, to?: string): Prom
   return report
 }
 
-function createPool(databaseUrl: string): Pool {
-  const pool = new Pool({ connectionString: databaseUrl, max: 10 })
-  // An idle client losing its connection must not crash the process; the pool replaces it on next checkout.
-  pool.on('error', (error) => console.error('PostgreSQL idle client error:', error.message))
-  return pool
-}
-
 export function createPostgresRepository(databaseUrl: string, poolOverride?: Pool): OrderRepository {
-  const pool = poolOverride ?? createPool(databaseUrl)
+  const pool = poolOverride ?? new Pool({ connectionString: databaseUrl, max: 10 })
   return {
     databaseMode: 'configured',
-    close: () => pool.end(),
     listRecent: () => findRecentOrders(pool),
     getDashboard: async () => {
       const recentOrders = await findRecentOrders(pool)
@@ -1169,16 +1161,16 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
     createSpecimen: (orderId, specimenType, barcode) => createSpecimen(pool, orderId, specimenType, barcode),
     collectSpecimen: (barcode) => collectSpecimen(pool, barcode),
     listResults: (orderId) => listResults(pool, orderId),
-    enterResult: (orderItemId, value, unit, referenceRange, flag) => enterResult(pool, orderItemId, value, unit, referenceRange, flag),
-    reviewResult: (id) => reviewResult(pool, id),
+    enterResult: (orderItemId, value, unit, referenceRange, flag, enteredBy) => enterResult(pool, orderItemId, value, unit, referenceRange, flag, enteredBy),
+    reviewResult: (id, reviewedBy) => reviewResult(pool, id, reviewedBy),
     listInvoices: (status) => listInvoices(pool, status),
     createInvoice: (orderId, items, discount, tax) => createInvoice(pool, orderId, items, discount, tax),
-    recordPayment: (invoiceId, amount, method, reference) => recordPayment(pool, invoiceId, amount, method, reference),
+    recordPayment: (invoiceId, amount, method, reference, receivedBy) => recordPayment(pool, invoiceId, amount, method, reference, receivedBy),
     listRadiologyStudies: (status) => listRadiologyStudies(pool, status),
     createRadiologyStudy: (patientId, modality, bodyPart, priority, scheduledAt, referringProvider) => createRadiologyStudy(pool, patientId, modality, bodyPart, priority, scheduledAt, referringProvider),
     startRadiologyStudy: (id) => startRadiologyStudy(pool, id),
     reportRadiologyStudy: (id, reportText, impression) => reportRadiologyStudy(pool, id, reportText, impression),
-    verifyRadiologyStudy: (id) => verifyRadiologyStudy(pool, id),
+    verifyRadiologyStudy: (id, verifiedBy) => verifyRadiologyStudy(pool, id, verifiedBy),
     listInventoryItems: (activeOnly) => listInventoryItems(pool, activeOnly),
     createInventoryItem: (sku, name, category, unit, reorderLevel) => createInventoryItem(pool, sku, name, category, unit, reorderLevel),
     recordInventoryMovement: (itemId, type, quantity, reason, reference, adjustmentDirection, createdBy) => recordInventoryMovement(

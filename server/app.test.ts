@@ -1,29 +1,17 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { createApp } from './app.js'
 import { mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
-async function startTestServer(repository = mockRepository): Promise<{ server: Server; baseUrl: string }> {
-  const server = createServer(createApp(repository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
-
-type RequestOptions = { method?: string; body?: string }
-
-async function request(server: Server, baseUrl: string, path: string, options: RequestOptions = {}): Promise<Response> {
+async function request(server: Server, baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
   try {
     return await fetch(`${baseUrl}${path}`, {
       method: options.method ?? 'GET',
       body: options.body,
-      headers: options.body ? { 'content-type': 'application/json' } : undefined,
+      headers: testHeaders(options),
     })
   } finally {
     server.close()
@@ -130,6 +118,77 @@ test('unsupported method returns 405 with GET and POST allowed', async () => {
   assert.equal(response.status, 405)
   assert.equal(response.headers.get('allow'), 'GET, POST')
   assert.deepEqual(await response.json(), { error: 'Method Not Allowed' })
+})
+
+test('unsupported method lists only the methods registered for that path', async () => {
+  const dashboardServer = await startTestServer()
+  const dashboardResponse = await request(dashboardServer.server, dashboardServer.baseUrl, '/api/dashboard', { method: 'POST', body: '{}' })
+  assert.equal(dashboardResponse.status, 405)
+  assert.equal(dashboardResponse.headers.get('allow'), 'GET')
+
+  const collectServer = await startTestServer()
+  const collectResponse = await request(collectServer.server, collectServer.baseUrl, '/api/specimens/LAB-ANY/collect')
+  assert.equal(collectResponse.status, 405)
+  assert.equal(collectResponse.headers.get('allow'), 'POST')
+})
+
+test('clinical routes require authentication but health and readiness stay public', async () => {
+  for (const path of ['/api/health', '/api/ready']) {
+    const publicServer = await startTestServer()
+    const response = await request(publicServer.server, publicServer.baseUrl, path, { token: null })
+    assert.equal(response.status, 200)
+  }
+
+  for (const path of ['/api/dashboard', '/api/orders', '/api/patients', '/api/catalog', '/api/specimens', '/api/results']) {
+    const protectedServer = await startTestServer()
+    const response = await request(protectedServer.server, protectedServer.baseUrl, path, { token: null })
+    assert.equal(response.status, 401, path)
+    assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+  }
+
+  const invalidServer = await startTestServer()
+  const invalidResponse = await request(invalidServer.server, invalidServer.baseUrl, '/api/dashboard', { token: 'not-a-real-token' })
+  assert.equal(invalidResponse.status, 401)
+})
+
+test('roles without the capability are forbidden from clinical writes', async () => {
+  const orderServer = await startTestServer()
+  const orderResponse = await request(orderServer.server, orderServer.baseUrl, '/api/orders', {
+    method: 'POST',
+    body: JSON.stringify({ patientName: 'مريض تجريبي', tests: ['صورة دم كاملة'] }),
+    token: TEST_TOKENS.accountant,
+  })
+  assert.equal(orderResponse.status, 403)
+  assert.deepEqual(await orderResponse.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+  const resultServer = await startTestServer()
+  const resultResponse = await request(resultServer.server, resultServer.baseUrl, '/api/results', {
+    method: 'POST',
+    body: JSON.stringify({ orderItemId: '00000000-0000-4000-8000-000000000201', value: '1', flag: 'normal' }),
+    token: TEST_TOKENS.receptionist,
+  })
+  assert.equal(resultResponse.status, 403)
+
+  const readServer = await startTestServer()
+  const readResponse = await request(readServer.server, readServer.baseUrl, '/api/dashboard', { token: TEST_TOKENS.receptionist })
+  assert.equal(readResponse.status, 200)
+})
+
+test('unexpected repository errors return a generic 500 without details', async () => {
+  const failingRepository = {
+    ...mockRepository,
+    getDashboard: () => { throw new Error('connection string postgres://secret leaked') },
+  }
+  const testServer = await startTestServer(failingRepository)
+  const originalError = console.error
+  console.error = () => undefined
+  try {
+    const response = await request(testServer.server, testServer.baseUrl, '/api/dashboard')
+    assert.equal(response.status, 500)
+    assert.deepEqual(await response.json(), { error: 'Internal Server Error' })
+  } finally {
+    console.error = originalError
+  }
 })
 
 test('patients endpoint supports optional search and returns safe records', async () => {
@@ -276,11 +335,14 @@ test('results enter as draft and advance through review states safely', async ()
   const entered = await enterResponse.json() as Record<string, unknown>
   assert.equal(enterResponse.status, 201)
   assert.equal(entered.status, 'draft')
+  assert.equal(entered.enteredBy, 'Test admin')
 
   const firstReviewServer = await startTestServer()
   const firstReviewResponse = await request(firstReviewServer.server, firstReviewServer.baseUrl, `/api/results/${entered.id}/review`, { method: 'POST' })
   assert.equal(firstReviewResponse.status, 200)
-  assert.equal((await firstReviewResponse.json() as Record<string, unknown>).status, 'in_review')
+  const firstReview = await firstReviewResponse.json() as Record<string, unknown>
+  assert.equal(firstReview.status, 'in_review')
+  assert.equal(firstReview.reviewedBy, 'Test admin')
 
   const secondReviewServer = await startTestServer()
   const secondReviewResponse = await request(secondReviewServer.server, secondReviewServer.baseUrl, `/api/results/${entered.id}/review`, { method: 'POST' })

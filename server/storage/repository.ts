@@ -34,6 +34,14 @@ export class RepositoryConflictError extends Error {
   readonly code = 'conflict'
 }
 
+/** Validates the signer name stored on clinical and financial records. */
+export function normalizeActor(actor: string): string {
+  const normalized = actor.trim()
+  if (!normalized || normalized.length > 200) throw new RepositoryInputError('Actor name is invalid.')
+  return normalized
+}
+
+/** Actor arguments (enteredBy, reviewedBy, ...) are the signer's display name, snapshotted onto the record. */
 export type OrderRepository = {
   listRecent(): RepositoryValue<Order[]>
   getDashboard(): RepositoryValue<DashboardSummary>
@@ -47,11 +55,11 @@ export type OrderRepository = {
   createSpecimen(orderId: string, specimenType: string, barcode: string): RepositoryValue<Specimen>
   collectSpecimen(barcode: string): RepositoryValue<Specimen>
   listResults(orderId?: string): RepositoryValue<LabResult[]>
-  enterResult(orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag): RepositoryValue<LabResult>
-  reviewResult(id: string): RepositoryValue<LabResult>
+  enterResult(orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag, enteredBy: string): RepositoryValue<LabResult>
+  reviewResult(id: string, reviewedBy: string): RepositoryValue<LabResult>
   listInvoices(status?: InvoiceStatus): RepositoryValue<Invoice[]>
   createInvoice(orderId: string, items: InvoiceItemInput[], discount?: number, tax?: number): RepositoryValue<Invoice>
-  recordPayment(invoiceId: string, amount: number, method: PaymentMethod, reference?: string): RepositoryValue<Invoice>
+  recordPayment(invoiceId: string, amount: number, method: PaymentMethod, reference: string | undefined, receivedBy: string): RepositoryValue<Invoice>
   listRadiologyStudies(status?: RadiologyStudyStatus): RepositoryValue<RadiologyStudy[]>
   createRadiologyStudy(
     patientId: string,
@@ -63,7 +71,7 @@ export type OrderRepository = {
   ): RepositoryValue<RadiologyStudy>
   startRadiologyStudy(id: string): RepositoryValue<RadiologyStudy>
   reportRadiologyStudy(id: string, reportText: string, impression: string): RepositoryValue<RadiologyStudy>
-  verifyRadiologyStudy(id: string): RepositoryValue<RadiologyStudy>
+  verifyRadiologyStudy(id: string, verifiedBy: string): RepositoryValue<RadiologyStudy>
   listInventoryItems(activeOnly?: boolean): RepositoryValue<InventoryItem[]>
   createInventoryItem(sku: string, name: string, category: string, unit: string, reorderLevel: number): RepositoryValue<InventoryItem>
   recordInventoryMovement(
@@ -71,9 +79,9 @@ export type OrderRepository = {
     type: InventoryMovementType,
     quantity: number,
     reason: string,
-    reference?: string,
-    adjustmentDirection?: InventoryAdjustmentDirection,
-    createdBy?: string,
+    reference: string | undefined,
+    adjustmentDirection: InventoryAdjustmentDirection | undefined,
+    createdBy: string,
   ): RepositoryValue<InventoryMovementResult>
   recordAuditEvent(input: AuditEventInput): RepositoryValue<AuditEvent>
   listAuditEvents(options?: AuditEventListOptions): RepositoryValue<AuditEvent[]>
@@ -105,6 +113,4 @@ export type OrderRepository = {
   createDevice(input: CreateDeviceInput): RepositoryValue<LabDevice>
   checkDeviceConnection(id: string): RepositoryValue<DeviceConnectionResult>
   readonly databaseMode: 'configured' | 'memory'
-  /** Releases pooled connections; optional for stores without external resources. */
-  close?(): Promise<void>
 }

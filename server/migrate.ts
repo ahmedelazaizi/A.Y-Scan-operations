@@ -1,16 +1,19 @@
-import { readFile } from 'node:fs/promises'
 import { Pool } from 'pg'
+import { runMigrations } from './migrations.js'
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.DATABASE_URL?.trim()
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required for db:migrate.')
+  console.error('DATABASE_URL is required to run migrations.')
+  process.exit(1)
 }
 
-const migration = await readFile(new URL('../db/migrations/001_initial.sql', import.meta.url), 'utf8')
-const pool = new Pool({ connectionString: databaseUrl })
+const pool = new Pool({ connectionString: databaseUrl, max: 1 })
 try {
-  await pool.query(migration)
-  console.log('Applied db/migrations/001_initial.sql')
+  const report = await runMigrations(pool)
+  console.log(`Database is up to date (${report.applied.length} applied now, ${report.alreadyApplied} already applied).`)
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error))
+  process.exitCode = 1
 } finally {
   await pool.end()
 }

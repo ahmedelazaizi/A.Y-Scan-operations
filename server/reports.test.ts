@@ -1,47 +1,18 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { createApp } from './app.js'
 import { createMemoryRepository } from './domain.js'
 import { validateReportQuery } from './reports.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
-
-const AUTH_KEYS = ['AUTH_REQUIRED'] as const
-
-type TestServer = { server: Server; baseUrl: string }
-type Environment = Partial<Record<(typeof AUTH_KEYS)[number], string | undefined>>
-
-async function startTestServer(repository = createMemoryRepository()): Promise<TestServer> {
-  const server = createServer(createApp(repository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
 async function stopTestServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 
-async function withEnvironment<T>(values: Environment, callback: () => Promise<T>): Promise<T> {
-  const previous = Object.fromEntries(AUTH_KEYS.map((key) => [key, process.env[key]])) as Environment
-  for (const key of AUTH_KEYS) {
-    const value = values[key]
-    if (value === undefined) delete process.env[key]
-    else process.env[key] = value
-  }
-  try {
-    return await callback()
-  } finally {
-    for (const key of AUTH_KEYS) {
-      const value = previous[key]
-      if (value === undefined) delete process.env[key]
-      else process.env[key] = value
-    }
-  }
+async function getReport(baseUrl: string, query = '', options: TestRequestOptions = {}): Promise<Response> {
+  return fetch(`${baseUrl}/api/reports/operations${query}`, { headers: testHeaders(options) })
 }
 
 test('memory operations report is zero-safe for an empty period', async () => {
@@ -74,9 +45,9 @@ test('report query validation rejects malformed and reversed date ranges', () =>
 })
 
 test('operations report route returns a bad request for an invalid range', async () => {
-  const testServer = await startTestServer()
+  const testServer = await startTestServer(createMemoryRepository())
   try {
-    const response = await fetch(`${testServer.baseUrl}/api/reports/operations?from=2026-02-01&to=2026-01-31`)
+    const response = await getReport(testServer.baseUrl, '?from=2026-02-01&to=2026-01-31')
     assert.equal(response.status, 400)
     assert.deepEqual(await response.json(), { error: 'Bad Request', message: 'from must be before or equal to to.' })
   } finally {
@@ -84,17 +55,23 @@ test('operations report route returns a bad request for an invalid range', async
   }
 })
 
-test('operations report route requires authentication when AUTH_REQUIRED is enabled', async () => {
-  await withEnvironment({ AUTH_REQUIRED: 'true' }, async () => {
-    const testServer = await startTestServer()
-    try {
-      const response = await fetch(`${testServer.baseUrl}/api/reports/operations`)
-      assert.equal(response.status, 401)
-      assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
-    } finally {
-      await stopTestServer(testServer.server)
-    }
-  })
+test('operations report route requires authentication and a finance role', async () => {
+  const testServer = await startTestServer(createMemoryRepository())
+  try {
+    const anonymous = await getReport(testServer.baseUrl, '', { token: null })
+    assert.equal(anonymous.status, 401)
+    assert.deepEqual(await anonymous.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+
+    const receptionist = await getReport(testServer.baseUrl, '', { token: TEST_TOKENS.receptionist })
+    assert.equal(receptionist.status, 403)
+    assert.deepEqual(await receptionist.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+    const accountant = await getReport(testServer.baseUrl, '', { token: TEST_TOKENS.accountant })
+    assert.equal(accountant.status, 200)
+    assert.deepEqual((await accountant.json() as { orders: unknown }).orders, { total: 4, completed: 1, awaitingSample: 1, inProgress: 2 })
+  } finally {
+    await stopTestServer(testServer.server)
+  }
 })
 
 test('postgres operations report uses parameterized date bounds and aggregate fields', async () => {

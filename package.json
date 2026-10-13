@@ -14,14 +14,7 @@
     "db:up": "docker compose -p ay-scan-local-v2 up -d ay-scan-postgres",
     "db:down": "docker compose -p ay-scan-local-v2 down",
     "db:migrate": "tsx server/migrate.ts",
-    "db:migrate:lab": "tsx server/migrate-lab.ts",
-    "db:migrate:auth": "tsx server/migrate-auth.ts",
-    "db:migrate:billing": "tsx server/migrate-billing.ts",
-    "db:migrate:radiology": "tsx server/migrate-radiology.ts",
-    "db:migrate:inventory": "tsx server/migrate-inventory.ts",
-    "db:migrate:insurance": "tsx server/migrate-insurance.ts",
-    "db:migrate:home-visits": "tsx server/migrate-home-visits.ts",
-    "db:migrate:devices": "tsx server/migrate-devices.ts",
+    "db:migrate:prod": "node dist-server/server/migrate.js",
     "test": "tsx --test \"server/**/*.test.ts\""
   },
   "dependencies": {

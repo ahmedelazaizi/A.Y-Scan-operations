@@ -33,7 +33,7 @@ import {
 } from './home-visits.js'
 import { checkDeviceConnection, cloneDevice, createDeviceRecord, isDeviceUuid, validateCreateDeviceInput, type LabDevice } from './devices.js'
 import { emptyOperationsReport, isReportDateInRange, validateReportQuery, type OperationsReport, type ReportQuery } from './reports.js'
-import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './storage/repository.js'
+import { normalizeActor, RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './storage/repository.js'
 
 export type OrderStatus =
   | 'processing'
@@ -384,22 +384,23 @@ export function createMemoryRepository(): OrderRepository {
     listResults: (orderId) => labResults
       .filter((labResult) => !orderId || labResult.orderItemId === orderId)
       .map(cloneLabResult),
-    enterResult: (orderItemId, value, unit, referenceRange, flag) => {
+    enterResult: (orderItemId, value, unit, referenceRange, flag, enteredBy) => {
       const timestamp = new Date().toISOString()
       const labResult: LabResult = {
         id: randomUUID(), orderItemId, resultValue: value, unit: unit ?? null, referenceRange: referenceRange ?? null,
-        flag, status: 'draft', enteredBy: 'system', reviewedBy: null, createdAt: timestamp, updatedAt: timestamp,
+        flag, status: 'draft', enteredBy: normalizeActor(enteredBy), reviewedBy: null, createdAt: timestamp, updatedAt: timestamp,
       }
       labResults = [labResult, ...labResults]
       return cloneLabResult(labResult)
     },
-    reviewResult: (id) => {
+    reviewResult: (id, reviewedBy) => {
+      const reviewer = normalizeActor(reviewedBy)
       const labResult = labResults.find((candidate) => candidate.id === id)
       if (!labResult) throw new RepositoryNotFoundError('Lab result was not found.')
       if (labResult.status === 'draft') labResult.status = 'in_review'
       else if (labResult.status === 'in_review') labResult.status = 'approved'
       else throw new RepositoryConflictError('Lab result is not in a reviewable status.')
-      labResult.reviewedBy = 'system'
+      labResult.reviewedBy = reviewer
       labResult.updatedAt = new Date().toISOString()
       return cloneLabResult(labResult)
     },
@@ -432,7 +433,7 @@ export function createMemoryRepository(): OrderRepository {
       invoices = [invoice, ...invoices]
       return cloneInvoice(invoice)
     },
-    recordPayment: (invoiceId, amount, method, reference) => {
+    recordPayment: (invoiceId, amount, method, reference, receivedBy) => {
       const invoice = invoices.find((candidate) => candidate.id === invoiceId)
       if (!invoice) throw new RepositoryNotFoundError('Invoice was not found.')
       if (!isPaymentMethod(method)) throw new RepositoryInputError('method is invalid.')
@@ -446,7 +447,7 @@ export function createMemoryRepository(): OrderRepository {
       if (normalizedAmount > roundMoney(invoice.total - paidBefore)) throw new RepositoryConflictError('Payment exceeds the invoice balance.')
       const payment: Payment = {
         id: randomUUID(), amount: normalizedAmount, method, reference: reference?.trim() || null,
-        paidAt: new Date().toISOString(), receivedBy: 'system',
+        paidAt: new Date().toISOString(), receivedBy: normalizeActor(receivedBy),
       }
       invoice.payments = [...invoice.payments, payment]
       const paidAfter = roundMoney(paidBefore + normalizedAmount)
@@ -500,14 +501,15 @@ export function createMemoryRepository(): OrderRepository {
       study.updatedAt = new Date().toISOString()
       return cloneRadiology(study)
     },
-    verifyRadiologyStudy: (id) => {
+    verifyRadiologyStudy: (id, verifiedBy) => {
       validateRadiologyId(id)
+      const verifier = normalizeActor(verifiedBy)
       const study = radiologyStudies.find((candidate) => candidate.id === id)
       if (!study) throw new RepositoryNotFoundError('Radiology study was not found.')
       if (study.status !== 'reported') throw new RepositoryConflictError('Radiology study can only be verified from reported status.')
       if (!study.reportText?.trim() || !study.impression?.trim()) throw new RepositoryConflictError('Radiology study requires a report and impression before verification.')
       study.status = 'verified'
-      study.verifiedBy = 'system'
+      study.verifiedBy = verifier
       study.updatedAt = new Date().toISOString()
       return cloneRadiology(study)
     },
@@ -526,6 +528,7 @@ export function createMemoryRepository(): OrderRepository {
     },
     recordInventoryMovement: (itemId, type, quantity, reason, reference, adjustmentDirection, createdBy) => {
       const input = validateInventoryMovementInput(type, quantity, reason, reference, adjustmentDirection)
+      const actor = normalizeActor(createdBy)
       const item = inventoryItems.find((candidate) => candidate.id === itemId)
       if (!item) throw new RepositoryNotFoundError('Inventory item was not found.')
       const delta = movementDelta(input.type, input.quantity, input.adjustmentDirection)
@@ -536,7 +539,7 @@ export function createMemoryRepository(): OrderRepository {
       const movement: InventoryMovement = {
         id: randomUUID(), itemId, type: input.type, quantity: input.quantity,
         adjustmentDirection: input.adjustmentDirection ?? null, reason: input.reason,
-        reference: input.reference ?? null, createdBy: createdBy?.trim() || 'system', createdAt: timestamp,
+        reference: input.reference ?? null, createdBy: actor, createdAt: timestamp,
       }
       return cloneInventoryResult({ item, movement })
     },

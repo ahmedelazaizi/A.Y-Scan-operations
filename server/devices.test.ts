@@ -1,38 +1,28 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { createApp } from './app.js'
 import { createMemoryRepository } from './domain.js'
 import { checkDeviceConnection, isDeviceProtocol, isDeviceStatus, isSafeDeviceEndpoint, type LabDevice } from './devices.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
 import { RepositoryConflictError } from './storage/repository.js'
-
-async function startTestServer(repository = createMemoryRepository()): Promise<{ server: Server; baseUrl: string }> {
-  const server = createServer(createApp(repository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
 async function stopTestServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 
-async function request(baseUrl: string, path: string, options: { method?: string; body?: string } = {}): Promise<Response> {
+async function request(baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
   return fetch(`${baseUrl}${path}`, {
     method: options.method ?? 'GET',
     body: options.body,
-    headers: options.body ? { 'content-type': 'application/json' } : undefined,
+    headers: testHeaders(options),
   })
 }
 
 const DEVICE_INPUT = { name: 'Analyzer One', manufacturer: 'Vendor', model: 'Model A', protocol: 'hl7' as const, endpoint: '127.0.0.1:5000' }
 
- test('device guards accept supported protocols and statuses only', () => {
+test('device guards accept supported protocols and statuses only', () => {
   assert.equal(isDeviceProtocol('hl7'), true)
   assert.equal(isDeviceProtocol('astm'), true)
   assert.equal(isDeviceProtocol('tcp_ip'), true)
@@ -85,24 +75,31 @@ test('device HTTP endpoints create, list, check, and audit without endpoint secr
     assert.match(checked.message, /not configured/i)
     const events = await repository.listAuditEvents({ entityType: 'device' })
     assert.equal(events.length, 2)
+    assert.ok(events.every((event) => typeof event.actorId === 'string' && event.actorId.length > 0))
     assert.ok(events.every((event) => !JSON.stringify(event).includes(DEVICE_INPUT.endpoint)))
   } finally {
     await stopTestServer(testServer.server)
   }
 })
 
-test('AUTH_REQUIRED protects device routes', async () => {
-  const previous = process.env.AUTH_REQUIRED
-  process.env.AUTH_REQUIRED = 'true'
-  const testServer = await startTestServer()
+test('device routes require authentication and a lab role', async () => {
+  const testServer = await startTestServer(createMemoryRepository())
   try {
-    const response = await request(testServer.baseUrl, '/api/devices')
+    const response = await request(testServer.baseUrl, '/api/devices', { token: null })
     assert.equal(response.status, 401)
     assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+
+    const receptionist = await request(testServer.baseUrl, '/api/devices', { token: TEST_TOKENS.receptionist })
+    assert.equal(receptionist.status, 403)
+    assert.deepEqual(await receptionist.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+    assert.equal((await request(testServer.baseUrl, '/api/devices', { token: TEST_TOKENS.lab_technician })).status, 200)
+    const technicianCreate = await request(testServer.baseUrl, '/api/devices', {
+      method: 'POST', body: JSON.stringify(DEVICE_INPUT), token: TEST_TOKENS.lab_technician,
+    })
+    assert.equal(technicianCreate.status, 403)
   } finally {
     await stopTestServer(testServer.server)
-    if (previous === undefined) delete process.env.AUTH_REQUIRED
-    else process.env.AUTH_REQUIRED = previous
   }
 })
 

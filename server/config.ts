@@ -1,8 +1,12 @@
+import path from 'node:path'
+
 export type ServerConfig = {
   port: number
   host: string
   databaseUrl: string | null
   allowInMemoryStore: boolean
+  migrateOnStart: boolean
+  webRoot: string | null
   isProduction: boolean
 }
 
@@ -27,6 +31,8 @@ export function loadServerConfig(environment: NodeJS.ProcessEnv = process.env): 
     host: environment.HOST?.trim() || '127.0.0.1',
     databaseUrl,
     allowInMemoryStore,
+    migrateOnStart: environment.MIGRATE_ON_START?.trim().toLowerCase() !== 'false',
+    webRoot: environment.WEB_ROOT?.trim() || (isProduction ? path.resolve(process.cwd(), 'dist') : null),
     isProduction,
   }
 }

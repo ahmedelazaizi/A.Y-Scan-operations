@@ -1,33 +1,19 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
-import { createApp } from './app.js'
 import { mockRepository } from './domain.js'
 import { AUDIT_MAX_METADATA_BYTES, sanitizeAuditMetadata } from './audit.js'
-
-type TestServer = { server: Server; baseUrl: string }
-
-type RequestOptions = { method?: string; body?: string }
-
-async function startTestServer(): Promise<TestServer> {
-  const server = createServer(createApp(mockRepository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
 async function stopTestServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 
-async function request(baseUrl: string, path: string, options: RequestOptions = {}): Promise<Response> {
+async function request(baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
   return fetch(`${baseUrl}${path}`, {
     method: options.method ?? 'GET',
     body: options.body,
-    headers: options.body ? { 'content-type': 'application/json' } : undefined,
+    headers: testHeaders(options),
   })
 }
 
@@ -53,18 +39,22 @@ test('memory audit repository lists newest bounded events with filters', async (
   assert.equal(filtered[0].entityType, 'order')
 })
 
-test('audit endpoint requires authentication when AUTH_REQUIRED is enabled', async () => {
-  const previous = process.env.AUTH_REQUIRED
-  process.env.AUTH_REQUIRED = 'true'
+test('audit endpoint requires authentication and the audit capability', async () => {
   const testServer = await startTestServer()
   try {
-    const response = await request(testServer.baseUrl, '/api/audit-events')
+    const response = await request(testServer.baseUrl, '/api/audit-events', { token: null })
     assert.equal(response.status, 401)
     assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+
+    const forbidden = await request(testServer.baseUrl, '/api/audit-events', { token: TEST_TOKENS.receptionist })
+    assert.equal(forbidden.status, 403)
+    assert.deepEqual(await forbidden.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+    const manager = await request(testServer.baseUrl, '/api/audit-events?limit=5', { token: TEST_TOKENS.branch_manager })
+    assert.equal(manager.status, 200)
+    assert.ok(Array.isArray(await manager.json()))
   } finally {
     await stopTestServer(testServer.server)
-    if (previous === undefined) delete process.env.AUTH_REQUIRED
-    else process.env.AUTH_REQUIRED = previous
   }
 })
 
@@ -84,9 +74,14 @@ test('successful patient and order writes create safe audit events', async () =>
     })
     assert.equal(orderResponse.status, 201)
 
+    const meResponse = await request(testServer.baseUrl, '/api/auth/me')
+    const me = await meResponse.json() as { user: { id: string } }
+
     const patientEvents = await mockRepository.listAuditEvents({ action: 'patient.created', limit: 100 })
     const orderEvents = await mockRepository.listAuditEvents({ action: 'order.created', limit: 100 })
-    assert.ok(patientEvents.some((event) => event.entityId === patient.id))
+    const patientEvent = patientEvents.find((event) => event.entityId === patient.id)
+    assert.ok(patientEvent)
+    assert.equal(patientEvent.actorId, me.user.id)
     assert.ok(orderEvents.length > 0)
     assert.ok(!JSON.stringify([...patientEvents, ...orderEvents]).includes('password'))
     assert.ok(!JSON.stringify([...patientEvents, ...orderEvents]).includes('token'))
@@ -100,6 +95,7 @@ test('audit endpoint does not expose a public POST write surface', async () => {
   try {
     const response = await request(testServer.baseUrl, '/api/audit-events', { method: 'POST', body: '{}' })
     assert.equal(response.status, 405)
+    assert.equal(response.headers.get('allow'), 'GET')
   } finally {
     await stopTestServer(testServer.server)
   }

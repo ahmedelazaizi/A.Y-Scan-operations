@@ -1,20 +1,13 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
 import test from 'node:test'
-import { createApp } from './app.js'
 import { ConfigError, loadServerConfig } from './config.js'
-import { mockRepository } from './domain.js'
 import { MAX_BODY_BYTES } from './http.js'
+import { startTestServer, testHeaders } from './test-support.js'
 
 async function withServer(callback: (baseUrl: string) => Promise<void>): Promise<void> {
-  const server: Server = createServer(createApp(mockRepository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
+  const { server, baseUrl } = await startTestServer()
   try {
-    await callback(`http://127.0.0.1:${address.port}`)
+    await callback(baseUrl)
   } finally {
     server.closeAllConnections()
     await new Promise<void>((resolve) => server.close(() => resolve()))
@@ -23,11 +16,8 @@ async function withServer(callback: (baseUrl: string) => Promise<void>): Promise
 
 test('oversized JSON bodies are rejected with 413 before parsing', async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/api/patients`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ fullName: 'x'.repeat(MAX_BODY_BYTES) }),
-    })
+    const body = JSON.stringify({ fullName: 'x'.repeat(MAX_BODY_BYTES) })
+    const response = await fetch(`${baseUrl}/api/patients`, { method: 'POST', headers: testHeaders({ body }), body })
     assert.equal(response.status, 413)
     assert.equal((await response.json() as Record<string, unknown>).error, 'Payload Too Large')
   })
@@ -35,7 +25,11 @@ test('oversized JSON bodies are rejected with 413 before parsing', async () => {
 
 test('non-JSON content types are rejected with 415', async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/api/patients`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' })
+    const response = await fetch(`${baseUrl}/api/patients`, {
+      method: 'POST',
+      headers: { ...testHeaders(), 'content-type': 'text/plain' },
+      body: '{}',
+    })
     assert.equal(response.status, 415)
   })
 })
