@@ -71,7 +71,7 @@ internal static class Launcher
 
         Form form = new Form();
         form.Text = Title;
-        form.ClientSize = new Size(420, 96);
+        form.ClientSize = new Size(420, 134);
         form.StartPosition = FormStartPosition.CenterScreen;
         form.FormBorderStyle = FormBorderStyle.FixedDialog;
         form.ControlBox = false;
@@ -86,8 +86,17 @@ internal static class Launcher
         bar.Style = ProgressBarStyle.Marquee;
         bar.MarqueeAnimationSpeed = 30;
         bar.SetBounds(16, 58, 388, 18);
+        Button cancel = new Button();
+        cancel.Text = "إلغاء";
+        cancel.SetBounds(16, 94, 90, 28);
+        cancel.Click += delegate
+        {
+            try { if (!process.HasExited) process.Kill(); } catch (Exception) { }
+            form.Close();
+        };
         form.Controls.Add(label);
         form.Controls.Add(bar);
+        form.Controls.Add(cancel);
 
         // Poll instead of relying on the Exited event: it cannot be missed if the script finishes before the window is up.
         Timer timer = new Timer();
@@ -108,7 +117,9 @@ internal static class Launcher
         }
 
         Application.Run(form);
-        process.WaitForExit();
+        // Do not wait for the redirected streams to close: a program the script started (the server) may keep them open.
+        process.WaitForExit(3000);
+        if (!process.HasExited) { try { process.Kill(); } catch (Exception) { } }
         int exitCode = process.ExitCode;
 
         string text;

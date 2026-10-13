@@ -45,7 +45,8 @@ try {
         $process = Start-Process @startOptions
         Set-Content -LiteralPath $script:PidFile -Value $process.Id -Encoding ASCII
 
-        $deadline = (Get-Date).AddSeconds(60)
+        # First start creates the database cluster and applies all migrations, which can take a few minutes on a slow disk.
+        $deadline = (Get-Date).AddSeconds(240)
         while (-not (Test-ServerHealthy)) {
             if ($process.HasExited -or (Get-Date) -gt $deadline) {
                 $errors = ''
@@ -61,6 +62,6 @@ try {
     if (-not $NoBrowser) { Open-AppWindow $url }
 } catch {
     Write-Host "Could not start A.Y Scan: $($_.Exception.Message)" -ForegroundColor Red
-    if ($Host.Name -eq 'ConsoleHost' -and (Test-IsWindowsHost)) { Read-Host 'Press Enter to close' | Out-Null }
+    # No 'press Enter' prompt here: the AYScan.exe launcher shows this message in a dialog, and start.cmd pauses by itself.
     exit 1
 }
