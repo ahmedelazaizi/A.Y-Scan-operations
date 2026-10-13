@@ -183,6 +183,8 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
       return 'created'
     },
 
+    hasUsers: async (): Promise<boolean> => (await store.countUsers()) > 0,
+
     pruneSessions: (): Promise<number> => store.deleteExpiredSessions(),
   }
 }

@@ -1,40 +1,32 @@
+<#
+.SYNOPSIS
+  Stops the A.Y Scan server and its database container. Data volumes are never removed.
+#>
 [CmdletBinding()]
-param()
+param(
+    # Stop only the web server and leave PostgreSQL running.
+    [switch]$ServerOnly
+)
 
-$ErrorActionPreference = 'Stop'
-$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-Set-Location -LiteralPath $ProjectRoot
-
-$script:PnpmCommand = $null
-$script:PnpmPrefix = @()
-
-function Select-Pnpm {
-    $corepack = Get-Command corepack -ErrorAction SilentlyContinue
-    if ($null -ne $corepack) {
-        & $corepack.Source pnpm --version *> $null
-        if ($LASTEXITCODE -eq 0) {
-            $script:PnpmCommand = $corepack.Source
-            $script:PnpmPrefix = @('pnpm')
-            return
-        }
-    }
-
-    $pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
-    if ($null -eq $pnpm) {
-        throw 'pnpm was not found. Install Node.js with Corepack support or pnpm, then run this script again.'
-    }
-    $script:PnpmCommand = $pnpm.Source
-}
+. "$PSScriptRoot\common.ps1"
+Set-Location -LiteralPath $script:ProjectRoot
 
 try {
-    Select-Pnpm
-    Write-Host 'Stopping the ay-scan-local-v2 PostgreSQL service without removing volumes...'
-    & $script:PnpmCommand @($script:PnpmPrefix + @('db:down'))
-    if ($LASTEXITCODE -ne 0) {
-        throw "pnpm db:down failed. Exit code: $LASTEXITCODE."
+    if (Test-Path -LiteralPath $script:EnvFile) { Import-DotEnv | Out-Null }
+    $server = Get-ServerProcess
+    if ($null -ne $server) {
+        Stop-Process -Id $server.Id -Force
+        Write-Host 'A.Y Scan server stopped.'
+    } else {
+        Write-Host 'The A.Y Scan server was not running.'
     }
-    Write-Host 'PostgreSQL service stopped. Docker volumes were not removed.'
+    Remove-Item -LiteralPath $script:PidFile -ErrorAction SilentlyContinue
+
+    if (-not $ServerOnly -and (Test-UsesDockerDatabase)) {
+        Invoke-Compose @('stop', 'ay-scan-postgres')
+        Write-Host 'PostgreSQL stopped (data kept).'
+    }
 } catch {
-    Write-Error "Stop stopped: $($_.Exception.Message)"
+    Write-Host "Could not stop A.Y Scan: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
