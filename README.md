@@ -19,7 +19,7 @@ pwsh -ExecutionPolicy Bypass -File .\installer\install.ps1
 
 ينشئ installer ملف `.env` من `.env.example` فقط إذا لم يكن موجودًا، ولا يستبدل ملفًا موجودًا. إذا كانت `AUTH_REQUIRED=true`، يجب ضبط `AUTH_ADMIN_PASSWORD` و`AUTH_TOKEN_SECRET` يدويًا في `.env`؛ لا ينشئ installer قيمًا سرية.
 
-يشغّل installer مشروع Docker باسم `ay-scan-local-v2`، ينتظر health لـ PostgreSQL، يطبق migrations `001` إلى `008` بالـ scripts الموجودة، ثم يبني الواجهة والخادم. لا ينفذ `down -v` ولا يحذف Docker volumes.
+يشغّل installer مشروع Docker باسم `ay-scan-local-v2`، ينتظر health لـ PostgreSQL، يطبق migrations `001` إلى `009` بالـ scripts الموجودة، ثم يبني الواجهة والخادم. لا ينفذ `down -v` ولا يحذف Docker volumes.
 
 ## التشغيل والإيقاف
 
@@ -73,9 +73,16 @@ pnpm db:migrate:radiology
 pnpm db:migrate:inventory
 pnpm db:migrate:insurance
 pnpm db:migrate:home-visits
+pnpm db:migrate:devices
 ```
 
-هذه migrations schema فقط؛ لا تضيف patient records أو credentials أو fixtures حقيقية. لا تُطبّق تلقائيًا عند تشغيل الخادم.
+تبقى migrations `001` إلى `008` كما هي، وتضيف `db/migrations/009_devices.sql` جدول سجل الأجهزة. الأمر `pnpm db:migrate:devices` يطبّق هذه migration صراحةً. هذه migrations schema فقط؛ لا تضيف patient records أو credentials أو fixtures حقيقية. لا تُطبّق تلقائيًا عند تشغيل الخادم.
+
+## سجل الأجهزة والتقارير
+
+- شاشة الأجهزة تسجّل الأجهزة وتعرضها عبر `/api/devices`، وتوفر فحصًا عبر `/api/devices/:id/check-connection`. البروتوكولات المدعومة هي HL7 وASTM وTCP/IP وSerial (`hl7` و`astm` و`tcp_ip` و`serial`). حقل endpoint يقبل host/port أو إعدادات Serial ولا يحتوي credentials؛ كما تُرفض endpoints التي تتضمن username أو password.
+- `check-connection` لا ينفّذ network أو serial access فعليًا، ويعيد `adapterConfigured:false`. actual driver integration يتطلب manufacturer/model وprotocol وhost/port أو serial settings وmessage samples وauth وresult mapping.
+- شاشة Reports تعرض مؤشرات تشغيلية aggregate-only بلا PII، وتستخدم endpoint `/api/reports/operations` مع date filter اختياري عبر `from` و`to`.
 
 ## الفحوصات
 
@@ -86,6 +93,6 @@ pnpm test
 pnpm lint
 ```
 
-تم تشغيل `pnpm build` و`pnpm server:build` و`pnpm test` و`pnpm lint` بنجاح عبر bundled pnpm runtime؛ نتيجة الاختبارات `64` passed و`0` failed. أمر `pnpm` المستقل غير موجود في `PATH` لهذه البيئة، لذلك لم يُستخدم مسار جهاز ثابت داخل scripts. Browser E2E وphysical device integrations غير متاحة في بيئة التطوير الحالية. لا يوجد installer EXE ولا device drivers ضمن المستودع.
+آخر تحقق مسجل لهذه الأوامر كان ناجحًا؛ نتيجة الاختبارات `77` passed و`0` failed. تم تشغيل browser automation محليًا للتحقق من مسار الواجهة، ولا يشمل ذلك physical device integration. لا يوجد installer EXE ولا device drivers ضمن المستودع.
 
 للتفاصيل التأسيسية الخاصة بالوثائق، راجع [`docs/README.md`](docs/README.md).

@@ -157,7 +157,7 @@ try {
     }
     Write-Host 'PostgreSQL health check passed.'
 
-    foreach ($migrationScript in @('db:migrate', 'db:migrate:lab', 'db:migrate:auth', 'db:migrate:billing', 'db:migrate:radiology', 'db:migrate:inventory', 'db:migrate:insurance', 'db:migrate:home-visits')) {
+    foreach ($migrationScript in @('db:migrate', 'db:migrate:lab', 'db:migrate:auth', 'db:migrate:billing', 'db:migrate:radiology', 'db:migrate:inventory', 'db:migrate:insurance', 'db:migrate:home-visits', 'db:migrate:devices')) {
         Write-Host "Applying $migrationScript..."
         Invoke-Pnpm @($migrationScript)
     }
