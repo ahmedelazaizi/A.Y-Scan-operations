@@ -1,22 +1,21 @@
 import { useState, type FormEvent } from 'react'
-import { ApiError, login, type AuthenticatedUser, type LoginResponse } from './api'
+import { ApiError, login, type LoginResponse } from './api'
 
 type LoginViewProps = {
   onSuccess: (session: LoginResponse) => Promise<void> | void
 }
 
-const ROLE_LABELS: Record<AuthenticatedUser['role'], string> = {
-  admin: 'مدير النظام',
-  branch_manager: 'مدير الفرع',
-  receptionist: 'الاستقبال',
-  lab_technician: 'فني المختبر',
-  radiologist: 'اختصاصي الأشعة',
-  accountant: 'المحاسبة',
-}
-
-function safeLoginMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 503) return 'خدمة الدخول غير متاحة حاليًا. حاول مرة أخرى لاحقًا.'
-  return 'تعذر تسجيل الدخول. تحقق من البريد الإلكتروني وكلمة المرور ثم حاول مرة أخرى.'
+function loginErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
+    if (error.status === 429) {
+      const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60))
+      return `محاولات كثيرة، حاول بعد ${new Intl.NumberFormat('ar-EG').format(minutes)} ${minutes === 1 ? 'دقيقة' : 'دقائق'}.`
+    }
+    if (error.status === 400) return 'أدخل البريد الإلكتروني وكلمة المرور.'
+    if (error.status === 0 || error.status >= 500) return 'خدمة الدخول غير متاحة حاليًا. حاول مرة أخرى بعد قليل.'
+  }
+  return 'تعذر تسجيل الدخول. حاول مرة أخرى.'
 }
 
 export default function LoginView({ onSuccess }: LoginViewProps) {
@@ -24,20 +23,17 @@ export default function LoginView({ onSuccess }: LoginViewProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setSubmitting] = useState(false)
-  const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUser | null>(null)
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!email.trim() || !password) { setError('أدخل البريد الإلكتروني وكلمة المرور.'); return }
     setError('')
     setSubmitting(true)
     try {
       const session = await login({ email, password })
-      setAuthenticatedUser(session.user)
       await onSuccess(session)
     } catch (requestError) {
-      setAuthenticatedUser(null)
-      setError(safeLoginMessage(requestError))
-    } finally {
+      setError(loginErrorMessage(requestError))
       setSubmitting(false)
     }
   }
@@ -88,13 +84,6 @@ export default function LoginView({ onSuccess }: LoginViewProps) {
             {isSubmitting ? 'جارٍ التحقق…' : 'دخول إلى مساحة العمل'}
           </button>
         </form>
-        {authenticatedUser && (
-          <div className="login-success" role="status" aria-live="polite">
-            <strong>مرحبًا، {authenticatedUser.displayName}</strong>
-            <span>{authenticatedUser.email}</span>
-            <small>{ROLE_LABELS[authenticatedUser.role]}</small>
-          </div>
-        )}
         <p className="login-note">لأمان المركز، لا تشارك بيانات الدخول مع أي شخص.</p>
       </section>
     </main>

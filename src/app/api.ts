@@ -1,13 +1,81 @@
 export const AUTH_TOKEN_STORAGE_KEY = 'ay-scan.auth.token'
 export const AUTH_REQUIRED_EVENT = 'ay-scan-auth-required'
 
-export type AuthRole = 'admin' | 'branch_manager' | 'receptionist' | 'lab_technician' | 'radiologist' | 'accountant'
+export const PASSWORD_CHANGE_REQUIRED_EVENT = 'ay-scan-password-change-required'
+
+export const AUTH_ROLES = ['admin', 'branch_manager', 'receptionist', 'lab_technician', 'radiologist', 'accountant'] as const
+export type AuthRole = (typeof AUTH_ROLES)[number]
+
+export const ROLE_LABELS: Record<AuthRole, string> = {
+  admin: 'مدير النظام',
+  branch_manager: 'مدير الفرع',
+  receptionist: 'الاستقبال',
+  lab_technician: 'فني المختبر',
+  radiologist: 'أخصائي الأشعة',
+  accountant: 'المحاسبة',
+}
+
+/** Mirrors server/permissions.ts. The server stays the authority; the client only hides what it would refuse. */
+export type Capability =
+  | 'dashboard.view'
+  | 'patients.view'
+  | 'patients.create'
+  | 'orders.view'
+  | 'orders.create'
+  | 'catalog.view'
+  | 'catalog.manage'
+  | 'specimens.view'
+  | 'specimens.manage'
+  | 'results.view'
+  | 'results.enter'
+  | 'results.review'
+  | 'billing.view'
+  | 'billing.manage'
+  | 'radiology.view'
+  | 'radiology.schedule'
+  | 'radiology.perform'
+  | 'radiology.report'
+  | 'inventory.view'
+  | 'inventory.manageItems'
+  | 'inventory.move'
+  | 'insurance.view'
+  | 'insurance.policies'
+  | 'insurance.claims'
+  | 'homeVisits.view'
+  | 'homeVisits.schedule'
+  | 'homeVisits.update'
+  | 'devices.view'
+  | 'devices.manage'
+  | 'devices.check'
+  | 'reports.view'
+  | 'audit.view'
+  | 'users.manage'
 
 export type AuthenticatedUser = {
   id: string
   email: string
   displayName: string
   role: AuthRole
+  mustChangePassword: boolean
+}
+
+export type UserAccount = AuthenticatedUser & {
+  isActive: boolean
+  lastLoginAt: string | null
+  createdAt: string
+}
+
+export type NewUserAccount = {
+  email: string
+  displayName: string
+  role: AuthRole
+  password: string
+}
+
+export type UserAccountUpdate = {
+  displayName?: string
+  role?: AuthRole
+  isActive?: boolean
 }
 
 export type LoginCredentials = {
@@ -19,20 +87,73 @@ export type LoginResponse = {
   user: AuthenticatedUser
   token: string
   expiresAt: string
+  capabilities: Capability[]
 }
 
 export type CurrentUserResponse = {
   user: AuthenticatedUser
+  capabilities: Capability[]
+}
+
+export type PasswordChange = {
+  currentPassword: string
+  newPassword: string
+}
+
+export const MIN_PASSWORD_LENGTH = 10
+
+/** Client-side copy of the server password policy (server/auth/passwords.ts). Returns an Arabic message or ''. */
+export function passwordPolicyError(password: string): string {
+  if (password.length < MIN_PASSWORD_LENGTH) return `يجب ألا تقل كلمة المرور عن ${MIN_PASSWORD_LENGTH} أحرف.`
+  if (password.length > 200) return 'يجب ألا تزيد كلمة المرور عن 200 حرف.'
+  if (!/[A-Za-z\u0600-\u06FF]/.test(password) || !/\d/.test(password)) return 'يجب أن تحتوي كلمة المرور على حروف وأرقام معًا.'
+  return ''
+}
+
+/** Arabic wording for messages the server is known to send; anything else is shown as the server wrote it. */
+const KNOWN_SERVER_MESSAGES: Record<string, string> = {
+  'Your role does not allow this action.': 'لا تملك صلاحية تنفيذ هذا الإجراء.',
+  'Change your password before continuing.': 'يجب تغيير كلمة المرور قبل المتابعة.',
+  'Authentication required.': 'انتهت الجلسة. سجّل الدخول مرة أخرى.',
+  'Invalid credentials.': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+  'Current password is incorrect.': 'كلمة المرور الحالية غير صحيحة.',
+  'New password must differ from the current password.': 'يجب أن تختلف كلمة المرور الجديدة عن الحالية.',
+  'Password must contain letters and digits.': 'يجب أن تحتوي كلمة المرور على حروف وأرقام معًا.',
+  'Password must be at least 10 characters.': 'يجب ألا تقل كلمة المرور عن 10 أحرف.',
+  'At least one active admin account must remain.': 'يجب أن يبقى حساب مدير نظام نشط واحد على الأقل.',
+  'You cannot deactivate your own account or change your own role.': 'لا يمكنك تعطيل حسابك أو تغيير دورك بنفسك.',
+  'Email is already registered.': 'هذا البريد الإلكتروني مسجل بالفعل.',
+  'email is invalid.': 'البريد الإلكتروني غير صالح.',
+  'displayName must be 1-200 characters.': 'الاسم المعروض مطلوب (حتى 200 حرف).',
+  'User was not found.': 'لم يتم العثور على المستخدم.',
+  'A test with this code already exists.': 'يوجد تحليل آخر بنفس الكود.',
+  'Catalog test was not found.': 'لم يتم العثور على التحليل.',
+  'One or more tests are not in the active catalog.': 'تحليل أو أكثر غير مفعّل في الدليل. حدّث القائمة وحاول مرة أخرى.',
+  'patientId does not reference an existing patient.': 'المريض المحدد غير موجود في السجل.',
 }
 
 export class ApiError extends Error {
   readonly status: number
+  /** The server's `error` field (e.g. 'Forbidden', 'Password Change Required'), when present. */
+  readonly code: string
+  /** The server's raw `message` field, when present. */
+  readonly serverMessage: string
+  readonly retryAfterSeconds: number | null
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, details: { code?: string; serverMessage?: string; retryAfterSeconds?: number | null } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = details.code ?? ''
+    this.serverMessage = details.serverMessage ?? ''
+    this.retryAfterSeconds = details.retryAfterSeconds ?? null
   }
+}
+
+/** A user-facing message for any thrown value. */
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message
+  return fallback
 }
 
 export function getStoredAuthToken(): string | null {
@@ -64,6 +185,10 @@ export function clearStoredAuthToken(): void {
 
 function dispatchAuthRequired(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT))
+}
+
+function dispatchPasswordChangeRequired(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(PASSWORD_CHANGE_REQUIRED_EVENT))
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -99,7 +224,7 @@ export type Dashboard = {
   samples: { total: number; completionRate: number; inProgress: number; completed: number; needsAttention: number }
 }
 
-export type NewOrder = { patientId?: string; patientName?: string; tests: string[]; priority: OrderPriority }
+export type NewOrder = { patientId: string; testIds: string[]; priority: OrderPriority }
 export type PatientSex = 'female' | 'male' | 'other' | 'unknown'
 
 export type Patient = {
@@ -126,6 +251,16 @@ export type CatalogItem = {
   price: number
   isActive: boolean
 }
+
+export type NewCatalogItem = {
+  code: string
+  name: string
+  specimenType: string
+  price: number
+  isActive: boolean
+}
+
+export type CatalogItemUpdate = Partial<Omit<NewCatalogItem, 'code'>>
 
 export type DeviceProtocol = 'hl7' | 'astm' | 'tcp_ip' | 'serial'
 export type DeviceStatus = 'configured' | 'online' | 'offline' | 'unknown'
@@ -433,13 +568,29 @@ export type OperationsReport = {
   homeVisits: { total: number; scheduled: number; inProgress: number; completed: number }
 }
 
+function statusFallbackMessage(status: number): string {
+  if (status === 401) return 'انتهت الجلسة. سجّل الدخول مرة أخرى.'
+  if (status === 403) return 'لا تملك صلاحية تنفيذ هذا الإجراء.'
+  if (status === 404) return 'العنصر المطلوب غير موجود.'
+  if (status === 409) return 'تعارض مع بيانات موجودة.'
+  if (status === 429) return 'محاولات كثيرة. حاول مرة أخرى لاحقًا.'
+  if (status >= 500) return 'الخدمة غير متاحة حاليًا. حاول مرة أخرى لاحقًا.'
+  return 'تعذر إتمام الطلب.'
+}
+
 async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers)
-  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  if (options?.body !== undefined && options.body !== null && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   const token = getStoredAuthToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  const response = await fetch(path, { ...options, headers })
+  let response: Response
+  try {
+    response = await fetch(path, { ...options, headers })
+  } catch {
+    throw new ApiError('تعذر الاتصال بالخادم. تحقق من الشبكة ثم حاول مرة أخرى.', 0)
+  }
+
   let payload: unknown = null
   if (response.status !== 204) {
     try {
@@ -450,11 +601,13 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    const code = isRecord(payload) && typeof payload.error === 'string' ? payload.error : ''
+    const serverMessage = isRecord(payload) && typeof payload.message === 'string' ? payload.message : ''
+    const retryAfterSeconds = isRecord(payload) && typeof payload.retryAfterSeconds === 'number' ? payload.retryAfterSeconds : null
     if (response.status === 401) dispatchAuthRequired()
-    const responseMessage = isRecord(payload) && typeof payload.message === 'string'
-      ? payload.message
-      : isRecord(payload) && typeof payload.error === 'string' ? payload.error : 'تعذر إتمام الطلب.'
-    throw new ApiError(responseMessage, response.status)
+    if (response.status === 403 && code === 'Password Change Required') dispatchPasswordChangeRequired()
+    const message = KNOWN_SERVER_MESSAGES[serverMessage] ?? (response.status < 500 && serverMessage ? serverMessage : statusFallbackMessage(response.status))
+    throw new ApiError(message, response.status, { code, serverMessage, retryAfterSeconds })
   }
 
   return payload as T
@@ -467,9 +620,31 @@ export function login(credentials: LoginCredentials): Promise<LoginResponse> {
   })
 }
 
-export async function fetchCurrentUser(): Promise<AuthenticatedUser> {
-  const response = await requestJson<CurrentUserResponse>('/api/auth/me')
-  return response.user
+export function fetchCurrentUser(): Promise<CurrentUserResponse> {
+  return requestJson<CurrentUserResponse>('/api/auth/me')
+}
+
+export function changePassword(change: PasswordChange): Promise<{ user: AuthenticatedUser }> {
+  return requestJson<{ user: AuthenticatedUser }>('/api/auth/password', { method: 'POST', body: JSON.stringify(change) })
+}
+
+export function fetchUsers(): Promise<UserAccount[]> {
+  return requestJson<UserAccount[]>('/api/users')
+}
+
+export function createUser(user: NewUserAccount): Promise<UserAccount> {
+  return requestJson<UserAccount>('/api/users', {
+    method: 'POST',
+    body: JSON.stringify({ ...user, email: user.email.trim(), displayName: user.displayName.trim() }),
+  })
+}
+
+export function updateUser(id: string, update: UserAccountUpdate): Promise<UserAccount> {
+  return requestJson<UserAccount>(`/api/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) })
+}
+
+export function resetUserPassword(id: string, password: string): Promise<void> {
+  return requestJson<void>(`/api/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) })
 }
 
 export function logout(): Promise<void> {
@@ -492,8 +667,9 @@ export function createOrder(order: NewOrder): Promise<Order> {
   return requestJson<Order>('/api/orders', { method: 'POST', body: JSON.stringify(order) })
 }
 
-export function fetchPatients(query = ''): Promise<Patient[]> {
+export function fetchPatients(query = '', limit?: number): Promise<Patient[]> {
   const params = new URLSearchParams({ q: query.trim() })
+  if (limit !== undefined) params.set('limit', String(limit))
   return requestJson<Patient[]>(`/api/patients?${params.toString()}`)
 }
 
@@ -503,6 +679,14 @@ export function createPatient(patient: NewPatient): Promise<Patient> {
 
 export function fetchCatalog(): Promise<CatalogItem[]> {
   return requestJson<CatalogItem[]>('/api/catalog')
+}
+
+export function createCatalogItem(item: NewCatalogItem): Promise<CatalogItem> {
+  return requestJson<CatalogItem>('/api/catalog', { method: 'POST', body: JSON.stringify(item) })
+}
+
+export function updateCatalogItem(id: string, update: CatalogItemUpdate): Promise<CatalogItem> {
+  return requestJson<CatalogItem>(`/api/catalog/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) })
 }
 
 export function fetchDevices(activeOnly = false): Promise<LabDevice[]> {
