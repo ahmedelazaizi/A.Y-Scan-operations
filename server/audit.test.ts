@@ -22,7 +22,7 @@ test('audit metadata keeps only bounded operational values and drops secrets', (
     status: 'approved',
     password: 'never-store-this',
     token: 'secret-token',
-    email: 'person@example.test',
+    username: 'person@example.test',
     fullName: 'مريض تجريبي',
     source: 'x'.repeat(10000),
   })

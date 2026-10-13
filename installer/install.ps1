@@ -16,7 +16,9 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$AdminEmail,
+    # Optional: create this admin instead of the default one (admin / admin123). The password comes from -AdminPassword or AYSCAN_ADMIN_PASSWORD.
+    [string]$AdminUsername,
+    [string]$AdminPassword,
     [string]$AdminName,
     [ValidateRange(1, 65535)][int]$Port = 0,
     # Lets other computers on the clinic network open the app (binds 0.0.0.0 and opens the Windows firewall port).
@@ -44,28 +46,8 @@ function Assert-Node {
     Write-Host "Node.js $versionText"
 }
 
-function ConvertFrom-SecureText([System.Security.SecureString]$Secure) {
-    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secure)
-    try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
-}
-
 function Test-PasswordPolicy([string]$Password) {
-    return $Password.Length -ge 10 -and $Password.Length -le 200 -and $Password -match '\d' -and $Password -match '[A-Za-z؀-ۿ]'
-}
-
-function Read-AdminPassword {
-    if ($NonInteractive) {
-        $password = $env:AYSCAN_ADMIN_PASSWORD
-        if (-not (Test-PasswordPolicy $password)) { throw 'AYSCAN_ADMIN_PASSWORD must be at least 10 characters with letters and digits.' }
-        return $password
-    }
-    while ($true) {
-        $first = ConvertFrom-SecureText (Read-Host 'Admin password (10+ characters, letters and digits)' -AsSecureString)
-        if (-not (Test-PasswordPolicy $first)) { Write-Warning 'The password must be at least 10 characters and contain letters and digits.'; continue }
-        $second = ConvertFrom-SecureText (Read-Host 'Repeat the admin password' -AsSecureString)
-        if ($first -ne $second) { Write-Warning 'The passwords do not match.'; continue }
-        return $first
-    }
+    return $Password.Length -ge 4 -and $Password.Length -le 200
 }
 
 # Creates .env on first install and fills in anything an older version did not have, without touching existing values.
@@ -127,28 +109,20 @@ function Initialize-AdminAccount([string]$Node) {
     & $Node 'dist-server/server/create-admin.js' '--check' | Out-Null
     if ($LASTEXITCODE -eq 0) { Write-Host 'User accounts already exist; skipping admin creation.'; return $null }
     if ($LASTEXITCODE -ne 3) { throw 'Could not check existing user accounts.' }
-
-    Write-Step 'Create the administrator account'
-    $email = $AdminEmail
-    while ([string]::IsNullOrWhiteSpace($email) -or $email -notmatch '^[^\s@]+@[^\s@]+\.[^\s@]+$') {
-        if ($NonInteractive) { throw 'Pass -AdminEmail for unattended installs.' }
-        $email = Read-Host 'Admin email (used to sign in)'
+    if ([string]::IsNullOrWhiteSpace($AdminUsername)) {
+        Write-Host 'No admin was requested: the default account (username admin, password admin123) is created on first start. Change the password after signing in.'
+        return $null
     }
-    $name = $AdminName
-    if ([string]::IsNullOrWhiteSpace($name)) { $name = if ($NonInteractive) { 'Administrator' } else { Read-Host 'Admin display name (e.g. Dr. Ahmed)' } }
-    if ([string]::IsNullOrWhiteSpace($name)) { $name = 'Administrator' }
-    $password = Read-AdminPassword
-
-    $env:AUTH_ADMIN_EMAIL = $email.Trim()
-    $env:AUTH_ADMIN_DISPLAY_NAME = $name.Trim()
+    $password = if ($AdminPassword) { $AdminPassword } else { $env:AYSCAN_ADMIN_PASSWORD }
+    if (-not (Test-PasswordPolicy $password)) { throw 'Give the admin password with -AdminPassword or AYSCAN_ADMIN_PASSWORD (4 or more characters).' }
+    $env:AUTH_ADMIN_USERNAME = $AdminUsername.Trim()
     $env:AUTH_ADMIN_PASSWORD = $password
     try {
         Invoke-Checked $Node @('dist-server/server/create-admin.js') 'Could not create the admin account.' | Out-Host
     } finally {
         Remove-Item Env:\AUTH_ADMIN_PASSWORD -ErrorAction SilentlyContinue
-        $password = $null
     }
-    return $email.Trim()
+    return $AdminUsername.Trim()
 }
 
 function New-Shortcut([string]$Path, [string]$Target, [string]$Arguments, [string]$Description) {

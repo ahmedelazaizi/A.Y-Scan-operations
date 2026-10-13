@@ -52,7 +52,9 @@ if (databaseUrl && config.migrateOnStart) {
 
 const stores = createStores(databaseUrl, { timeZone: config.timeZone })
 try {
-  if ((await stores.auth.bootstrapAdmin()) === 'created') console.log('Created the first admin account from AUTH_ADMIN_EMAIL.')
+  const bootstrap = await stores.auth.bootstrapAdmin(process.env, { useDefaults: true })
+  if (bootstrap === 'created') console.log('Created the first admin account from AUTH_ADMIN_USERNAME.')
+  if (bootstrap === 'created-default') console.log('Created the default admin account (username: admin, password: admin123). Change this password after the first sign-in.')
 } catch (error) {
   console.error(`Could not create the first admin account: ${describeError(error)}`)
   await stores.close()

@@ -5,7 +5,6 @@ import {
   clearStoredAuthToken,
   fetchCurrentUser,
   fetchDashboard,
-  fetchSetupStatus,
   getStoredAuthToken,
   logout,
   PASSWORD_CHANGE_REQUIRED_EVENT,
@@ -32,7 +31,6 @@ import PatientsView from './PatientsView'
 import RadiologyView from './RadiologyView'
 import ReportsView from './ReportsView'
 import { createSession, SessionContext, type Session } from './session'
-import SetupView from './SetupView'
 import UsersView from './UsersView'
 
 type AppView = 'dashboard' | 'patients' | 'catalog' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
@@ -90,7 +88,7 @@ function UserMenu({ user, onChangePassword, onLogout }: { user: AuthenticatedUse
       <span className="chevron" aria-hidden="true">⌄</span>
     </button>
     {open && <div className="user-menu-popover" role="menu">
-      <div className="user-menu-identity"><strong>{user.displayName}</strong><span>{ROLE_LABELS[user.role]}</span><span dir="ltr">{user.email}</span></div>
+      <div className="user-menu-identity"><strong>{user.displayName}</strong><span>{ROLE_LABELS[user.role]}</span><span dir="ltr">{user.username}</span></div>
       <button type="button" role="menuitem" onClick={() => { setOpen(false); onChangePassword() }}><Icon name="key" size={16} />تغيير كلمة المرور</button>
       <button type="button" role="menuitem" onClick={() => { setOpen(false); onLogout() }}><Icon name="logout" size={16} />تسجيل الخروج</button>
     </div>}
@@ -198,8 +196,6 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
 
 function App() {
   const [auth, setAuth] = useState<AuthState>(() => (getStoredAuthToken() ? { status: 'loading' } : { status: 'anonymous' }))
-  // null while unknown. Only asked when signed out; a failed check falls back to the normal login screen.
-  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
 
   useEffect(() => {
     const handleAuthRequired = () => {
@@ -231,17 +227,7 @@ function App() {
     return () => { cancelled = true }
   }, [auth.status])
 
-  useEffect(() => {
-    if (auth.status !== 'anonymous' || needsSetup !== null) return
-    let cancelled = false
-    fetchSetupStatus()
-      .then((status) => { if (!cancelled) setNeedsSetup(status.needsSetup) })
-      .catch(() => { if (!cancelled) setNeedsSetup(false) })
-    return () => { cancelled = true }
-  }, [auth.status, needsSetup])
-
   const handleLoginSuccess = useCallback((response: LoginResponse) => {
-    setNeedsSetup(false)
     setStoredAuthToken(response.token)
     setAuth({ status: 'ready', user: response.user, capabilities: response.capabilities })
   }, [])
@@ -259,8 +245,6 @@ function App() {
   const session = useMemo(() => auth.status === 'ready' ? createSession(auth.user, auth.capabilities) : null, [auth])
 
   if (auth.status === 'loading') return <div className="boot-screen" role="status" aria-live="polite">جارٍ التحميل…</div>
-  if (auth.status === 'anonymous' && needsSetup === null) return <div className="boot-screen" role="status" aria-live="polite">جارٍ التحميل…</div>
-  if (auth.status === 'anonymous' && needsSetup) return <SetupView onComplete={handleLoginSuccess} onAlreadySetUp={() => setNeedsSetup(false)} />
   if (auth.status === 'anonymous' || !session) return <LoginView onSuccess={handleLoginSuccess} />
   if (auth.user.mustChangePassword) return <RequiredPasswordChangeView user={auth.user} onChanged={handleUserChange} onLogout={() => void handleLogout()} />
   return <AuthenticatedApp session={session} onSessionUserChange={handleUserChange} onLogout={() => void handleLogout()} />

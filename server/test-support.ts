@@ -22,7 +22,7 @@ export async function createTestApp(repository: OrderRepository = mockRepository
   const auth = createAuthService(store)
   for (const role of ROLES) {
     const user = await store.createUser({
-      email: `user@${role.replace('_', '-')}.test`,
+      username: `user@${role.replace('_', '-')}.test`,
       displayName: `Test ${role}`,
       role,
       // Seeded with a precomputed-format hash only; login tests create their own users through auth.createUser.

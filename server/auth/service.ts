@@ -14,9 +14,15 @@ import {
   type UserUpdate,
 } from './types.js'
 
+export const DEFAULT_ADMIN_USERNAME = 'admin'
+export const DEFAULT_ADMIN_PASSWORD = 'admin123'
+export const DEFAULT_ADMIN_DISPLAY_NAME = 'مدير النظام'
 export const DEFAULT_SESSION_TTL_MS = 12 * 60 * 60 * 1000
 const TOKEN_BYTES = 32
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Letters (Latin or Arabic) and digits, optionally with . _ - @ inside; no spaces. Not required to be an email address.
+const USERNAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}._@-]*$/u
+export const MIN_USERNAME_LENGTH = 2
+export const MAX_USERNAME_LENGTH = 64
 
 export type LoginResult =
   | { status: 'success'; user: AuthenticatedUser; token: string; expiresAt: string }
@@ -30,7 +36,7 @@ export class AuthConflictError extends Error {}
 /** Raised when the current password supplied for a change is wrong. */
 export class AuthCredentialError extends Error {}
 
-export type NewUserInput = { email: string; displayName: string; role: Role; password: string }
+export type NewUserInput = { username: string; displayName: string; role: Role; password: string }
 
 export type AuthService = ReturnType<typeof createAuthService>
 
@@ -38,14 +44,16 @@ function hashToken(token: string): Buffer {
   return createHash('sha256').update(token, 'utf8').digest()
 }
 
-export function normalizeEmail(value: string): string {
+export function normalizeUsername(value: string): string {
   return value.trim().toLowerCase()
 }
 
-function validateEmail(value: string): string {
-  const email = normalizeEmail(value)
-  if (email.length < 3 || email.length > 320 || !EMAIL_PATTERN.test(email)) throw new AuthInputError('email is invalid.')
-  return email
+function validateUsername(value: string): string {
+  const username = normalizeUsername(value)
+  if (username.length < MIN_USERNAME_LENGTH || username.length > MAX_USERNAME_LENGTH || !USERNAME_PATTERN.test(username)) {
+    throw new AuthInputError('username is invalid.')
+  }
+  return username
 }
 
 function validateDisplayName(value: string): string {
@@ -63,7 +71,6 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
   const sessionTtlMs = options.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS
   const throttle = options.throttle ?? new LoginThrottle()
   const now = options.now ?? Date.now
-  let setupInProgress = false
 
   async function issueSession(user: AuthenticatedUser): Promise<{ token: string; expiresAt: string }> {
     const token = randomBytes(TOKEN_BYTES).toString('base64url')
@@ -73,12 +80,12 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
   }
 
   async function createUser(input: NewUserInput, options: { mustChangePassword?: boolean } = {}): Promise<UserAccount> {
-    const email = validateEmail(input.email)
+    const username = validateUsername(input.username)
     const displayName = validateDisplayName(input.displayName)
     if (!isRole(input.role)) throw new AuthInputError('role is invalid.')
     assertPasswordPolicy(input.password)
     return store.createUser({
-      email,
+      username,
       displayName,
       role: input.role,
       passwordHash: await hashPassword(input.password),
@@ -98,12 +105,12 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
   return {
     issueSession,
 
-    async login(email: string, password: string, clientAddress: string): Promise<LoginResult> {
-      const normalized = normalizeEmail(email)
+    async login(username: string, password: string, clientAddress: string): Promise<LoginResult> {
+      const normalized = normalizeUsername(username)
       const retryAfterMs = throttle.retryAfterMs(normalized, clientAddress)
       if (retryAfterMs > 0) return { status: 'throttled', retryAfterSeconds: Math.ceil(retryAfterMs / 1000) }
 
-      const user = await store.findUserByEmail(normalized)
+      const user = await store.findUserByUsername(normalized)
       // Always run one scrypt verification so response time does not reveal whether the account exists.
       const passwordMatches = await verifyPassword(password, user?.passwordHash ?? await getDummyPasswordHash())
       if (!user || !user.isActive || !passwordMatches) {
@@ -165,38 +172,34 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
     },
 
     /**
-     * Creates the first admin from AUTH_ADMIN_* variables when no account exists yet.
+     * Creates the first admin when no account exists yet. Credentials come from AUTH_ADMIN_USERNAME/AUTH_ADMIN_PASSWORD
+     * when both are set; with `useDefaults` the built-in default account (admin / admin123) is used otherwise.
      * It never touches an existing installation, so the variables can be removed after first start.
      */
-    async bootstrapAdmin(environment: NodeJS.ProcessEnv = process.env): Promise<'created' | 'skipped'> {
-      const email = environment.AUTH_ADMIN_EMAIL?.trim()
-      const password = environment.AUTH_ADMIN_PASSWORD ?? ''
-      if (!email || !password || (await store.countUsers()) > 0) return 'skipped'
+    async bootstrapAdmin(environment: NodeJS.ProcessEnv = process.env, options: { useDefaults?: boolean } = {}): Promise<'created' | 'created-default' | 'skipped'> {
+      if ((await store.countUsers()) > 0) return 'skipped'
+      const configuredUsername = environment.AUTH_ADMIN_USERNAME?.trim()
+      const configuredPassword = environment.AUTH_ADMIN_PASSWORD ?? ''
+      const configured = Boolean(configuredUsername && configuredPassword)
+      if (!configured && !options.useDefaults) return 'skipped'
       try {
         await createUser(
-          { email, password, role: 'admin', displayName: environment.AUTH_ADMIN_DISPLAY_NAME?.trim() || 'مدير النظام' },
+          {
+            username: configured ? (configuredUsername as string) : DEFAULT_ADMIN_USERNAME,
+            password: configured ? configuredPassword : DEFAULT_ADMIN_PASSWORD,
+            role: 'admin',
+            displayName: environment.AUTH_ADMIN_DISPLAY_NAME?.trim() || DEFAULT_ADMIN_DISPLAY_NAME,
+          },
           { mustChangePassword: false },
         )
       } catch (error) {
         if (error instanceof UserConflictError) return 'skipped'
         throw error
       }
-      return 'created'
+      return configured ? 'created' : 'created-default'
     },
 
     hasUsers: async (): Promise<boolean> => (await store.countUsers()) > 0,
-
-    /** Creates the very first admin; refuses once any account exists. Serialized so concurrent calls cannot create two. */
-    async setupFirstAdmin(input: Omit<NewUserInput, 'role'>): Promise<UserAccount> {
-      if (setupInProgress) throw new AuthConflictError('Setup is already in progress.')
-      setupInProgress = true
-      try {
-        if ((await store.countUsers()) > 0) throw new AuthConflictError('The system is already set up.')
-        return await createUser({ ...input, role: 'admin' }, { mustChangePassword: false })
-      } finally {
-        setupInProgress = false
-      }
-    },
 
     pruneSessions: (): Promise<number> => store.deleteExpiredSessions(),
   }

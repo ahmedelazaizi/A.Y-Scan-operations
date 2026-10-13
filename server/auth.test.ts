@@ -37,17 +37,17 @@ async function request(baseUrl: string, path: string, options: TestRequestOption
 
 async function createUser(
   auth: AuthService,
-  email: string,
+  username: string,
   options: { role?: Role; mustChangePassword?: boolean; displayName?: string } = {},
 ): Promise<UserAccount> {
   return auth.createUser(
-    { email, displayName: options.displayName ?? 'Test User', role: options.role ?? 'receptionist', password: PASSWORD },
+    { username, displayName: options.displayName ?? 'Test User', role: options.role ?? 'receptionist', password: PASSWORD },
     { mustChangePassword: options.mustChangePassword ?? false },
   )
 }
 
-async function login(baseUrl: string, email: string, password = PASSWORD): Promise<Response> {
-  return request(baseUrl, '/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }), token: null })
+async function login(baseUrl: string, username: string, password = PASSWORD): Promise<Response> {
+  return request(baseUrl, '/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }), token: null })
 }
 
 test('successful login returns a safe profile, token, and capabilities, and allows me lookup', async () => {
@@ -58,7 +58,7 @@ test('successful login returns a safe profile, token, and capabilities, and allo
     assert.equal(loginResponse.status, 200)
     assert.deepEqual(body.user, {
       id: body.user.id,
-      email: 'clerk@example.test',
+      username: 'clerk@example.test',
       displayName: 'Front Desk Clerk',
       role: 'receptionist',
       mustChangePassword: false,
@@ -77,8 +77,8 @@ test('successful login returns a safe profile, token, and capabilities, and allo
 test('invalid credentials return the same unauthorized response', async () => {
   await withServer(async ({ baseUrl, auth }) => {
     await createUser(auth, 'known@example.test')
-    for (const [email, password] of [['unknown@example.test', PASSWORD], ['known@example.test', 'Wrong-pass-999']]) {
-      const response = await login(baseUrl, email, password)
+    for (const [username, password] of [['unknown@example.test', PASSWORD], ['known@example.test', 'Wrong-pass-999']]) {
+      const response = await login(baseUrl, username, password)
       assert.equal(response.status, 401)
       assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Invalid credentials.' })
     }
@@ -87,10 +87,10 @@ test('invalid credentials return the same unauthorized response', async () => {
 
 test('malformed login bodies return 400', async () => {
   await withServer(async ({ baseUrl }) => {
-    for (const body of [JSON.stringify({ email: 'user@example.test' }), JSON.stringify([]), JSON.stringify({ email: 1, password: PASSWORD })]) {
+    for (const body of [JSON.stringify({ username: 'user@example.test' }), JSON.stringify([]), JSON.stringify({ username: 1, password: PASSWORD })]) {
       const response = await request(baseUrl, '/api/auth/login', { method: 'POST', body, token: null })
       assert.equal(response.status, 400)
-      assert.deepEqual(await response.json(), { error: 'Bad Request', message: 'email and password are required.' })
+      assert.deepEqual(await response.json(), { error: 'Bad Request', message: 'username and password are required.' })
     }
     const malformed = await request(baseUrl, '/api/auth/login', { method: 'POST', body: '{', token: null })
     assert.equal(malformed.status, 400)
@@ -142,7 +142,7 @@ test('a pending password change blocks other routes until the password is change
     assert.deepEqual(await wrongCurrent.json(), { error: 'Forbidden', message: 'Current password is incorrect.' })
 
     const weak = await request(baseUrl, '/api/auth/password', {
-      method: 'POST', body: JSON.stringify({ currentPassword: PASSWORD, newPassword: 'short' }), token,
+      method: 'POST', body: JSON.stringify({ currentPassword: PASSWORD, newPassword: 'abc' }), token,
     })
     assert.equal(weak.status, 400)
 
@@ -177,11 +177,11 @@ test('admins list, create, update, and reset passwords for users', async () => {
     assert.ok(users.some((user) => user.role === 'admin'))
     assert.ok(!JSON.stringify(users).includes('passwordHash'))
 
-    const createBody = JSON.stringify({ email: 'new.hire@example.test', displayName: 'New Hire', role: 'lab_technician', password: PASSWORD })
+    const createBody = JSON.stringify({ username: 'new.hire@example.test', displayName: 'New Hire', role: 'lab_technician', password: PASSWORD })
     const createResponse = await request(baseUrl, '/api/users', { method: 'POST', body: createBody })
     const created = await createResponse.json() as UserAccount
     assert.equal(createResponse.status, 201)
-    assert.equal(created.email, 'new.hire@example.test')
+    assert.equal(created.username, 'new.hire@example.test')
     assert.equal(created.role, 'lab_technician')
     assert.equal(created.mustChangePassword, true)
     assert.equal(created.isActive, true)
@@ -191,9 +191,19 @@ test('admins list, create, update, and reset passwords for users', async () => {
     assert.equal(duplicate.status, 409)
 
     const weak = await request(baseUrl, '/api/users', {
-      method: 'POST', body: JSON.stringify({ email: 'weak@example.test', displayName: 'Weak', role: 'accountant', password: 'onlyletters' }),
+      method: 'POST', body: JSON.stringify({ username: 'weak@example.test', displayName: 'Weak', role: 'accountant', password: 'abc' }),
     })
     assert.equal(weak.status, 400)
+
+    const simple = await request(baseUrl, '/api/users', {
+      method: 'POST', body: JSON.stringify({ username: 'nurse1', displayName: 'ممرضة', role: 'receptionist', password: '1234' }),
+    })
+    assert.equal(simple.status, 201, 'a plain username and a 4-character password are accepted')
+
+    const spaced = await request(baseUrl, '/api/users', {
+      method: 'POST', body: JSON.stringify({ username: 'two words', displayName: 'X', role: 'receptionist', password: '1234' }),
+    })
+    assert.equal(spaced.status, 400)
 
     const roleResponse = await request(baseUrl, `/api/users/${created.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'radiologist' }) })
     assert.equal(roleResponse.status, 200)
@@ -234,7 +244,7 @@ test('user management is forbidden for non-admin roles', async () => {
     const token = TEST_TOKENS.branch_manager
     const attempts: Array<[string, TestRequestOptions]> = [
       ['/api/users', { token }],
-      ['/api/users', { method: 'POST', body: JSON.stringify({ email: 'x@example.test', displayName: 'X', role: 'admin', password: PASSWORD }), token }],
+      ['/api/users', { method: 'POST', body: JSON.stringify({ username: 'x@example.test', displayName: 'X', role: 'admin', password: PASSWORD }), token }],
       [`/api/users/${target.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'admin' }), token }],
       [`/api/users/${target.id}/reset-password`, { method: 'POST', body: JSON.stringify({ password: NEW_PASSWORD }), token }],
     ]

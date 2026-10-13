@@ -30,22 +30,22 @@ export class LoginThrottle {
   }
 
   /** Milliseconds until another attempt is allowed, or 0 when the attempt may proceed. */
-  retryAfterMs(email: string, address: string): number {
+  retryAfterMs(username: string, address: string): number {
     const now = this.now()
-    return Math.max(this.lockRemaining(this.accountKey(email), now), this.lockRemaining(this.addressKey(address), now))
+    return Math.max(this.lockRemaining(this.accountKey(username), now), this.lockRemaining(this.addressKey(address), now))
   }
 
-  recordFailure(email: string, address: string): void {
-    this.bump(this.accountKey(email), this.options.maxFailuresPerAccount)
+  recordFailure(username: string, address: string): void {
+    this.bump(this.accountKey(username), this.options.maxFailuresPerAccount)
     this.bump(this.addressKey(address), this.options.maxFailuresPerAddress)
   }
 
-  recordSuccess(email: string): void {
-    this.buckets.delete(this.accountKey(email))
+  recordSuccess(username: string): void {
+    this.buckets.delete(this.accountKey(username))
   }
 
-  private accountKey(email: string): string {
-    return `account:${email.trim().toLowerCase()}`
+  private accountKey(username: string): string {
+    return `account:${username.trim().toLowerCase()}`
   }
 
   private addressKey(address: string): string {

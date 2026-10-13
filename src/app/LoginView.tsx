@@ -7,30 +7,30 @@ type LoginViewProps = {
 
 function loginErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 401) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
+    if (error.status === 401) return 'اسم المستخدم أو كلمة المرور غير صحيحة.'
     if (error.status === 429) {
       const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60))
       return `محاولات كثيرة، حاول بعد ${new Intl.NumberFormat('ar-EG').format(minutes)} ${minutes === 1 ? 'دقيقة' : 'دقائق'}.`
     }
-    if (error.status === 400) return 'أدخل البريد الإلكتروني وكلمة المرور.'
+    if (error.status === 400) return 'أدخل اسم المستخدم وكلمة المرور.'
     if (error.status === 0 || error.status >= 500) return 'خدمة الدخول غير متاحة حاليًا. حاول مرة أخرى بعد قليل.'
   }
   return 'تعذر تسجيل الدخول. حاول مرة أخرى.'
 }
 
 export default function LoginView({ onSuccess }: LoginViewProps) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setSubmitting] = useState(false)
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!email.trim() || !password) { setError('أدخل البريد الإلكتروني وكلمة المرور.'); return }
+    if (!username.trim() || !password) { setError('أدخل اسم المستخدم وكلمة المرور.'); return }
     setError('')
     setSubmitting(true)
     try {
-      const session = await login({ email, password })
+      const session = await login({ username, password })
       await onSuccess(session)
     } catch (requestError) {
       setError(loginErrorMessage(requestError))
@@ -52,18 +52,18 @@ export default function LoginView({ onSuccess }: LoginViewProps) {
         </div>
         <form className="login-form" onSubmit={submit} noValidate aria-busy={isSubmitting}>
           <div className="login-field">
-            <label htmlFor="login-email">البريد الإلكتروني</label>
+            <label htmlFor="login-username">اسم المستخدم</label>
             <input
-              id="login-email"
+              id="login-username"
               className="form-input"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              inputMode="email"
-              dir="ltr"
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               required
-              placeholder="name@example.com"
+              placeholder="admin"
             />
           </div>
           <div className="login-field">

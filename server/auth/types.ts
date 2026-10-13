@@ -7,7 +7,7 @@ export function isRole(value: unknown): value is Role {
 
 export type AuthenticatedUser = {
   id: string
-  email: string
+  username: string
   displayName: string
   role: Role
   mustChangePassword: boolean
@@ -22,7 +22,7 @@ export type UserAccount = AuthenticatedUser & {
 export type StoredUser = UserAccount & { passwordHash: string }
 
 export type NewUserRecord = {
-  email: string
+  username: string
   displayName: string
   role: Role
   passwordHash: string
@@ -38,7 +38,7 @@ export class UserNotFoundError extends Error {}
 export type UserStore = {
   countUsers(): Promise<number>
   countActiveAdmins(): Promise<number>
-  findUserByEmail(email: string): Promise<StoredUser | null>
+  findUserByUsername(username: string): Promise<StoredUser | null>
   findUserById(id: string): Promise<StoredUser | null>
   listUsers(): Promise<UserAccount[]>
   createUser(input: NewUserRecord): Promise<UserAccount>
@@ -56,7 +56,7 @@ export type UserStore = {
 export function toAccount(user: StoredUser): UserAccount {
   return {
     id: user.id,
-    email: user.email,
+    username: user.username,
     displayName: user.displayName,
     role: user.role,
     mustChangePassword: user.mustChangePassword,
@@ -67,5 +67,5 @@ export function toAccount(user: StoredUser): UserAccount {
 }
 
 export function toAuthenticatedUser(user: UserAccount): AuthenticatedUser {
-  return { id: user.id, email: user.email, displayName: user.displayName, role: user.role, mustChangePassword: user.mustChangePassword }
+  return { id: user.id, username: user.username, displayName: user.displayName, role: user.role, mustChangePassword: user.mustChangePassword }
 }

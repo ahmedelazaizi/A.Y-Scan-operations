@@ -53,7 +53,7 @@ export type Capability =
 
 export type AuthenticatedUser = {
   id: string
-  email: string
+  username: string
   displayName: string
   role: AuthRole
   mustChangePassword: boolean
@@ -66,7 +66,7 @@ export type UserAccount = AuthenticatedUser & {
 }
 
 export type NewUserAccount = {
-  email: string
+  username: string
   displayName: string
   role: AuthRole
   password: string
@@ -79,7 +79,7 @@ export type UserAccountUpdate = {
 }
 
 export type LoginCredentials = {
-  email: string
+  username: string
   password: string
 }
 
@@ -100,13 +100,12 @@ export type PasswordChange = {
   newPassword: string
 }
 
-export const MIN_PASSWORD_LENGTH = 10
+export const MIN_PASSWORD_LENGTH = 4
 
 /** Client-side copy of the server password policy (server/auth/passwords.ts). Returns an Arabic message or ''. */
 export function passwordPolicyError(password: string): string {
   if (password.length < MIN_PASSWORD_LENGTH) return `يجب ألا تقل كلمة المرور عن ${MIN_PASSWORD_LENGTH} أحرف.`
   if (password.length > 200) return 'يجب ألا تزيد كلمة المرور عن 200 حرف.'
-  if (!/[A-Za-z\u0600-\u06FF]/.test(password) || !/\d/.test(password)) return 'يجب أن تحتوي كلمة المرور على حروف وأرقام معًا.'
   return ''
 }
 
@@ -115,23 +114,20 @@ const KNOWN_SERVER_MESSAGES: Record<string, string> = {
   'Your role does not allow this action.': 'لا تملك صلاحية تنفيذ هذا الإجراء.',
   'Change your password before continuing.': 'يجب تغيير كلمة المرور قبل المتابعة.',
   'Authentication required.': 'انتهت الجلسة. سجّل الدخول مرة أخرى.',
-  'Invalid credentials.': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+  'Invalid credentials.': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
   'Current password is incorrect.': 'كلمة المرور الحالية غير صحيحة.',
   'New password must differ from the current password.': 'يجب أن تختلف كلمة المرور الجديدة عن الحالية.',
-  'Password must contain letters and digits.': 'يجب أن تحتوي كلمة المرور على حروف وأرقام معًا.',
-  'Password must be at least 10 characters.': 'يجب ألا تقل كلمة المرور عن 10 أحرف.',
+  'Password must be at least 4 characters.': 'يجب ألا تقل كلمة المرور عن 4 أحرف.',
   'At least one active admin account must remain.': 'يجب أن يبقى حساب مدير نظام نشط واحد على الأقل.',
   'You cannot deactivate your own account or change your own role.': 'لا يمكنك تعطيل حسابك أو تغيير دورك بنفسك.',
-  'Email is already registered.': 'هذا البريد الإلكتروني مسجل بالفعل.',
-  'email is invalid.': 'البريد الإلكتروني غير صالح.',
+  'Username is already taken.': 'اسم المستخدم مستخدم بالفعل.',
+  'username is invalid.': 'اسم المستخدم غير صالح: حروف وأرقام فقط (يمكن . _ - @)، من حرفين إلى 64 حرفًا، بدون مسافات.',
   'displayName must be 1-200 characters.': 'الاسم المعروض مطلوب (حتى 200 حرف).',
   'User was not found.': 'لم يتم العثور على المستخدم.',
   'A test with this code already exists.': 'يوجد تحليل آخر بنفس الكود.',
   'Catalog test was not found.': 'لم يتم العثور على التحليل.',
   'One or more tests are not in the active catalog.': 'تحليل أو أكثر غير مفعّل في الدليل. حدّث القائمة وحاول مرة أخرى.',
   'patientId does not reference an existing patient.': 'المريض المحدد غير موجود في السجل.',
-  'First-time setup must be done from the computer that runs A.Y Scan.': 'يجب إجراء الإعداد الأول من الجهاز الذي يشغّل A.Y Scan نفسه.',
-  'The system is already set up.': 'تم إعداد النظام من قبل. سجّل الدخول.',
 }
 
 export class ApiError extends Error {
@@ -618,7 +614,7 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
 export function login(credentials: LoginCredentials): Promise<LoginResponse> {
   return requestJson<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: credentials.email.trim(), password: credentials.password }),
+    body: JSON.stringify({ username: credentials.username.trim(), password: credentials.password }),
   })
 }
 
@@ -637,7 +633,7 @@ export function fetchUsers(): Promise<UserAccount[]> {
 export function createUser(user: NewUserAccount): Promise<UserAccount> {
   return requestJson<UserAccount>('/api/users', {
     method: 'POST',
-    body: JSON.stringify({ ...user, email: user.email.trim(), displayName: user.displayName.trim() }),
+    body: JSON.stringify({ ...user, username: user.username.trim(), displayName: user.displayName.trim() }),
   })
 }
 
@@ -647,14 +643,6 @@ export function updateUser(id: string, update: UserAccountUpdate): Promise<UserA
 
 export function resetUserPassword(id: string, password: string): Promise<void> {
   return requestJson<void>(`/api/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) })
-}
-
-export function fetchSetupStatus(): Promise<{ needsSetup: boolean }> {
-  return requestJson<{ needsSetup: boolean }>('/api/setup/status')
-}
-
-export function completeSetup(account: { email: string; displayName: string; password: string }): Promise<{ user: AuthenticatedUser }> {
-  return requestJson<{ user: AuthenticatedUser }>('/api/setup', { method: 'POST', body: JSON.stringify(account) })
 }
 
 export function logout(): Promise<void> {

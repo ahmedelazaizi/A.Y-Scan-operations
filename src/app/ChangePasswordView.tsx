@@ -44,7 +44,7 @@ function ChangePasswordForm({ onChanged, onCancel, submitLabel }: ChangePassword
       <div className="login-field">
         <label htmlFor={`${id}-new`}>كلمة المرور الجديدة</label>
         <input id={`${id}-new`} className="form-input" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" dir="ltr" minLength={MIN_PASSWORD_LENGTH} aria-describedby={hintId} required />
-        <small className="field-hint" id={hintId}>{MIN_PASSWORD_LENGTH} أحرف على الأقل، وتحتوي على حروف وأرقام.</small>
+        <small className="field-hint" id={hintId}>{MIN_PASSWORD_LENGTH} أحرف على الأقل.</small>
       </div>
       <div className="login-field">
         <label htmlFor={`${id}-confirm`}>تأكيد كلمة المرور الجديدة</label>

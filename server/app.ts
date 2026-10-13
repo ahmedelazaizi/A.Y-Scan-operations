@@ -5,7 +5,6 @@ import { createRouter, publicRoute, type Route } from './router.js'
 import { authRoutes } from './routes/auth-routes.js'
 import { labRoutes } from './routes/lab-routes.js'
 import { operationsRoutes } from './routes/operations-routes.js'
-import { setupRoutes } from './routes/setup-routes.js'
 import { createStaticHandler } from './static.js'
 import type { OrderRepository } from './storage/repository.js'
 
@@ -31,7 +30,6 @@ export function createApp({ repository, auth, webRoot }: AppDependencies): Reque
   const routes = [
     ...systemRoutes(repository),
     ...authRoutes(auth),
-    ...setupRoutes(auth),
     ...labRoutes(repository),
     ...operationsRoutes(repository),
   ]

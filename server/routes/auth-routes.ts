@@ -34,10 +34,10 @@ export function authRoutes(auth: AuthService): Route[] {
   return [
     publicRoute('POST', '/api/auth/login', async (context) => {
       const body = await context.body()
-      if (!isRecord(body) || typeof body.email !== 'string' || typeof body.password !== 'string' || body.password.length > 200) {
-        throw new ValidationError('email and password are required.')
+      if (!isRecord(body) || typeof body.username !== 'string' || typeof body.password !== 'string' || body.password.length > 200) {
+        throw new ValidationError('username and password are required.')
       }
-      const result = await auth.login(body.email, body.password, context.clientAddress)
+      const result = await auth.login(body.username, body.password, context.clientAddress)
       if (result.status === 'throttled') {
         context.response.setHeader('Retry-After', String(result.retryAfterSeconds))
         context.json(429, { error: 'Too Many Requests', message: 'Too many failed sign-in attempts. Try again later.', retryAfterSeconds: result.retryAfterSeconds })
@@ -79,10 +79,10 @@ export function authRoutes(auth: AuthService): Route[] {
 
     route('POST', '/api/users', requires('users.manage'), async (context) => {
       const body = await context.body()
-      if (!isRecord(body)) throw new ValidationError('email, displayName, role, and password are required.')
+      if (!isRecord(body)) throw new ValidationError('username, displayName, role, and password are required.')
       if (!isRole(body.role)) throw new ValidationError('role is invalid.')
       const user = await auth.createUser({
-        email: readString(body.email, 'email'),
+        username: readString(body.username, 'username'),
         displayName: readString(body.displayName, 'displayName', 200),
         role: body.role,
         password: readString(body.password, 'password', 200),

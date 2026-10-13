@@ -30,7 +30,7 @@ test('full clinic workflow against a freshly migrated PostgreSQL database', { sk
     assert.ok(first.applied.length >= 11)
     assert.deepEqual((await runMigrations(migrationPool, undefined, () => {})).applied, [])
 
-    assert.equal(await stores.auth.bootstrapAdmin({ AUTH_ADMIN_EMAIL: 'owner@clinic.test', AUTH_ADMIN_PASSWORD: PASSWORD }), 'created')
+    assert.equal(await stores.auth.bootstrapAdmin({ AUTH_ADMIN_USERNAME: 'owner@clinic.test', AUTH_ADMIN_PASSWORD: PASSWORD }), 'created')
     server.listen(0)
     await once(server, 'listening')
     const address = server.address()
@@ -48,7 +48,7 @@ test('full clinic workflow against a freshly migrated PostgreSQL database', { sk
       return { status: response.status, payload }
     }
 
-    const login = await call('POST', '/api/auth/login', { email: 'owner@clinic.test', password: PASSWORD })
+    const login = await call('POST', '/api/auth/login', { username: 'owner@clinic.test', password: PASSWORD })
     assert.equal(login.status, 200)
     token = String(login.payload?.token)
 

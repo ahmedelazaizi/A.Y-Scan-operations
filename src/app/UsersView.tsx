@@ -20,7 +20,7 @@ type ToastTone = 'success' | 'error'
 type UsersViewProps = { onBack: () => void; onToast: (message: string, tone?: ToastTone) => void }
 type DialogState = { kind: 'create' } | { kind: 'edit'; user: UserAccount } | { kind: 'reset'; user: UserAccount }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const USERNAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}._@-]{1,63}$/u
 
 function Dialog({ titleId, title, description, onClose, children }: { titleId: string; title: string; description: string; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
@@ -50,7 +50,7 @@ function PasswordFields({ idPrefix, password, confirm, onPassword, onConfirm, au
       <label className="form-label" htmlFor={`${idPrefix}-confirm`}>تأكيد كلمة المرور <span className="required-mark">*</span></label>
       <input id={`${idPrefix}-confirm`} className="form-input" type="password" value={confirm} onChange={(event) => onConfirm(event.target.value)} autoComplete="new-password" dir="ltr" required />
     </div>
-    <p className="field-status users-password-hint" id={`${idPrefix}-password-hint`}>{MIN_PASSWORD_LENGTH} أحرف على الأقل وتحتوي على حروف وأرقام. سيُطلب من المستخدم تغييرها عند أول دخول.</p>
+    <p className="field-status users-password-hint" id={`${idPrefix}-password-hint`}>{MIN_PASSWORD_LENGTH} أحرف على الأقل. سيُطلب من المستخدم تغييرها عند أول دخول.</p>
   </div>
 }
 
@@ -62,7 +62,7 @@ function validatePasswordPair(password: string, confirm: string): string {
 }
 
 function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (user: UserAccount) => void }) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState<AuthRole>('receptionist')
   const [password, setPassword] = useState('')
@@ -72,14 +72,14 @@ function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!EMAIL_PATTERN.test(email.trim())) { setError('أدخل بريدًا إلكترونيًا صحيحًا.'); return }
+    if (!USERNAME_PATTERN.test(username.trim())) { setError('اسم المستخدم: حروف وأرقام فقط (ويمكن . _ - @)، من حرفين إلى 64 حرفًا، بدون مسافات.'); return }
     if (!displayName.trim() || displayName.trim().length > 200) { setError('الاسم المعروض مطلوب (حتى 200 حرف).'); return }
     const passwordError = validatePasswordPair(password, confirm)
     if (passwordError) { setError(passwordError); return }
     setSaving(true)
     setError('')
     try {
-      onCreated(await createUser({ email, displayName, role, password }))
+      onCreated(await createUser({ username, displayName, role, password }))
     } catch (requestError) {
       setError(errorMessage(requestError, 'تعذر إنشاء المستخدم.'))
       setSaving(false)
@@ -88,8 +88,8 @@ function CreateUserDialog({ onClose, onCreated }: { onClose: () => void; onCreat
 
   return <Dialog titleId="create-user-title" title="إضافة مستخدم" description="سيُطلب من المستخدم الجديد تغيير كلمة المرور المؤقتة عند أول تسجيل دخول. سلّمها له بطريقة آمنة." onClose={onClose}>
     <form onSubmit={submit} noValidate aria-busy={saving}>
-      <label className="form-label" htmlFor="new-user-email">البريد الإلكتروني <span className="required-mark">*</span></label>
-      <input id="new-user-email" className="form-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="off" inputMode="email" dir="ltr" maxLength={320} autoFocus required />
+      <label className="form-label" htmlFor="new-user-username">اسم المستخدم <span className="required-mark">*</span></label>
+      <input id="new-user-username" className="form-input" type="text" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} dir="ltr" maxLength={64} autoFocus required />
       <div className="form-grid">
         <div>
           <label className="form-label" htmlFor="new-user-name">الاسم المعروض <span className="required-mark">*</span></label>
@@ -132,7 +132,7 @@ function EditUserDialog({ user, isSelf, onClose, onSaved }: { user: UserAccount;
     }
   }
 
-  return <Dialog titleId="edit-user-title" title={`تعديل ${user.displayName}`} description={user.email} onClose={onClose}>
+  return <Dialog titleId="edit-user-title" title={`تعديل ${user.displayName}`} description={user.username} onClose={onClose}>
     <form onSubmit={submit} noValidate aria-busy={saving}>
       <label className="form-label" htmlFor="edit-user-name">الاسم المعروض <span className="required-mark">*</span></label>
       <input id="edit-user-name" className="form-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={200} autoFocus required />
@@ -232,12 +232,12 @@ function UsersView({ onBack, onToast }: UsersViewProps) {
       <div className="panel-heading"><div><h2 id="users-table-title">الحسابات</h2><p>{formatCount(users.length)} حساب · {formatCount(activeCount)} نشط</p></div></div>
       {users.length === 0 ? <div className="empty-state" role="status">لا يوجد مستخدمون.</div> : <div className="catalog-table-wrap"><table className="catalog-table users-table">
         <caption className="sr-only">قائمة المستخدمين</caption>
-        <thead><tr><th scope="col">الاسم</th><th scope="col">البريد الإلكتروني</th><th scope="col">الدور</th><th scope="col">الحالة</th><th scope="col">آخر دخول</th><th scope="col"><span className="sr-only">إجراءات</span></th></tr></thead>
+        <thead><tr><th scope="col">الاسم</th><th scope="col">اسم المستخدم</th><th scope="col">الدور</th><th scope="col">الحالة</th><th scope="col">آخر دخول</th><th scope="col"><span className="sr-only">إجراءات</span></th></tr></thead>
         <tbody>{users.map((user) => {
           const isSelf = user.id === currentUser.id
           return <tr key={user.id}>
             <td><strong>{user.displayName}</strong>{isSelf && <span className="table-subtext">(أنت)</span>}</td>
-            <td dir="ltr">{user.email}</td>
+            <td dir="ltr">{user.username}</td>
             <td>{ROLE_LABELS[user.role]}</td>
             <td><div className="inventory-status-list">
               <span className={`status ${user.isActive ? 'status-success' : 'status-neutral'}`}><span className="status-dot" aria-hidden="true" />{user.isActive ? 'نشط' : 'معطّل'}</span>

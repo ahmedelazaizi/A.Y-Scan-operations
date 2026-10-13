@@ -1,7 +1,7 @@
 import type { Pool } from 'pg'
 import { isRole, UserConflictError, UserNotFoundError, toAccount, type StoredUser, type UserStore } from './types.js'
 
-const USER_COLUMNS = 'id, email, display_name, role, password_hash, is_active, must_change_password, last_login_at, created_at'
+const USER_COLUMNS = 'id, username, display_name, role, password_hash, is_active, must_change_password, last_login_at, created_at'
 const QUALIFIED_USER_COLUMNS = USER_COLUMNS.split(', ').map((column) => `u.${column}`).join(', ')
 
 function formatUser(row: Record<string, unknown>): StoredUser {
@@ -9,7 +9,7 @@ function formatUser(row: Record<string, unknown>): StoredUser {
   if (!isRole(role)) throw new Error('Stored user has an unknown role.')
   return {
     id: String(row.id),
-    email: String(row.email),
+    username: String(row.username),
     displayName: String(row.display_name),
     role,
     passwordHash: String(row.password_hash),
@@ -59,23 +59,23 @@ export function createPostgresUserStore(pool: Pool): UserStore {
       const result = await pool.query<{ count: string }>("SELECT COUNT(*) AS count FROM users WHERE role = 'admin' AND is_active")
       return Number(result.rows[0]?.count ?? 0)
     },
-    findUserByEmail: (email) => findOne('lower(email) = lower($1)', email.trim()),
+    findUserByUsername: (username) => findOne('lower(username) = lower($1)', username.trim()),
     findUserById: (id) => findOne('id = $1', id),
     async listUsers() {
-      const result = await pool.query(`SELECT ${USER_COLUMNS} FROM users ORDER BY lower(email)`)
+      const result = await pool.query(`SELECT ${USER_COLUMNS} FROM users ORDER BY lower(username)`)
       return result.rows.map((row) => toAccount(formatUser(row)))
     },
     async createUser(input) {
       try {
         const result = await pool.query(
-          `INSERT INTO users (email, display_name, role, password_hash, must_change_password)
+          `INSERT INTO users (username, display_name, role, password_hash, must_change_password)
            VALUES (lower($1), $2, $3, $4, $5)
            RETURNING ${USER_COLUMNS}`,
-          [input.email.trim(), input.displayName, input.role, input.passwordHash, input.mustChangePassword],
+          [input.username.trim(), input.displayName, input.role, input.passwordHash, input.mustChangePassword],
         )
         return toAccount(formatUser(result.rows[0]))
       } catch (error) {
-        if (isUniqueViolation(error)) throw new UserConflictError('Email is already registered.')
+        if (isUniqueViolation(error)) throw new UserConflictError('Username is already taken.')
         throw error
       }
     },

@@ -4,7 +4,7 @@ const SCHEME = 'scrypt'
 const KEY_LENGTH = 64
 const SALT_BYTES = 16
 const DEFAULT_PARAMETERS = { N: 16384, r: 8, p: 1 } as const
-export const MIN_PASSWORD_LENGTH = 10
+export const MIN_PASSWORD_LENGTH = 4
 export const MAX_PASSWORD_LENGTH = 200
 
 function deriveKey(password: string, salt: Buffer, options: ScryptOptions): Promise<Buffer> {
@@ -42,9 +42,9 @@ export function getDummyPasswordHash(): Promise<string> {
   return dummyHash
 }
 
+/** Deliberately simple for clinic staff: only a short minimum and a sane maximum. Brute force is limited by the login throttle. */
 export function passwordPolicyError(password: string): string | null {
   if (password.length < MIN_PASSWORD_LENGTH) return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
   if (password.length > MAX_PASSWORD_LENGTH) return `Password must be at most ${MAX_PASSWORD_LENGTH} characters.`
-  if (!/[A-Za-z؀-ۿ]/.test(password) || !/\d/.test(password)) return 'Password must contain letters and digits.'
   return null
 }

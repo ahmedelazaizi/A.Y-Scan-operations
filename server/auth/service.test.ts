@@ -12,7 +12,7 @@ const PASSWORD = 'Strong-pass-123'
 
 async function seededService(store: UserStore = createMemoryUserStore(), throttle?: LoginThrottle) {
   const auth = createAuthService(store, { throttle })
-  const admin = await auth.createUser({ email: 'Admin@Example.test', displayName: 'Admin', role: 'admin', password: PASSWORD }, { mustChangePassword: false })
+  const admin = await auth.createUser({ username: 'Admin@Example.test', displayName: 'Admin', role: 'admin', password: PASSWORD }, { mustChangePassword: false })
   return { auth, store, admin }
 }
 
@@ -26,19 +26,20 @@ test('password hashes are salted per user and verify only the right password', a
   assert.equal(await verifyPassword(PASSWORD, 'not-a-hash'), false)
 })
 
-test('password policy requires length, letters and digits', () => {
-  assert.ok(passwordPolicyError('short1'))
-  assert.ok(passwordPolicyError('onlyletterslong'))
-  assert.equal(passwordPolicyError('كلمةسر-آمنة-2024'), null)
+test('password policy is only a short minimum and a sane maximum', () => {
+  assert.ok(passwordPolicyError('abc'))
+  assert.ok(passwordPolicyError('x'.repeat(201)))
+  assert.equal(passwordPolicyError('1234'), null)
+  assert.equal(passwordPolicyError('كلمة'), null)
   assert.equal(passwordPolicyError(PASSWORD), null)
 })
 
-test('login issues a revocable session and normalizes the email', async () => {
+test('login issues a revocable session and normalizes the username', async () => {
   const { auth } = await seededService()
   const result = await auth.login(' ADMIN@example.test ', PASSWORD, '10.0.0.1')
   assert.equal(result.status, 'success')
   if (result.status !== 'success') return
-  assert.equal(result.user.email, 'admin@example.test')
+  assert.equal(result.user.username, 'admin@example.test')
   assert.deepEqual(await auth.authenticate(result.token), result.user)
   await auth.logout(result.token)
   assert.equal(await auth.authenticate(result.token), null)
@@ -63,7 +64,7 @@ test('repeated failures lock the account temporarily', async () => {
 
 test('deactivated users lose existing sessions immediately', async () => {
   const { auth, admin } = await seededService()
-  const clerk = await auth.createUser({ email: 'clerk@example.test', displayName: 'Clerk', role: 'receptionist', password: PASSWORD })
+  const clerk = await auth.createUser({ username: 'clerk@example.test', displayName: 'Clerk', role: 'receptionist', password: PASSWORD })
   const session = await auth.login('clerk@example.test', PASSWORD, '10.0.0.3')
   assert.equal(session.status, 'success')
   if (session.status !== 'success') return
@@ -75,7 +76,7 @@ test('deactivated users lose existing sessions immediately', async () => {
 
 test('the last active admin cannot be demoted or deactivated, and nobody can lock themselves out', async () => {
   const { auth, admin } = await seededService()
-  const other = await auth.createUser({ email: 'manager@example.test', displayName: 'Manager', role: 'branch_manager', password: PASSWORD })
+  const other = await auth.createUser({ username: 'manager@example.test', displayName: 'Manager', role: 'branch_manager', password: PASSWORD })
   await assert.rejects(auth.updateUser(other, admin.id, { role: 'receptionist' }), AuthConflictError)
   await assert.rejects(auth.updateUser(admin, admin.id, { isActive: false }), AuthConflictError)
   await auth.updateUser(admin, other.id, { role: 'admin' })
@@ -89,7 +90,7 @@ test('changing the own password keeps the current session and revokes the others
   const second = await auth.login('admin@example.test', PASSWORD, '10.0.0.5')
   assert.ok(first.status === 'success' && second.status === 'success')
   await assert.rejects(auth.changeOwnPassword(first.user, first.token, 'Wrong-pass-999', 'Another-pass-456'), AuthCredentialError)
-  await assert.rejects(auth.changeOwnPassword(first.user, first.token, PASSWORD, 'weak'), AuthInputError)
+  await assert.rejects(auth.changeOwnPassword(first.user, first.token, PASSWORD, 'abc'), AuthInputError)
   await auth.changeOwnPassword(first.user, first.token, PASSWORD, 'Another-pass-456')
   assert.ok(await auth.authenticate(first.token))
   assert.equal(await auth.authenticate(second.token), null)
@@ -98,7 +99,7 @@ test('changing the own password keeps the current session and revokes the others
 
 test('admin password reset forces a change at next login and signs the user out', async () => {
   const { auth } = await seededService()
-  const clerk = await auth.createUser({ email: 'clerk@example.test', displayName: 'Clerk', role: 'receptionist', password: PASSWORD }, { mustChangePassword: false })
+  const clerk = await auth.createUser({ username: 'clerk@example.test', displayName: 'Clerk', role: 'receptionist', password: PASSWORD }, { mustChangePassword: false })
   const session = await auth.login('clerk@example.test', PASSWORD, '10.0.0.6')
   assert.ok(session.status === 'success')
   await auth.resetPassword(clerk.id, 'Reset-pass-789')
@@ -107,26 +108,45 @@ test('admin password reset forces a change at next login and signs the user out'
   assert.ok(next.status === 'success' && next.user.mustChangePassword)
 })
 
+test('the default admin (admin / admin123) is created on an empty installation and can sign in', async () => {
+  const auth = createAuthService(createMemoryUserStore())
+  assert.equal(await auth.bootstrapAdmin({}, { useDefaults: true }), 'created-default')
+  assert.equal(await auth.bootstrapAdmin({}, { useDefaults: true }), 'skipped')
+  const result = await auth.login('Admin', 'admin123', '10.0.0.9')
+  assert.ok(result.status === 'success' && result.user.role === 'admin' && !result.user.mustChangePassword)
+})
+
+test('usernames: letters, digits and . _ - @ only, 2-64 characters, case-insensitive', async () => {
+  const { auth } = await seededService()
+  for (const valid of ['nurse1', 'dr.ahmed', 'أحمد', 'a_b-c', 'lab@clinic']) {
+    await auth.createUser({ username: valid, displayName: 'X', role: 'receptionist', password: '1234' })
+  }
+  for (const invalid of ['a', 'two words', '-start', 'x'.repeat(65), 'نقطة!']) {
+    await assert.rejects(auth.createUser({ username: invalid, displayName: 'X', role: 'receptionist', password: '1234' }), AuthInputError)
+  }
+  await assert.rejects(auth.createUser({ username: 'NURSE1', displayName: 'X', role: 'receptionist', password: '1234' }))
+})
+
 test('bootstrap creates the first admin only on an empty installation', async () => {
   const auth = createAuthService(createMemoryUserStore())
-  const environment = { AUTH_ADMIN_EMAIL: 'owner@example.test', AUTH_ADMIN_PASSWORD: PASSWORD }
+  const environment = { AUTH_ADMIN_USERNAME: 'owner@example.test', AUTH_ADMIN_PASSWORD: PASSWORD }
   assert.equal(await auth.bootstrapAdmin({}), 'skipped')
   assert.equal(await auth.bootstrapAdmin(environment), 'created')
-  assert.equal(await auth.bootstrapAdmin({ ...environment, AUTH_ADMIN_EMAIL: 'second@example.test' }), 'skipped')
+  assert.equal(await auth.bootstrapAdmin({ ...environment, AUTH_ADMIN_USERNAME: 'second@example.test' }), 'skipped')
   assert.equal((await auth.listUsers()).length, 1)
-  await assert.rejects(createAuthService(createMemoryUserStore()).bootstrapAdmin({ AUTH_ADMIN_EMAIL: 'x@example.test', AUTH_ADMIN_PASSWORD: 'weak' }), AuthInputError)
+  await assert.rejects(createAuthService(createMemoryUserStore()).bootstrapAdmin({ AUTH_ADMIN_USERNAME: 'x@example.test', AUTH_ADMIN_PASSWORD: 'abc' }), AuthInputError)
 })
 
 const databaseUrl = process.env.TEST_DATABASE_URL
 test('postgres user store enforces the same session rules', { skip: databaseUrl ? false : 'TEST_DATABASE_URL is not set' }, async () => {
   const pool = new Pool({ connectionString: databaseUrl })
   try {
-    await pool.query("DELETE FROM users WHERE email LIKE '%@store-test.example'")
+    await pool.query("DELETE FROM users WHERE username LIKE '%@store-test.example'")
     const store = createPostgresUserStore(pool)
     const auth = createAuthService(store)
-    const admin = await auth.createUser({ email: 'Admin@Store-Test.example', displayName: 'Admin', role: 'admin', password: PASSWORD }, { mustChangePassword: false })
-    assert.equal(admin.email, 'admin@store-test.example')
-    await assert.rejects(auth.createUser({ email: 'ADMIN@store-test.example', displayName: 'Dup', role: 'admin', password: PASSWORD }))
+    const admin = await auth.createUser({ username: 'Admin@Store-Test.example', displayName: 'Admin', role: 'admin', password: PASSWORD }, { mustChangePassword: false })
+    assert.equal(admin.username, 'admin@store-test.example')
+    await assert.rejects(auth.createUser({ username: 'ADMIN@store-test.example', displayName: 'Dup', role: 'admin', password: PASSWORD }))
     const session = await auth.login('admin@store-test.example', PASSWORD, '127.0.0.1')
     assert.ok(session.status === 'success')
     assert.equal((await auth.authenticate(session.token))?.id, admin.id)
@@ -134,7 +154,7 @@ test('postgres user store enforces the same session rules', { skip: databaseUrl 
     await auth.logout(session.token)
     assert.equal(await auth.authenticate(session.token), null)
   } finally {
-    await pool.query("DELETE FROM users WHERE email LIKE '%@store-test.example'")
+    await pool.query("DELETE FROM users WHERE username LIKE '%@store-test.example'")
     await pool.end()
   }
 })

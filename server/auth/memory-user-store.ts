@@ -18,20 +18,20 @@ export function createMemoryUserStore(now: () => number = Date.now): UserStore {
   return {
     async countUsers() { return users.size },
     async countActiveAdmins() { return [...users.values()].filter((user) => user.isActive && user.role === 'admin').length },
-    async findUserByEmail(email) {
-      const normalized = email.trim().toLowerCase()
-      return [...users.values()].find((user) => user.email === normalized) ?? null
+    async findUserByUsername(username) {
+      const normalized = username.trim().toLowerCase()
+      return [...users.values()].find((user) => user.username === normalized) ?? null
     },
     async findUserById(id) { return users.get(id) ?? null },
     async listUsers(): Promise<UserAccount[]> {
-      return [...users.values()].sort((left, right) => left.email.localeCompare(right.email)).map(toAccount)
+      return [...users.values()].sort((left, right) => left.username.localeCompare(right.username)).map(toAccount)
     },
     async createUser(input) {
-      const email = input.email.trim().toLowerCase()
-      if ([...users.values()].some((user) => user.email === email)) throw new UserConflictError('Email is already registered.')
+      const username = input.username.trim().toLowerCase()
+      if ([...users.values()].some((user) => user.username === username)) throw new UserConflictError('Username is already taken.')
       const user: StoredUser = {
         id: randomUUID(),
-        email,
+        username,
         displayName: input.displayName,
         role: input.role,
         passwordHash: input.passwordHash,
