@@ -134,7 +134,7 @@ try {
     }
 
     Write-Step 'Installing production dependencies (pg only)'
-    $runtimePackage = [ordered]@{ name = 'ayscan-runtime'; version = $version; private = $true; dependencies = [ordered]@{ pg = $pgDriverVersion } }
+    $runtimePackage = [ordered]@{ name = 'ayscan-runtime'; version = $version; private = $true; type = 'module'; dependencies = [ordered]@{ pg = $pgDriverVersion } }
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText((Join-Path $StageDir 'package.json'), ($runtimePackage | ConvertTo-Json -Depth 4), $utf8NoBom)
     Push-Location $StageDir

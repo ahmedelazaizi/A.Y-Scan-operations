@@ -10,7 +10,7 @@
   #define OutputDir "..\release"
 #endif
 #define AppName "A.Y Scan"
-#define AppPort "3001"
+#define AppPort "8741"
 #define PowerShell "{sys}\WindowsPowerShell\v1.0\powershell.exe"
 #define HasArabic FileExists(CompilerPath + "Languages\Arabic.isl")
 #define HasLauncher FileExists(StageDir + "\AYScan.exe")

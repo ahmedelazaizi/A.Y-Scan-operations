@@ -20,7 +20,7 @@ try {
     } else {
         Write-Host 'The A.Y Scan server was not running.'
     }
-    Remove-Item -LiteralPath $script:PidFile -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $script:PidFile, $script:PortFile -ErrorAction SilentlyContinue
 
     if (-not $ServerOnly -and (Test-EmbeddedDatabase)) {
         # The server was just killed, so it could not stop the bundled PostgreSQL itself.

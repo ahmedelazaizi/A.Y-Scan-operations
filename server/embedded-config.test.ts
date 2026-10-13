@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
+import net from 'node:net'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -21,8 +22,17 @@ test('embedded PostgreSQL initializes, restarts with the same credentials, and s
   const root = await mkdtemp(path.join(tmpdir(), 'ayscan-embedded-'))
   const dataDir = path.join(root, 'pgdata')
   try {
-    const first = await startEmbeddedPostgres({ binDir: binDir as string, dataDir, port: 55891 })
-    assert.match(first.url, /^postgresql:\/\/ayscan:[0-9a-f]{48}@127\.0\.0\.1:55891\/ayscan$/)
+    // Another program already owns the preferred port: the database must move to a free one instead of failing.
+    const blocker = net.createServer()
+    await new Promise<void>((resolve) => blocker.listen({ port: 55891, host: '127.0.0.1' }, resolve))
+    let first
+    try {
+      first = await startEmbeddedPostgres({ binDir: binDir as string, dataDir, port: 55891 })
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()))
+    }
+    assert.match(first.url, /^postgresql:\/\/ayscan:[0-9a-f]{48}@127\.0\.0\.1:\d+\/ayscan$/)
+    assert.doesNotMatch(first.url, /:55891\//)
     const { Pool } = await import('pg')
     const pool = new Pool({ connectionString: first.url, max: 1 })
     try {
@@ -34,7 +44,8 @@ test('embedded PostgreSQL initializes, restarts with the same credentials, and s
     await first.stop()
 
     const second = await startEmbeddedPostgres({ binDir: binDir as string, dataDir, port: 55891 })
-    assert.equal(second.url, first.url)
+    // After a restart the preferred port is free again, so the database returns to it; the credentials stay the same.
+    assert.equal(new URL(second.url).password, new URL(first.url).password)
     const again = new Pool({ connectionString: second.url, max: 1 })
     try {
       assert.equal((await again.query('SELECT count(*)::int AS n FROM smoke')).rows[0].n, 1)

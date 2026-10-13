@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
+import net from 'node:net'
 import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { Pool } from 'pg'
@@ -104,6 +105,24 @@ async function isRunning(options: EmbeddedPostgresOptions): Promise<boolean> {
   return (await run(executable(options.binDir, 'pg_ctl'), ['status', '-D', options.dataDir])).code === 0
 }
 
+function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = net.createServer()
+    probe.once('error', () => resolve(false))
+    probe.listen({ port, host: '127.0.0.1', exclusive: true }, () => probe.close(() => resolve(true)))
+  })
+}
+
+/** The first free port at or after `preferred`; another program may already own the default one. */
+export async function findFreePort(preferred: number, attempts = 100): Promise<number> {
+  for (let offset = 0; offset < attempts; offset += 1) {
+    const candidate = preferred + offset
+    if (candidate > 65535) break
+    if (await isPortFree(candidate)) return candidate
+  }
+  throw new Error(`No free TCP port was found starting at ${preferred}.`)
+}
+
 async function ensureDatabase(credentials: Credentials): Promise<void> {
   const pool = new Pool({ connectionString: connectionUrl(credentials, 'postgres'), max: 1 })
   try {
@@ -137,15 +156,19 @@ export async function startEmbeddedPostgres(options: EmbeddedPostgresOptions): P
   } else if (!credentials) {
     throw new Error(`The database folder exists but its credentials file is missing (${credentialsPath(dataDir)}). Restore it from a backup or move the data folder aside.`)
   }
-  const effective: Credentials = { ...credentials, port: options.port }
-
   let startedByUs = false
+  let effective: Credentials = credentials
   if (!(await isRunning(resolved))) {
+    // Another program (or a leftover process) may hold the configured port, so use the first free one and remember it.
+    const port = await findFreePort(options.port)
+    if (port !== options.port) log(`Port ${options.port} is in use by another program; the local database will use port ${port}.`)
+    effective = { ...credentials, port }
+    if (port !== credentials.port) await writeFile(credentialsPath(dataDir), JSON.stringify(effective, null, 2), { mode: 0o600 })
     log('Starting the local database...')
     const logFile = path.join(path.dirname(dataDir), 'postgres.log')
     await runChecked(executable(options.binDir, 'pg_ctl'), [
       'start', '-D', dataDir, '-w', '-t', String(START_TIMEOUT_SECONDS), '-l', logFile,
-      '-o', `-p ${options.port} -c listen_addresses=127.0.0.1 -c unix_socket_directories= -c max_connections=60`,
+      '-o', `-p ${port} -c listen_addresses=127.0.0.1 -c unix_socket_directories= -c max_connections=60`,
     ], `Starting PostgreSQL failed (see ${logFile})`)
     startedByUs = true
   }

@@ -14,10 +14,22 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $script:ProjectRoot 'dist-server\server\index.js'))) { throw 'The server build is missing. Run installer\install.cmd again.' }
     Import-RuntimeEnvironment
 
+    # A previous start may have moved to another port because the preferred one was taken; the server it left running keeps it.
+    if (($null -ne (Get-ServerProcess)) -and (Test-Path -LiteralPath $script:PortFile)) {
+        $recorded = (Get-Content -LiteralPath $script:PortFile -Raw).Trim()
+        if ($recorded -match '^\d+$') { $env:PORT = $recorded }
+    }
     $url = Get-ServerUrl
     if ($null -ne (Get-ServerProcess) -and (Test-ServerHealthy)) {
         Write-Host "A.Y Scan is already running at $url"
     } else {
+        $wantedPort = [int]((Get-ServerUrl) -replace '^.*:', '')
+        if (-not (Test-PortFree $wantedPort)) {
+            $chosenPort = Find-FreePort ($wantedPort + 1)
+            Write-Host "Port $wantedPort is used by another program; A.Y Scan will use port $chosenPort instead."
+            $env:PORT = "$chosenPort"
+        }
+        $url = Get-ServerUrl
         Start-Database
         New-Item -ItemType Directory -Force -Path $script:LogDirectory, $script:RunDirectory | Out-Null
         $node = Get-NodeCommand
@@ -43,6 +55,7 @@ try {
             }
             Start-Sleep -Milliseconds 500
         }
+        Set-Content -LiteralPath $script:PortFile -Value $env:PORT -Encoding ASCII
         Write-Host "A.Y Scan is running at $url"
     }
     if (-not $NoBrowser) { Open-AppWindow $url }

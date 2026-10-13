@@ -9,6 +9,7 @@ $script:DatabaseContainer = 'ay-scan-postgres-v2'
 $script:RunDirectory = Join-Path $script:ProjectRoot 'run'
 $script:LogDirectory = Join-Path $script:ProjectRoot 'logs'
 $script:PidFile = Join-Path $script:RunDirectory 'server.pid'
+$script:PortFile = Join-Path $script:RunDirectory 'port.txt'
 $script:PnpmCommand = $null
 $script:PnpmPrefix = @()
 
@@ -264,7 +265,7 @@ function Start-Database {
 
 function Get-ServerUrl {
     $port = [Environment]::GetEnvironmentVariable('PORT', 'Process')
-    if ([string]::IsNullOrWhiteSpace($port)) { $port = '3001' }
+    if ([string]::IsNullOrWhiteSpace($port)) { $port = '8741' }
     return "http://localhost:$port"
 }
 
@@ -296,7 +297,7 @@ function Test-BundledLayout {
 function Import-RuntimeEnvironment {
     if (Test-BundledLayout) {
         $defaults = [ordered]@{
-            PORT = '3001'; HOST = '127.0.0.1'; NODE_ENV = 'production'; APP_TIMEZONE = 'Africa/Cairo'; MIGRATE_ON_START = 'true'
+            PORT = '8741'; HOST = '127.0.0.1'; NODE_ENV = 'production'; APP_TIMEZONE = 'Africa/Cairo'; MIGRATE_ON_START = 'true'
             EMBEDDED_PG = 'true'; PG_BIN_DIR = 'runtime/pgsql/bin'; PG_DATA_DIR = 'data/pgdata'; PG_PORT = '55432'; WEB_ROOT = 'dist'
         }
         foreach ($key in $defaults.Keys) { [Environment]::SetEnvironmentVariable($key, $defaults[$key], 'Process') }
@@ -320,4 +321,25 @@ function Open-AppWindow([string]$Url) {
         }
     }
     Start-Process $Url | Out-Null
+}
+
+# True when nothing is listening on the TCP port (checked on all addresses, so a program bound only to 127.0.0.1 counts too).
+function Test-PortFree([int]$Port) {
+    $listener = $null
+    try {
+        $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Any, $Port)
+        $listener.Start()
+        return $true
+    } catch {
+        return $false
+    } finally {
+        if ($null -ne $listener) { $listener.Stop() }
+    }
+}
+
+function Find-FreePort([int]$Preferred) {
+    for ($candidate = $Preferred; $candidate -lt ($Preferred + 100); $candidate++) {
+        if (Test-PortFree $candidate) { return $candidate }
+    }
+    throw "No free TCP port was found starting at $Preferred."
 }

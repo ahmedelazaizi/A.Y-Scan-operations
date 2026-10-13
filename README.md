@@ -34,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File .\installer\install.ps1
 
 | الخيار | الوظيفة |
 |---|---|
-| `-Port 8080` | تغيير المنفذ (الافتراضي 3001) |
+| `-Port 8080` | تغيير المنفذ (الافتراضي 3001 لهذا المثبّت القديم القائم على Docker) |
 | `-AllowNetworkAccess` | السماح لأجهزة أخرى في شبكة المركز بالدخول (يفتح منفذ Windows Firewall للشبكات الخاصة) |
 | `-ExternalDatabaseUrl "postgresql://..."` | استخدام PostgreSQL موجود بدل Docker |
 | `-NoAutoStart` / `-NoShortcuts` / `-NoBackupSchedule` | تعطيل التشغيل التلقائي / الاختصارات / النسخ المجدول |
@@ -44,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\installer\install.ps1
 
 ## الاستخدام اليومي
 
-- **التشغيل:** اختصار **A.Y Scan** (أو `installer\start.cmd`) — يشغّل قاعدة البيانات والخادم ويفتح المتصفح على `http://localhost:3001`.
+- **التشغيل:** اختصار **A.Y Scan** (أو `installer\start.cmd`) — يشغّل قاعدة البيانات والخادم ويفتح البرنامج في نافذته على `http://localhost:8741`.
 - **الإيقاف:** اختصار **A.Y Scan - Stop** (أو `installer\stop.cmd`). البيانات لا تُحذف أبدًا.
 - **السجلات:** مجلد `logs\` (`server.log` و `server-error.log` و `backup.log`).
 
