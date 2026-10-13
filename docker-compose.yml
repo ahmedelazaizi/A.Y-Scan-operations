@@ -1,0 +1,21 @@
+services:
+  ay-scan-postgres:
+    image: postgres:16.4
+    container_name: ay-scan-postgres-v2
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ayscan_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-ayscan_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-development-only}
+    ports:
+      - "${POSTGRES_PORT:-55433}:5432"
+    volumes:
+      - ay-scan-postgres-data-v2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ay-scan-postgres-data-v2:
