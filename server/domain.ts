@@ -31,6 +31,7 @@ import {
   validateCreateHomeVisitInput,
   type HomeVisit,
 } from './home-visits.js'
+import { checkDeviceConnection, cloneDevice, createDeviceRecord, isDeviceUuid, validateCreateDeviceInput, type LabDevice } from './devices.js'
 import { emptyOperationsReport, isReportDateInRange, validateReportQuery, type OperationsReport, type ReportQuery } from './reports.js'
 import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './storage/repository.js'
 
@@ -317,6 +318,7 @@ export function createMemoryRepository(): OrderRepository {
   let insuranceClaims: InsuranceClaim[] = []
   let nextClaimNumber = 1
   let homeVisits: HomeVisit[] = []
+  let devices: LabDevice[] = []
   const auditEvents: AuditEvent[] = []
 
   return {
@@ -616,7 +618,24 @@ export function createMemoryRepository(): OrderRepository {
        visit.updatedAt = new Date().toISOString()
        return cloneHomeVisit(visit)
      },
-     recordAuditEvent: (input) => recordAuditEvent(auditEvents, input),
+     listDevices: (activeOnly) => devices
+        .filter((device) => activeOnly !== true || device.isActive)
+        .map(cloneDevice),
+      createDevice: (input) => {
+        const normalized = validateCreateDeviceInput(input)
+        if (!normalized) throw new RepositoryInputError('Device input is invalid.')
+        if (devices.some((device) => device.name === normalized.name)) throw new RepositoryConflictError('Device name already exists.')
+        const device = createDeviceRecord(normalized)
+        devices = [device, ...devices]
+        return cloneDevice(device)
+      },
+      checkDeviceConnection: (id) => {
+        if (!isDeviceUuid(id)) throw new RepositoryInputError('id must be a valid UUID.')
+        const device = devices.find((candidate) => candidate.id === id)
+        if (!device) throw new RepositoryNotFoundError('Device was not found.')
+        return checkDeviceConnection(device)
+      },
+      recordAuditEvent: (input) => recordAuditEvent(auditEvents, input),
     listAuditEvents: (options) => listAuditEvents(auditEvents, options),
   }
 }

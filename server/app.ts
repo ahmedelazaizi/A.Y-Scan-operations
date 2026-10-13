@@ -37,6 +37,7 @@ import {
   validateHomeVisitTransitionInput,
 } from './home-visits.js'
 import { parseReportQuery, ReportValidationError } from './reports.js'
+import { validateCreateDeviceInput } from './devices.js'
 import {
   RepositoryConflictError,
   RepositoryInputError,
@@ -64,6 +65,8 @@ const INSURANCE_POLICIES_PATH = `${INSURANCE_PATH}/policies`
 const INSURANCE_CLAIMS_PATH = `${INSURANCE_PATH}/claims`
 const HOME_VISITS_PATH = '/api/home-visits'
 const REPORTS_PATH = '/api/reports'
+const DEVICES_PATH = '/api/devices'
+const DEVICE_CONNECTION_CHECK_SUFFIX = '/check-connection'
 const OPERATIONS_REPORT_PATH = `${REPORTS_PATH}/operations`
 const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 100
@@ -621,6 +624,30 @@ async function transitionHomeVisit(request: IncomingMessage, response: ServerRes
   } catch (error) { sendRepositoryError(response, error) }
 }
 
+async function createDevice(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
+  let parsedBody: unknown
+  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const input = validateCreateDeviceInput(parsedBody)
+  if (!input) { sendBadRequest(response, 'name, manufacturer, model, protocol, endpoint, status, and isActive are invalid.'); return }
+  try {
+    const device = await repository.createDevice(input)
+    await sendAuditedResponse({
+      request, response, repository, statusCode: 201, payload: device,
+      event: { action: 'device.created', entityType: 'device', entityId: device.id, metadata: { method: device.protocol, status: device.status } },
+    })
+  } catch (error) { sendRepositoryError(response, error) }
+}
+
+async function checkDeviceConnection(request: IncomingMessage, response: ServerResponse, id: string, repository: OrderRepository): Promise<void> {
+  try {
+    const result = await repository.checkDeviceConnection(id)
+    await sendAuditedResponse({
+      request, response, repository, statusCode: 200, payload: result,
+      event: { action: 'device.connection_checked', entityType: 'device', entityId: result.device.id, metadata: { method: result.device.protocol, status: result.status } },
+    })
+  } catch (error) { sendRepositoryError(response, error) }
+}
+
 function sendRepositoryResponse<T>(response: ServerResponse, result: RepositoryValue<T>): void {
   Promise.resolve(result).then((payload) => sendJson(response, 200, payload)).catch((error: unknown) => sendRepositoryError(response, error))
 }
@@ -674,7 +701,7 @@ function sendLogout(response: ServerResponse): void {
 }
 
 function isClinicalPath(pathname: string): boolean {
-  const clinicalPaths = ['/api/dashboard', ORDER_PATH, PATIENTS_PATH, CATALOG_PATH, SPECIMENS_PATH, RESULTS_PATH, BILLING_PATH, RADIOLOGY_PATH, INVENTORY_PATH, AUDIT_EVENTS_PATH, INSURANCE_PATH, HOME_VISITS_PATH, REPORTS_PATH]
+  const clinicalPaths = ['/api/dashboard', ORDER_PATH, PATIENTS_PATH, CATALOG_PATH, SPECIMENS_PATH, RESULTS_PATH, BILLING_PATH, RADIOLOGY_PATH, INVENTORY_PATH, AUDIT_EVENTS_PATH, INSURANCE_PATH, HOME_VISITS_PATH, REPORTS_PATH, DEVICES_PATH]
   return clinicalPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 }
 
@@ -800,6 +827,15 @@ export function createApp(repository: OrderRepository = mockRepository): Request
       void createHomeVisit(request, response, repository)
       return
     }
+    if (requestUrl.pathname === DEVICES_PATH && request.method === 'POST') {
+      void createDevice(request, response, repository)
+      return
+    }
+    const deviceConnectionCheckId = extractActionParameter(requestUrl.pathname, `${DEVICES_PATH}/`, DEVICE_CONNECTION_CHECK_SUFFIX)
+    if (request.method === 'POST' && deviceConnectionCheckId !== null) {
+      void checkDeviceConnection(request, response, deviceConnectionCheckId, repository)
+      return
+    }
     const homeVisitTransitionId = extractActionParameter(requestUrl.pathname, `${HOME_VISITS_PATH}/`, '/transition')
     if (request.method === 'POST' && homeVisitTransitionId !== null) {
       if (!isHomeVisitUuid(homeVisitTransitionId)) { sendBadRequest(response, 'id must be a valid UUID.'); return }
@@ -816,6 +852,13 @@ export function createApp(repository: OrderRepository = mockRepository): Request
     }
     if (requestUrl.pathname === '/api/ready') {
       sendJson(response, 200, { status: 'ready', database: repository.databaseMode })
+      return
+    }
+    if (requestUrl.pathname === DEVICES_PATH) {
+      const activeOnlyValue = requestUrl.searchParams.get('activeOnly')
+      const activeOnly = activeOnlyValue === null ? undefined : activeOnlyValue === 'true' ? true : activeOnlyValue === 'false' ? false : null
+      if (activeOnly === null) { sendBadRequest(response, 'activeOnly must be true or false.'); return }
+      sendRepositoryResponse(response, repository.listDevices(activeOnly))
       return
     }
     if (requestUrl.pathname === HOME_VISITS_PATH) {

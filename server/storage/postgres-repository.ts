@@ -42,6 +42,7 @@ import {
   type HomeVisit,
   type HomeVisitStatus,
 } from '../home-visits.js'
+import { checkDeviceConnection as evaluateDeviceConnection, isDeviceUuid, validateCreateDeviceInput, type DeviceConnectionResult, type LabDevice } from '../devices.js'
 import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './repository.js'
 
 const ORDER_STATUS = 'awaiting_sample'
@@ -250,6 +251,22 @@ function formatHomeVisit(row: Record<string, unknown>): HomeVisit {
     assignedTo: row.assigned_to === null || row.assigned_to === undefined ? null : String(row.assigned_to),
     status: row.status as HomeVisitStatus,
     notes: row.notes === null || row.notes === undefined ? null : String(row.notes),
+    createdAt: new Date(String(row.created_at)).toISOString(),
+    updatedAt: new Date(String(row.updated_at)).toISOString(),
+  }
+}
+
+function formatDevice(row: Record<string, unknown>): LabDevice {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    manufacturer: row.manufacturer === null || row.manufacturer === undefined ? null : String(row.manufacturer),
+    model: row.model === null || row.model === undefined ? null : String(row.model),
+    protocol: row.protocol as LabDevice['protocol'],
+    endpoint: String(row.endpoint),
+    status: row.status as LabDevice['status'],
+    isActive: Boolean(row.is_active),
+    lastSeenAt: row.last_seen_at === null || row.last_seen_at === undefined ? null : new Date(String(row.last_seen_at)).toISOString(),
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   }
@@ -988,6 +1005,49 @@ async function recordPayment(pool: Pool, invoiceId: string, amount: number, meth
   }
 }
 
+const DEVICE_COLUMNS = 'id, name, manufacturer, model, protocol, endpoint, status, is_active, last_seen_at, created_at, updated_at'
+
+async function findDevice(pool: Pool, id: string): Promise<LabDevice> {
+  if (!isDeviceUuid(id)) throw new RepositoryInputError('id must be a valid UUID.')
+  const result = await pool.query(`SELECT ${DEVICE_COLUMNS} FROM lab_devices WHERE id = $1`, [id])
+  if (!result.rows[0]) throw new RepositoryNotFoundError('Device was not found.')
+  return formatDevice(result.rows[0])
+}
+
+async function listDevices(pool: Pool, activeOnly: boolean | undefined): Promise<LabDevice[]> {
+  const result = await pool.query(
+    `SELECT ${DEVICE_COLUMNS}
+     FROM lab_devices
+     WHERE ($1::boolean IS NOT TRUE OR is_active = TRUE)
+     ORDER BY name ASC`,
+    [activeOnly === true],
+  )
+  return result.rows.map(formatDevice)
+}
+
+async function createDevice(pool: Pool, input: Parameters<OrderRepository['createDevice']>[0]): Promise<LabDevice> {
+  const normalized = validateCreateDeviceInput(input)
+  if (!normalized) throw new RepositoryInputError('Device input is invalid.')
+  try {
+    const result = await pool.query(
+      `INSERT INTO lab_devices (name, manufacturer, model, protocol, endpoint, status, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING ${DEVICE_COLUMNS}`,
+      [normalized.name, normalized.manufacturer ?? null, normalized.model ?? null, normalized.protocol, normalized.endpoint, normalized.status ?? 'unknown', normalized.isActive ?? true],
+    )
+    return formatDevice(result.rows[0])
+  } catch (error) {
+    if (isPostgresError(error, '23505')) throw new RepositoryConflictError('Device name already exists.')
+    if (isPostgresError(error, '22P02') || isPostgresError(error, '23514')) throw new RepositoryInputError('Device input is invalid.')
+    throw error
+  }
+}
+
+async function checkDeviceConnection(pool: Pool, id: string): Promise<DeviceConnectionResult> {
+  const device = await findDevice(pool, id)
+  return evaluateDeviceConnection(device)
+}
+
 function reportDateFilter(column: string): string {
   return `($1::date IS NULL OR ${column} >= $1::date) AND ($2::date IS NULL OR ${column} < ($2::date + INTERVAL '1 day'))`
 }
@@ -1130,5 +1190,8 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
        pool, patientId, orderId, address, contactPhone, scheduledAt, assignedTo, notes,
      ),
      transitionHomeVisit: (id, nextStatus) => transitionHomeVisit(pool, id, nextStatus),
+      listDevices: (activeOnly) => listDevices(pool, activeOnly),
+      createDevice: (input) => createDevice(pool, input),
+      checkDeviceConnection: (id) => checkDeviceConnection(pool, id),
   }
 }

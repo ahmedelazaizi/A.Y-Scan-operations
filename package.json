@@ -21,6 +21,7 @@
     "db:migrate:inventory": "tsx server/migrate-inventory.ts",
     "db:migrate:insurance": "tsx server/migrate-insurance.ts",
     "db:migrate:home-visits": "tsx server/migrate-home-visits.ts",
+    "db:migrate:devices": "tsx server/migrate-devices.ts",
     "test": "tsx --test server/**/*.test.ts"
   },
   "dependencies": {

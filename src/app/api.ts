@@ -127,6 +127,41 @@ export type CatalogItem = {
   isActive: boolean
 }
 
+export type DeviceProtocol = 'hl7' | 'astm' | 'tcp_ip' | 'serial'
+export type DeviceStatus = 'configured' | 'online' | 'offline' | 'unknown'
+
+export type LabDevice = {
+  id: string
+  name: string
+  manufacturer: string | null
+  model: string | null
+  protocol: DeviceProtocol
+  endpoint: string
+  status: DeviceStatus
+  isActive: boolean
+  lastSeenAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type NewDevice = {
+  name: string
+  manufacturer?: string
+  model?: string
+  protocol: DeviceProtocol
+  endpoint: string
+  status?: DeviceStatus
+  isActive?: boolean
+}
+
+export type DeviceConnectionResult = {
+  device: LabDevice
+  status: DeviceStatus
+  adapterConfigured: false
+  message: string
+  lastCheckedAt: string
+}
+
 export type SpecimenStatus = 'pending' | 'collected' | 'received' | 'processing' | 'rejected' | 'completed'
 
 export type Specimen = {
@@ -468,6 +503,19 @@ export function createPatient(patient: NewPatient): Promise<Patient> {
 
 export function fetchCatalog(): Promise<CatalogItem[]> {
   return requestJson<CatalogItem[]>('/api/catalog')
+}
+
+export function fetchDevices(activeOnly = false): Promise<LabDevice[]> {
+  const query = new URLSearchParams({ activeOnly: String(activeOnly) })
+  return requestJson<LabDevice[]>(`/api/devices?${query.toString()}`)
+}
+
+export function createDevice(device: NewDevice): Promise<LabDevice> {
+  return requestJson<LabDevice>('/api/devices', { method: 'POST', body: JSON.stringify(device) })
+}
+
+export function checkDeviceConnection(id: string): Promise<DeviceConnectionResult> {
+  return requestJson<DeviceConnectionResult>(`/api/devices/${encodeURIComponent(id)}/check-connection`, { method: 'POST' })
 }
 
 export function fetchSpecimens(status?: SpecimenStatus): Promise<Specimen[]> {

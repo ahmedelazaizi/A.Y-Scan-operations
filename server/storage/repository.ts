@@ -18,6 +18,7 @@ import type { InventoryAdjustmentDirection, InventoryItem, InventoryMovementResu
 import type { AuditEvent, AuditEventInput, AuditEventListOptions } from '../audit.js'
 import type { InsuranceClaim, InsuranceClaimStatus, InsurancePolicy } from '../insurance.js'
 import type { HomeVisit, HomeVisitStatus } from '../home-visits.js'
+import type { CreateDeviceInput, DeviceConnectionResult, LabDevice } from '../devices.js'
 
 export type RepositoryValue<T> = T | Promise<T>
 
@@ -100,5 +101,8 @@ export type OrderRepository = {
     notes?: string,
   ): RepositoryValue<HomeVisit>
   transitionHomeVisit(id: string, nextStatus: HomeVisitStatus): RepositoryValue<HomeVisit>
+  listDevices(activeOnly?: boolean): RepositoryValue<LabDevice[]>
+  createDevice(input: CreateDeviceInput): RepositoryValue<LabDevice>
+  checkDeviceConnection(id: string): RepositoryValue<DeviceConnectionResult>
   readonly databaseMode: 'configured' | 'memory'
 }
