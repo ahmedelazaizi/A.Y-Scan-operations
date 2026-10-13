@@ -1103,10 +1103,18 @@ async function getOperationsReport(pool: Pool, from?: string, to?: string): Prom
   return report
 }
 
+function createPool(databaseUrl: string): Pool {
+  const pool = new Pool({ connectionString: databaseUrl, max: 10 })
+  // An idle client losing its connection must not crash the process; the pool replaces it on next checkout.
+  pool.on('error', (error) => console.error('PostgreSQL idle client error:', error.message))
+  return pool
+}
+
 export function createPostgresRepository(databaseUrl: string, poolOverride?: Pool): OrderRepository {
-  const pool = poolOverride ?? new Pool({ connectionString: databaseUrl, max: 10 })
+  const pool = poolOverride ?? createPool(databaseUrl)
   return {
     databaseMode: 'configured',
+    close: () => pool.end(),
     listRecent: () => findRecentOrders(pool),
     getDashboard: async () => {
       const recentOrders = await findRecentOrders(pool)
@@ -1151,7 +1159,7 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
           priority: input.priority ?? 'normal',
         }
       } catch (error) {
-        await client.query('ROLLBACK')
+        try { await client.query('ROLLBACK') } catch { /* preserve the original repository error */ }
         throw error
       } finally {
         client.release()

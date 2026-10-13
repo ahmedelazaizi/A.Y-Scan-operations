@@ -105,4 +105,6 @@ export type OrderRepository = {
   createDevice(input: CreateDeviceInput): RepositoryValue<LabDevice>
   checkDeviceConnection(id: string): RepositoryValue<DeviceConnectionResult>
   readonly databaseMode: 'configured' | 'memory'
+  /** Releases pooled connections; optional for stores without external resources. */
+  close?(): Promise<void>
 }

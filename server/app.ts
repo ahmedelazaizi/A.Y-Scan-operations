@@ -45,7 +45,18 @@ import {
   type OrderRepository,
   type RepositoryValue,
 } from './storage/repository.js'
-import { applyCors, readBody, sendBadRequest, sendJson, sendMethodNotAllowed, sendNotFound } from './http.js'
+import {
+  applyCors,
+  applySecurityHeaders,
+  readJsonBody,
+  RequestBodyError,
+  sendBadRequest,
+  sendInternalError,
+  sendJson,
+  sendMethodNotAllowed,
+  sendNotFound,
+  sendRequestBodyError,
+} from './http.js'
 
 const SERVICE_NAME = 'ay-scan-api'
 const ORDER_PATH = '/api/orders'
@@ -307,6 +318,19 @@ function parsePageValue(value: string | null, fallback: number, maximum?: number
   return maximum === undefined ? parsed : Math.min(parsed, maximum)
 }
 
+const BODY_REJECTED = Symbol('body-rejected')
+
+/** Parses the JSON body; on failure the error response is already sent and BODY_REJECTED is returned. */
+async function parseRequestBody(request: IncomingMessage, response: ServerResponse): Promise<unknown> {
+  try {
+    return await readJsonBody(request)
+  } catch (error) {
+    if (error instanceof RequestBodyError) sendRequestBodyError(response, error)
+    else sendInternalError(response)
+    return BODY_REJECTED
+  }
+}
+
 function auditActorId(request: IncomingMessage): string {
   return authenticateRequest(request)?.id ?? 'system'
 }
@@ -325,13 +349,8 @@ async function sendAuditedResponse(input: AuditedResponseInput): Promise<void> {
 }
 
 async function createPatient(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try {
-    parsedBody = JSON.parse(await readBody(request))
-  } catch {
-    sendBadRequest(response, 'Body must be valid JSON.')
-    return
-  }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validatePatientInput(parsedBody)
   if (!input) {
     sendBadRequest(response, 'fullName, dateOfBirth, and sex are invalid.')
@@ -349,13 +368,8 @@ async function createPatient(request: IncomingMessage, response: ServerResponse,
 }
 
 async function createOrder(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try {
-    parsedBody = JSON.parse(await readBody(request))
-  } catch {
-    sendBadRequest(response, 'Body must be valid JSON.')
-    return
-  }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateOrderInput(parsedBody)
   if (!input) {
     sendBadRequest(response, 'patientName, tests, and priority are invalid.')
@@ -389,12 +403,13 @@ function sendRepositoryError(response: ServerResponse, error: unknown): void {
     sendJson(response, 409, { error: 'Conflict', message: error.message })
     return
   }
+  console.error('Repository operation failed:', error instanceof Error ? error.message : 'unknown error')
   sendJson(response, 503, { error: 'Service Unavailable' })
 }
 
 async function createSpecimen(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateSpecimenInput(parsedBody)
   if (!input) { sendBadRequest(response, 'orderId, specimenType, and barcode are invalid.'); return }
   try {
@@ -417,8 +432,8 @@ async function collectSpecimen(request: IncomingMessage, barcode: string, respon
 }
 
 async function createResult(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateResultInput(parsedBody)
   if (!input) { sendBadRequest(response, 'orderItemId, value, and flag are invalid.'); return }
   try {
@@ -441,8 +456,8 @@ async function reviewResult(request: IncomingMessage, id: string, response: Serv
 }
 
 async function createInvoice(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateInvoiceInput(parsedBody)
   if (!input) { sendBadRequest(response, 'orderId, items, discount, and tax are invalid.'); return }
   try {
@@ -455,8 +470,8 @@ async function createInvoice(request: IncomingMessage, response: ServerResponse,
 }
 
 async function recordPayment(request: IncomingMessage, response: ServerResponse, invoiceId: string, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validatePaymentInput(parsedBody)
   if (!input) { sendBadRequest(response, 'amount, method, and reference are invalid.'); return }
   try {
@@ -469,8 +484,8 @@ async function recordPayment(request: IncomingMessage, response: ServerResponse,
 }
 
 async function createRadiologyStudy(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateRadiologyStudyInput(parsedBody)
   if (!input) { sendBadRequest(response, 'patientId, modality, bodyPart, priority, scheduledAt, and referringProvider are invalid.'); return }
   try {
@@ -493,8 +508,8 @@ async function startRadiologyStudy(request: IncomingMessage, id: string, respons
 }
 
 async function reportRadiologyStudy(request: IncomingMessage, response: ServerResponse, id: string, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateRadiologyReportInput(parsedBody)
   if (!input) { sendBadRequest(response, 'reportText and impression are required.'); return }
   try {
@@ -517,8 +532,8 @@ async function verifyRadiologyStudy(request: IncomingMessage, id: string, respon
 }
 
 async function createInventoryItem(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateCreateInventoryItemInput(parsedBody)
   if (!input) { sendBadRequest(response, 'sku, name, category, unit, and reorderLevel are invalid.'); return }
   try {
@@ -536,8 +551,8 @@ async function recordInventoryMovement(
   itemId: string,
   repository: OrderRepository,
 ): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateRecordInventoryMovementInput(parsedBody)
   if (!input) { sendBadRequest(response, 'type, quantity, reason, reference, and adjustmentDirection are invalid.'); return }
   try {
@@ -552,8 +567,8 @@ async function recordInventoryMovement(
 }
 
 async function createInsurancePolicy(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateCreateInsurancePolicyInput(parsedBody)
   if (!input) { sendBadRequest(response, 'patientId, payerName, memberNumber, planName, coveragePercent, validFrom, and validTo are invalid.'); return }
   try {
@@ -566,8 +581,8 @@ async function createInsurancePolicy(request: IncomingMessage, response: ServerR
 }
 
 async function createInsuranceClaim(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateCreateInsuranceClaimInput(parsedBody)
   if (!input) { sendBadRequest(response, 'policyId, orderId, and amount are invalid.'); return }
   try {
@@ -580,8 +595,8 @@ async function createInsuranceClaim(request: IncomingMessage, response: ServerRe
 }
 
 async function transitionInsuranceClaim(request: IncomingMessage, response: ServerResponse, id: string, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateTransitionInsuranceClaimInput(parsedBody)
   if (!input) { sendBadRequest(response, 'status is invalid.'); return }
   try {
@@ -594,8 +609,8 @@ async function transitionInsuranceClaim(request: IncomingMessage, response: Serv
 }
 
 async function createHomeVisit(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateCreateHomeVisitInput(parsedBody)
   if (!input) { sendBadRequest(response, 'patientId, orderId, address, contactPhone, scheduledAt, assignedTo, and notes are invalid.'); return }
   try {
@@ -611,8 +626,8 @@ async function createHomeVisit(request: IncomingMessage, response: ServerRespons
 }
 
 async function transitionHomeVisit(request: IncomingMessage, response: ServerResponse, id: string, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateHomeVisitTransitionInput(parsedBody)
   if (!input) { sendBadRequest(response, 'status is invalid.'); return }
   try {
@@ -625,8 +640,8 @@ async function transitionHomeVisit(request: IncomingMessage, response: ServerRes
 }
 
 async function createDevice(request: IncomingMessage, response: ServerResponse, repository: OrderRepository): Promise<void> {
-  let parsedBody: unknown
-  try { parsedBody = JSON.parse(await readBody(request)) } catch { sendBadRequest(response, 'Body must be valid JSON.'); return }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return
   const input = validateCreateDeviceInput(parsedBody)
   if (!input) { sendBadRequest(response, 'name, manufacturer, model, protocol, endpoint, status, and isActive are invalid.'); return }
   try {
@@ -653,13 +668,8 @@ function sendRepositoryResponse<T>(response: ServerResponse, result: RepositoryV
 }
 
 async function readLoginCredentials(request: IncomingMessage, response: ServerResponse): Promise<{ email: string; password: string } | null> {
-  let parsedBody: unknown
-  try {
-    parsedBody = JSON.parse(await readBody(request))
-  } catch {
-    sendBadRequest(response, 'Body must be valid JSON.')
-    return null
-  }
+  const parsedBody = await parseRequestBody(request, response)
+  if (parsedBody === BODY_REJECTED) return null
   const credentials = parseLoginCredentials(parsedBody)
   if (!credentials) sendBadRequest(response, 'email and password are required.')
   return credentials
@@ -713,7 +723,20 @@ function extractActionParameter(pathname: string, prefix: string, suffix: string
 }
 
 export function createApp(repository: OrderRepository = mockRepository): RequestHandler {
+  const route = createRouteHandler(repository)
   return (request, response) => {
+    try {
+      route(request, response)
+    } catch (error) {
+      console.error('Unhandled request error:', error instanceof Error ? error.message : 'unknown error')
+      sendInternalError(response)
+    }
+  }
+}
+
+function createRouteHandler(repository: OrderRepository): RequestHandler {
+  return (request, response) => {
+    applySecurityHeaders(response)
     applyCors(response, request.headers.origin)
     const requestUrl = new URL(request.url ?? '/', 'http://localhost')
 
@@ -904,7 +927,7 @@ export function createApp(repository: OrderRepository = mockRepository): Request
         sendRepositoryResponse(response, repository.getOperationsReport(period.from ?? undefined, period.to ?? undefined))
       } catch (error) {
         if (error instanceof ReportValidationError) sendBadRequest(response, error.message)
-        else throw error
+        else sendInternalError(response)
       }
       return
     }
