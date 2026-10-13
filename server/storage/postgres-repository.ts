@@ -10,6 +10,7 @@ import type {
   SpecimenStatus,
   TestCatalogItem,
 } from '../domain.js'
+import { emptyOperationsReport, validateReportQuery, type OperationsReport } from '../reports.js'
 import { calculateInvoiceTotals, isInvoiceStatus, isPaymentMethod, normalizePaymentAmount, roundMoney, type Invoice, type InvoiceItem, type InvoiceItemInput, type Payment, type PaymentMethod } from '../billing.js'
 import { isRadiologyModality, isRadiologyPriority, isRadiologyStudyStatus, type RadiologyModality, type RadiologyPriority, type RadiologyStudy, type RadiologyStudyStatus } from '../radiology.js'
 import {
@@ -987,6 +988,61 @@ async function recordPayment(pool: Pool, invoiceId: string, amount: number, meth
   }
 }
 
+function reportDateFilter(column: string): string {
+  return `($1::date IS NULL OR ${column} >= $1::date) AND ($2::date IS NULL OR ${column} < ($2::date + INTERVAL '1 day'))`
+}
+
+function reportNumber(row: Record<string, unknown>, field: string): number {
+  return Number(row[field] ?? 0)
+}
+
+async function getOperationsReport(pool: Pool, from?: string, to?: string): Promise<OperationsReport> {
+  const period = validateReportQuery({ from, to })
+  const result = await pool.query<Record<string, unknown>>(`
+    SELECT
+      (SELECT COUNT(*) FROM orders o WHERE ${reportDateFilter('o.created_at')}) AS orders_total,
+      (SELECT COUNT(*) FROM orders o WHERE ${reportDateFilter('o.created_at')} AND o.status = 'completed') AS orders_completed,
+      (SELECT COUNT(*) FROM orders o WHERE ${reportDateFilter('o.created_at')} AND o.status = 'awaiting_sample') AS orders_awaiting_sample,
+      (SELECT COUNT(*) FROM orders o WHERE ${reportDateFilter('o.created_at')} AND o.status IN ('processing', 'ready_for_review')) AS orders_in_progress,
+      (SELECT COUNT(*) FROM specimens s WHERE ${reportDateFilter('s.created_at')}) AS specimens_total,
+      (SELECT COUNT(*) FROM specimens s WHERE ${reportDateFilter('s.created_at')} AND s.status = 'collected') AS specimens_collected,
+      (SELECT COUNT(*) FROM specimens s WHERE ${reportDateFilter('s.created_at')} AND s.status = 'processing') AS specimens_processing,
+      (SELECT COUNT(*) FROM specimens s WHERE ${reportDateFilter('s.created_at')} AND s.status = 'completed') AS specimens_completed,
+      (SELECT COUNT(*) FROM lab_results r WHERE ${reportDateFilter('r.created_at')}) AS results_total,
+      (SELECT COUNT(*) FROM lab_results r WHERE ${reportDateFilter('r.created_at')} AND r.status = 'draft') AS results_draft,
+      (SELECT COUNT(*) FROM lab_results r WHERE ${reportDateFilter('r.created_at')} AND r.status <> 'draft') AS results_reviewed,
+      (SELECT COALESCE(SUM(i.total), 0) FROM invoices i WHERE ${reportDateFilter('i.created_at')} AND i.status <> 'void') AS billing_invoiced,
+      (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE ${reportDateFilter('p.paid_at')}) AS billing_paid,
+      (SELECT COALESCE(SUM(i.total - COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.invoice_id = i.id), 0)), 0) FROM invoices i WHERE ${reportDateFilter('i.created_at')} AND i.status <> 'void') AS billing_open,
+      (SELECT COUNT(*) FROM radiology_studies r WHERE ${reportDateFilter('r.created_at')}) AS radiology_total,
+      (SELECT COUNT(*) FROM radiology_studies r WHERE ${reportDateFilter('r.created_at')} AND r.status = 'scheduled') AS radiology_scheduled,
+      (SELECT COUNT(*) FROM radiology_studies r WHERE ${reportDateFilter('r.created_at')} AND r.status = 'in_progress') AS radiology_in_progress,
+      (SELECT COUNT(*) FROM radiology_studies r WHERE ${reportDateFilter('r.created_at')} AND r.status = 'reported') AS radiology_reported,
+      (SELECT COUNT(*) FROM radiology_studies r WHERE ${reportDateFilter('r.created_at')} AND r.status = 'verified') AS radiology_verified,
+      (SELECT COUNT(*) FROM inventory_items i WHERE ${reportDateFilter('i.created_at')} AND i.is_active) AS inventory_items,
+      (SELECT COUNT(*) FROM inventory_items i WHERE ${reportDateFilter('i.created_at')} AND i.is_active AND i.quantity <= i.reorder_level) AS inventory_low_stock,
+      (SELECT COUNT(*) FROM insurance_claims c WHERE ${reportDateFilter('c.created_at')}) AS insurance_claims_total,
+      (SELECT COUNT(*) FROM insurance_claims c WHERE ${reportDateFilter('c.created_at')} AND c.status = 'submitted') AS insurance_submitted,
+      (SELECT COUNT(*) FROM insurance_claims c WHERE ${reportDateFilter('c.created_at')} AND c.status = 'approved') AS insurance_approved,
+      (SELECT COUNT(*) FROM insurance_claims c WHERE ${reportDateFilter('c.created_at')} AND c.status = 'paid') AS insurance_paid,
+      (SELECT COUNT(*) FROM home_visits h WHERE ${reportDateFilter('h.scheduled_at')}) AS home_visits_total,
+      (SELECT COUNT(*) FROM home_visits h WHERE ${reportDateFilter('h.scheduled_at')} AND h.status = 'scheduled') AS home_visits_scheduled,
+      (SELECT COUNT(*) FROM home_visits h WHERE ${reportDateFilter('h.scheduled_at')} AND h.status = 'in_progress') AS home_visits_in_progress,
+      (SELECT COUNT(*) FROM home_visits h WHERE ${reportDateFilter('h.scheduled_at')} AND h.status = 'completed') AS home_visits_completed
+  `, [period.from, period.to])
+  const row = result.rows[0] ?? {}
+  const report = emptyOperationsReport(period)
+  report.orders = { total: reportNumber(row, 'orders_total'), completed: reportNumber(row, 'orders_completed'), awaitingSample: reportNumber(row, 'orders_awaiting_sample'), inProgress: reportNumber(row, 'orders_in_progress') }
+  report.specimens = { total: reportNumber(row, 'specimens_total'), collected: reportNumber(row, 'specimens_collected'), processing: reportNumber(row, 'specimens_processing'), completed: reportNumber(row, 'specimens_completed') }
+  report.results = { total: reportNumber(row, 'results_total'), draft: reportNumber(row, 'results_draft'), reviewed: reportNumber(row, 'results_reviewed') }
+  report.billing = { invoiced: reportNumber(row, 'billing_invoiced'), paid: reportNumber(row, 'billing_paid'), open: Math.max(0, reportNumber(row, 'billing_open')) }
+  report.radiology = { total: reportNumber(row, 'radiology_total'), scheduled: reportNumber(row, 'radiology_scheduled'), inProgress: reportNumber(row, 'radiology_in_progress'), reported: reportNumber(row, 'radiology_reported'), verified: reportNumber(row, 'radiology_verified') }
+  report.inventory = { items: reportNumber(row, 'inventory_items'), lowStock: reportNumber(row, 'inventory_low_stock') }
+  report.insurance = { claimsTotal: reportNumber(row, 'insurance_claims_total'), submitted: reportNumber(row, 'insurance_submitted'), approved: reportNumber(row, 'insurance_approved'), paid: reportNumber(row, 'insurance_paid') }
+  report.homeVisits = { total: reportNumber(row, 'home_visits_total'), scheduled: reportNumber(row, 'home_visits_scheduled'), inProgress: reportNumber(row, 'home_visits_in_progress'), completed: reportNumber(row, 'home_visits_completed') }
+  return report
+}
+
 export function createPostgresRepository(databaseUrl: string, poolOverride?: Pool): OrderRepository {
   const pool = poolOverride ?? new Pool({ connectionString: databaseUrl, max: 10 })
   return {
@@ -1000,6 +1056,7 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
         samples: { total: recentOrders.length, completionRate: 0, inProgress: 0, completed: 0, needsAttention: 0 },
       }
     },
+    getOperationsReport: (from, to) => getOperationsReport(pool, from, to),
     listPatients: (options) => listPatients(pool, options?.query, options?.limit ?? 50, options?.offset ?? 0),
     getPatientById: async (patientId) => {
       const result = await pool.query(

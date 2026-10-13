@@ -384,6 +384,20 @@ export type NewInsuranceClaim = {
   amount: number
 }
 
+export type ReportDateRange = { from?: string; to?: string }
+
+export type OperationsReport = {
+  period: { from: string | null; to: string | null }
+  orders: { total: number; completed: number; awaitingSample: number; inProgress: number }
+  specimens: { total: number; collected: number; processing: number; completed: number }
+  results: { total: number; draft: number; reviewed: number }
+  billing: { invoiced: number; paid: number; open: number }
+  radiology: { total: number; scheduled: number; inProgress: number; reported: number; verified: number }
+  inventory: { items: number; lowStock: number }
+  insurance: { claimsTotal: number; submitted: number; approved: number; paid: number }
+  homeVisits: { total: number; scheduled: number; inProgress: number; completed: number }
+}
+
 async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers)
   if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
@@ -429,6 +443,14 @@ export function logout(): Promise<void> {
 
 export function fetchDashboard(): Promise<Dashboard> {
   return requestJson<Dashboard>('/api/dashboard')
+}
+
+export function fetchOperationsReport(range: ReportDateRange = {}): Promise<OperationsReport> {
+  const params = new URLSearchParams()
+  if (range.from) params.set('from', range.from)
+  if (range.to) params.set('to', range.to)
+  const query = params.toString()
+  return requestJson<OperationsReport>(`/api/reports/operations${query ? `?${query}` : ''}`)
 }
 
 export function createOrder(order: NewOrder): Promise<Order> {

@@ -11,6 +11,7 @@ import type {
   TestCatalogItem,
   ResultFlag,
 } from '../domain.js'
+import type { OperationsReport } from '../reports.js'
 import type { Invoice, InvoiceItemInput, InvoiceStatus, PaymentMethod } from '../billing.js'
 import type { RadiologyModality, RadiologyPriority, RadiologyStudy, RadiologyStudyStatus } from '../radiology.js'
 import type { InventoryAdjustmentDirection, InventoryItem, InventoryMovementResult, InventoryMovementType } from '../inventory.js'
@@ -35,6 +36,7 @@ export class RepositoryConflictError extends Error {
 export type OrderRepository = {
   listRecent(): RepositoryValue<Order[]>
   getDashboard(): RepositoryValue<DashboardSummary>
+  getOperationsReport(from?: string, to?: string): RepositoryValue<OperationsReport>
   createOrder(input: CreateOrderInput): RepositoryValue<Order>
   listPatients(options?: PatientListOptions): RepositoryValue<Patient[]>
   getPatientById(patientId: string): RepositoryValue<Patient | null>

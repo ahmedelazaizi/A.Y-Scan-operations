@@ -36,6 +36,7 @@ import {
   validateCreateHomeVisitInput,
   validateHomeVisitTransitionInput,
 } from './home-visits.js'
+import { parseReportQuery, ReportValidationError } from './reports.js'
 import {
   RepositoryConflictError,
   RepositoryInputError,
@@ -62,6 +63,8 @@ const INSURANCE_PATH = '/api/insurance'
 const INSURANCE_POLICIES_PATH = `${INSURANCE_PATH}/policies`
 const INSURANCE_CLAIMS_PATH = `${INSURANCE_PATH}/claims`
 const HOME_VISITS_PATH = '/api/home-visits'
+const REPORTS_PATH = '/api/reports'
+const OPERATIONS_REPORT_PATH = `${REPORTS_PATH}/operations`
 const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 100
 
@@ -671,7 +674,7 @@ function sendLogout(response: ServerResponse): void {
 }
 
 function isClinicalPath(pathname: string): boolean {
-  const clinicalPaths = ['/api/dashboard', ORDER_PATH, PATIENTS_PATH, CATALOG_PATH, SPECIMENS_PATH, RESULTS_PATH, BILLING_PATH, RADIOLOGY_PATH, INVENTORY_PATH, AUDIT_EVENTS_PATH, INSURANCE_PATH, HOME_VISITS_PATH]
+  const clinicalPaths = ['/api/dashboard', ORDER_PATH, PATIENTS_PATH, CATALOG_PATH, SPECIMENS_PATH, RESULTS_PATH, BILLING_PATH, RADIOLOGY_PATH, INVENTORY_PATH, AUDIT_EVENTS_PATH, INSURANCE_PATH, HOME_VISITS_PATH, REPORTS_PATH]
   return clinicalPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 }
 
@@ -850,6 +853,16 @@ export function createApp(repository: OrderRepository = mockRepository): Request
       }
       const limit = parsePageValue(requestUrl.searchParams.get('limit'), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
       sendRepositoryResponse(response, repository.listAuditEvents({ limit, entityType, action }))
+      return
+    }
+    if (requestUrl.pathname === OPERATIONS_REPORT_PATH) {
+      try {
+        const period = parseReportQuery(requestUrl.searchParams)
+        sendRepositoryResponse(response, repository.getOperationsReport(period.from ?? undefined, period.to ?? undefined))
+      } catch (error) {
+        if (error instanceof ReportValidationError) sendBadRequest(response, error.message)
+        else throw error
+      }
       return
     }
     if (requestUrl.pathname === '/api/dashboard') {

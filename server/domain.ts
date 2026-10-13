@@ -31,6 +31,7 @@ import {
   validateCreateHomeVisitInput,
   type HomeVisit,
 } from './home-visits.js'
+import { emptyOperationsReport, isReportDateInRange, validateReportQuery, type OperationsReport, type ReportQuery } from './reports.js'
 import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './storage/repository.js'
 
 export type OrderStatus =
@@ -196,6 +197,63 @@ function cloneLabResult(labResult: LabResult): LabResult {
   return { ...labResult }
 }
 
+function countReportRecords<T extends { status: string }>(records: T[], query: ReportQuery, getTimestamp: (record: T) => string, status?: string): number {
+  return records.filter((record) => isReportDateInRange(getTimestamp(record), query) && (status === undefined || record.status === status)).length
+}
+
+function invoicePaidAmount(invoice: Invoice): number {
+  return invoice.payments.reduce((sum, payment) => sum + payment.amount, 0)
+}
+
+type MemoryReportSources = {
+  period: ReportQuery
+  orders: Order[]
+  orderCreatedAt: Map<string, string>
+  specimens: Specimen[]
+  labResults: LabResult[]
+  invoices: Invoice[]
+  radiologyStudies: RadiologyStudy[]
+  inventoryItems: InventoryItem[]
+  insuranceClaims: InsuranceClaim[]
+  homeVisits: HomeVisit[]
+}
+
+function calculateMemoryOperationsReport(sources: MemoryReportSources): OperationsReport {
+  const { period, orders, orderCreatedAt, specimens, labResults, invoices, radiologyStudies, inventoryItems, insuranceClaims, homeVisits } = sources
+  const report = emptyOperationsReport(period)
+  report.orders.total = countReportRecords(orders, period, (order) => orderCreatedAt.get(order.id) ?? '')
+  report.orders.completed = countReportRecords(orders, period, (order) => orderCreatedAt.get(order.id) ?? '', 'completed')
+  report.orders.awaitingSample = countReportRecords(orders, period, (order) => orderCreatedAt.get(order.id) ?? '', 'awaiting_sample')
+  report.orders.inProgress = countReportRecords(orders, period, (order) => orderCreatedAt.get(order.id) ?? '', 'processing') + countReportRecords(orders, period, (order) => orderCreatedAt.get(order.id) ?? '', 'ready_for_review')
+  report.specimens.total = countReportRecords(specimens, period, (specimen) => specimen.createdAt)
+  report.specimens.collected = countReportRecords(specimens, period, (specimen) => specimen.createdAt, 'collected')
+  report.specimens.processing = countReportRecords(specimens, period, (specimen) => specimen.createdAt, 'processing')
+  report.specimens.completed = countReportRecords(specimens, period, (specimen) => specimen.createdAt, 'completed')
+  report.results.total = countReportRecords(labResults, period, (labResult) => labResult.createdAt)
+  report.results.draft = countReportRecords(labResults, period, (labResult) => labResult.createdAt, 'draft')
+  report.results.reviewed = labResults.filter((labResult) => isReportDateInRange(labResult.createdAt, period) && labResult.status !== 'draft').length
+  report.billing.invoiced = roundMoney(invoices.filter((invoice) => invoice.status !== 'void' && isReportDateInRange(invoice.createdAt, period)).reduce((sum, invoice) => sum + invoice.total, 0))
+  report.billing.paid = roundMoney(invoices.flatMap((invoice) => invoice.payments).filter((payment) => isReportDateInRange(payment.paidAt, period)).reduce((sum, payment) => sum + payment.amount, 0))
+  report.billing.open = roundMoney(invoices.filter((invoice) => invoice.status !== 'void' && isReportDateInRange(invoice.createdAt, period)).reduce((sum, invoice) => sum + Math.max(0, invoice.total - invoicePaidAmount(invoice)), 0))
+  report.radiology.total = countReportRecords(radiologyStudies, period, (study) => study.createdAt)
+  report.radiology.scheduled = countReportRecords(radiologyStudies, period, (study) => study.createdAt, 'scheduled')
+  report.radiology.inProgress = countReportRecords(radiologyStudies, period, (study) => study.createdAt, 'in_progress')
+  report.radiology.reported = countReportRecords(radiologyStudies, period, (study) => study.createdAt, 'reported')
+  report.radiology.verified = countReportRecords(radiologyStudies, period, (study) => study.createdAt, 'verified')
+  const activeInventory = inventoryItems.filter((item) => item.isActive && isReportDateInRange(item.createdAt, period))
+  report.inventory.items = activeInventory.length
+  report.inventory.lowStock = activeInventory.filter((item) => item.quantity <= item.reorderLevel).length
+  report.insurance.claimsTotal = countReportRecords(insuranceClaims, period, (claim) => claim.createdAt)
+  report.insurance.submitted = countReportRecords(insuranceClaims, period, (claim) => claim.createdAt, 'submitted')
+  report.insurance.approved = countReportRecords(insuranceClaims, period, (claim) => claim.createdAt, 'approved')
+  report.insurance.paid = countReportRecords(insuranceClaims, period, (claim) => claim.createdAt, 'paid')
+  report.homeVisits.total = countReportRecords(homeVisits, period, (visit) => visit.scheduledAt)
+  report.homeVisits.scheduled = countReportRecords(homeVisits, period, (visit) => visit.scheduledAt, 'scheduled')
+  report.homeVisits.inProgress = countReportRecords(homeVisits, period, (visit) => visit.scheduledAt, 'in_progress')
+  report.homeVisits.completed = countReportRecords(homeVisits, period, (visit) => visit.scheduledAt, 'completed')
+  return report
+}
+
 function cloneRadiology(study: RadiologyStudy): RadiologyStudy {
   return cloneRadiologyStudy(study)
 }
@@ -242,9 +300,11 @@ function paginatePatients(patients: Patient[], options: PatientListOptions | und
   return patients.slice(offset, offset + limit).map(clonePatient)
 }
 
-function createInMemoryRepository(): OrderRepository {
+export function createMemoryRepository(): OrderRepository {
   let nextOrderNumber = 10483
   let orders = MOCK_ORDERS.map(cloneOrder)
+  const initialOrderTimestamp = new Date().toISOString()
+  const orderCreatedAt = new Map(orders.map((order) => [order.id, initialOrderTimestamp]))
   let patients = MOCK_PATIENTS.map(clonePatient)
   let specimens: Specimen[] = []
   let labResults: LabResult[] = []
@@ -263,6 +323,10 @@ function createInMemoryRepository(): OrderRepository {
     databaseMode: 'memory' as const,
     listRecent: () => orders.map(cloneOrder),
     getDashboard: () => cloneDashboard(orders),
+    getOperationsReport: (from, to) => {
+      const period = validateReportQuery({ from, to })
+      return calculateMemoryOperationsReport({ period, orders, orderCreatedAt, specimens, labResults, invoices, radiologyStudies, inventoryItems, insuranceClaims, homeVisits })
+    },
     listPatients: (options) => paginatePatients(filterPatients(patients, options?.query), options),
     getPatientById: (patientId) => {
       const patient = patients.find((candidate) => candidate.id === patientId)
@@ -278,6 +342,7 @@ function createInMemoryRepository(): OrderRepository {
       const patient = input.patientId ? patients.find((candidate) => candidate.id === input.patientId) : undefined
       const patientName = patient?.fullName ?? input.patientName
       if (!patientName) throw new Error('A patientId or patientName is required.')
+      const createdAt = new Date().toISOString()
       const order: Order = {
         id: `AY-${nextOrderNumber++}`,
         patient: patientName.trim(),
@@ -288,6 +353,7 @@ function createInMemoryRepository(): OrderRepository {
         tone: 'warning',
         priority: input.priority ?? 'normal',
       }
+      orderCreatedAt.set(order.id, createdAt)
       orders = [order, ...orders]
       return cloneOrder(order)
     },
@@ -555,4 +621,4 @@ function createInMemoryRepository(): OrderRepository {
   }
 }
 
-export const mockRepository = createInMemoryRepository()
+export const mockRepository = createMemoryRepository()
