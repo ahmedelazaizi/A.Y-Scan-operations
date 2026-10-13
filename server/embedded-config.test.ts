@@ -53,6 +53,22 @@ test('embedded PostgreSQL initializes, restarts with the same credentials, and s
       await again.end()
     }
     await second.stop()
+
+    // Losing the password file must not brick the installation: the old cluster is kept aside and a fresh one starts.
+    await rm(path.join(root, 'pg-credentials.json'))
+    const messages: string[] = []
+    const recovered = await startEmbeddedPostgres({ binDir: binDir as string, dataDir, port: 55891, log: (message) => messages.push(message) })
+    assert.ok(messages.some((message) => message.includes('kept aside')))
+    assert.notEqual(new URL(recovered.url).password, new URL(first.url).password)
+    const { readdir } = await import('node:fs/promises')
+    assert.ok((await readdir(root)).some((name) => name.startsWith('pgdata.unusable-')))
+    const fresh = new Pool({ connectionString: recovered.url, max: 1 })
+    try {
+      assert.equal((await fresh.query("SELECT to_regclass('public.smoke') AS t")).rows[0].t, null, 'the new database starts empty')
+    } finally {
+      await fresh.end()
+    }
+    await recovered.stop()
     const credentials = JSON.parse(await readFile(path.join(root, 'pg-credentials.json'), 'utf8')) as { password: string }
     assert.equal(credentials.password.length, 48)
   } finally {

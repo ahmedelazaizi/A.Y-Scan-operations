@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import net from 'node:net'
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { Pool } from 'pg'
 
@@ -141,8 +141,18 @@ export async function startEmbeddedPostgres(options: EmbeddedPostgresOptions): P
   const log = options.log ?? (() => {})
   const dataDir = path.resolve(options.dataDir)
   const resolved: EmbeddedPostgresOptions = { ...options, dataDir }
-  const clusterExists = await exists(path.join(dataDir, 'PG_VERSION'))
+  let clusterExists = await exists(path.join(dataDir, 'PG_VERSION'))
   let credentials = await readCredentials(dataDir)
+
+  if (clusterExists && !credentials) {
+    // The password file is gone, so nobody can connect to this cluster any more. Never delete it: keep it aside
+    // (a backup can still be restored into a fresh database) and start a new cluster instead of failing forever.
+    if (await isRunning(resolved)) await run(executable(options.binDir, 'pg_ctl'), ['stop', '-D', dataDir, '-m', 'fast', '-w', '-t', '30'])
+    const aside = `${dataDir}.unusable-${new Date().toISOString().replace(/[:.]/g, '-')}`
+    await rename(dataDir, aside)
+    log(`WARNING: the database password file was missing, so the old database folder was kept aside at ${aside} and a new database is being created.`)
+    clusterExists = false
+  }
 
   if (!clusterExists) {
     credentials = {
@@ -153,9 +163,9 @@ export async function startEmbeddedPostgres(options: EmbeddedPostgresOptions): P
     }
     log('Creating the local database for the first time...')
     await initializeCluster(resolved, credentials)
-  } else if (!credentials) {
-    throw new Error(`The database folder exists but its credentials file is missing (${credentialsPath(dataDir)}). Restore it from a backup or move the data folder aside.`)
   }
+  if (!credentials) throw new Error('The local database credentials could not be created.')
+
   let startedByUs = false
   let effective: Credentials = credentials
   if (!(await isRunning(resolved))) {
