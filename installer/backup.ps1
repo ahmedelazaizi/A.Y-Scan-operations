@@ -31,7 +31,15 @@ try {
     $fileName = "ayscan-$(Get-Date -Format 'yyyyMMdd-HHmmss').dump"
     $target = Join-Path $directory $fileName
 
-    if (Test-UsesDockerDatabase) {
+    if (Test-EmbeddedDatabase) {
+        $startedHere = Start-EmbeddedDatabaseIfNeeded
+        try {
+            $credentials = Get-EmbeddedCredentials
+            Invoke-EmbeddedPg 'pg_dump' @('-d', $credentials.database, '--format=custom', '--no-owner', '-f', $target) 'pg_dump failed.'
+        } finally {
+            if ($startedHere) { Stop-EmbeddedDatabase }
+        }
+    } elseif (Test-UsesDockerDatabase) {
         Start-Database
         $docker = Get-DockerCommand
         $containerPath = "/tmp/$fileName"

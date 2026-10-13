@@ -18,7 +18,9 @@
     "test": "tsx --test \"server/**/*.test.ts\"",
     "admin:create": "node dist-server/server/create-admin.js",
     "start": "node dist-server/server/index.js",
-    "test:db": "tsx --test \"server/**/*.test.ts\""
+    "test:db": "tsx --test \"server/**/*.test.ts\"",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1",
+    "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller"
   },
   "dependencies": {
     "pg": "8.16.3"

@@ -5,6 +5,7 @@ import {
   clearStoredAuthToken,
   fetchCurrentUser,
   fetchDashboard,
+  fetchSetupStatus,
   getStoredAuthToken,
   logout,
   PASSWORD_CHANGE_REQUIRED_EVENT,
@@ -31,6 +32,7 @@ import PatientsView from './PatientsView'
 import RadiologyView from './RadiologyView'
 import ReportsView from './ReportsView'
 import { createSession, SessionContext, type Session } from './session'
+import SetupView from './SetupView'
 import UsersView from './UsersView'
 
 type AppView = 'dashboard' | 'patients' | 'catalog' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
@@ -196,6 +198,8 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
 
 function App() {
   const [auth, setAuth] = useState<AuthState>(() => (getStoredAuthToken() ? { status: 'loading' } : { status: 'anonymous' }))
+  // null while unknown. Only asked when signed out; a failed check falls back to the normal login screen.
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
 
   useEffect(() => {
     const handleAuthRequired = () => {
@@ -227,7 +231,17 @@ function App() {
     return () => { cancelled = true }
   }, [auth.status])
 
+  useEffect(() => {
+    if (auth.status !== 'anonymous' || needsSetup !== null) return
+    let cancelled = false
+    fetchSetupStatus()
+      .then((status) => { if (!cancelled) setNeedsSetup(status.needsSetup) })
+      .catch(() => { if (!cancelled) setNeedsSetup(false) })
+    return () => { cancelled = true }
+  }, [auth.status, needsSetup])
+
   const handleLoginSuccess = useCallback((response: LoginResponse) => {
+    setNeedsSetup(false)
     setStoredAuthToken(response.token)
     setAuth({ status: 'ready', user: response.user, capabilities: response.capabilities })
   }, [])
@@ -245,6 +259,8 @@ function App() {
   const session = useMemo(() => auth.status === 'ready' ? createSession(auth.user, auth.capabilities) : null, [auth])
 
   if (auth.status === 'loading') return <div className="boot-screen" role="status" aria-live="polite">جارٍ التحميل…</div>
+  if (auth.status === 'anonymous' && needsSetup === null) return <div className="boot-screen" role="status" aria-live="polite">جارٍ التحميل…</div>
+  if (auth.status === 'anonymous' && needsSetup) return <SetupView onComplete={handleLoginSuccess} onAlreadySetUp={() => setNeedsSetup(false)} />
   if (auth.status === 'anonymous' || !session) return <LoginView onSuccess={handleLoginSuccess} />
   if (auth.user.mustChangePassword) return <RequiredPasswordChangeView user={auth.user} onChanged={handleUserChange} onLogout={() => void handleLogout()} />
   return <AuthenticatedApp session={session} onSessionUserChange={handleUserChange} onLogout={() => void handleLogout()} />

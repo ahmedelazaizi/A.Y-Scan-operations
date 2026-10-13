@@ -1,0 +1,6955 @@
+[
+ {
+  "id": "sysmex-kx-21n",
+  "manufacturer": "Sysmex",
+  "model": "KX-21N",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.labwrench.com/equipment/10827/sysmex-kx-21n-trade",
+   "https://www.sysmex.co.id/sysmex-establishes-subsidiary-in-egypt-and-begins-conducting-direct-sales-and-services/?lang=id"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Only confirmed: RS-232 output exists (university thesis snippet) and Sysmex sells direct in Egypt; no protocol/baud/format document found. The KX-21N is a legacy 3-part analyzer whose output format is Sysmex-proprietary.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "هل مخرج KX-21N هو الـ ASTM أم الصيغة الخاصة القديمة؟ وهل يلزم كابل Sysmex أصلي (pinout)؟"
+  ]
+ },
+ {
+  "id": "sysmex-xp-300",
+  "manufacturer": "Sysmex",
+  "model": "XP-300",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.medwrench.com/equipment/8673/sysmex-xp-300",
+   "https://www.sysmex.co.id/sysmex-establishes-subsidiary-in-egypt-and-begins-conducting-direct-sales-and-services/?lang=id"
+  ],
+  "confidence": "low",
+  "confidenceNote": "A search-result snippet of the Sysmex brochure said LAN (TCP/IP) or RS-232C with bidirectional interface; the brochure itself returned 404 when fetched, protocol name and defaults not confirmed.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "sysmex-xs-1000i",
+  "manufacturer": "Sysmex",
+  "model": "XS-1000i / XS-800i",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://bioclinicalservices.com.au/sysmex/clinical/xs-1000i-and-xs-800i-instructions-for-use-feb-2006"
+  ],
+  "confidence": "low",
+  "confidenceNote": "IFU has a 'HOST Connection' section (seen in table of contents snippet only; page returned 403). No settings read.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "sysmex-xn-l-350-450-550",
+  "manufacturer": "Sysmex",
+  "model": "XN-350 / XN-450 / XN-550 (XN-L series)",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.sysmex.co.id/wp-content/uploads/sites/19/2019/12/Product-Fact-Sheet-XN-450-for-MDB_2025-04-11-DGC_rev4-SAP_approved.pdf",
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf",
+   "https://www.sysmex.co.id/sysmex-establishes-subsidiary-in-egypt-and-begins-conducting-direct-sales-and-services/?lang=id"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "Fact sheet lists 'ASTM XN-L' as communication interface; CAP Today 2023 lists 'XN series ASTM 1381-95/ASTM 1894-97 or XN series ASTM 1381-02/ASTM 1894-97' with host query supported (sic: 1894 as printed; the E1394 standard is meant). Transport defaults/ports and test-ID strings not found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "XN-L ASTM interface specification (Sysmex 'Host Interface Specifications')"
+  ]
+ },
+ {
+  "id": "sysmex-xn-1000",
+  "manufacturer": "Sysmex",
+  "model": "XN-1000 / XN-2000 series",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm",
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "XN family also sends research (RUO) and flag parameters (e.g. IG, RET-He, NRBC); ASTM test-ID string layout unknown to us"
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic CBC ASTM E1381/E1394 (LIS2-A2) frames, shape only",
+    "protocol": "astm",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf",
+    "message": "<ENQ>\n<STX>1H|\\^&|||LIS-SIM|||||LIS||P|LIS2-A|20260101120000<CR><ETX>22<CR><LF>\n<STX>2P|1||PID001||Test^Patient||19800101|M<CR><ETX>C5<CR><LF>\n<STX>3O|1|SMP0001||^^^CBC|R|20260101115500|||||||||||||||||F<CR><ETX>CA<CR><LF>\n<STX>4R|1|^^^WBC|6.8|10^3/uL|4.0 to 10.0||N||F<CR><ETX>9F<CR><LF>\n<STX>5R|2|^^^HGB|13.0|g/dL|12.0 to 16.0||N||F<CR><ETX>55<CR><LF>\n<STX>6R|3|^^^PLT|130|10^3/uL|150 to 400|L||F<CR><ETX>0A<CR><LF>\n<STX>7L|1|N<CR><ETX>0A<CR><LF>\n<EOT>\n(Sender sends <ENQ>, receiver answers <ACK>, then each frame is acknowledged with <ACK>; frame = <STX> + frame digit + text + <CR> + <ETX> + 2-hex checksum + <CR><LF>; checksum = sum of bytes from frame digit through <ETX> mod 256, verified by the generator script. Field layout follows the public ASTM record structure as illustrated in the Beckman manual; it is NOT captured from any device and the test-ID component layout (^^^WBC) differs per vendor.)"
+   }
+  ],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf",
+   "https://www.sysmex.co.id/sysmex-establishes-subsidiary-in-egypt-and-begins-conducting-direct-sales-and-services/?lang=id"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "CAP Today 2023: 'ASTM 1394-91, HL7' for XN-1000/2000 with host query and order download; Sysmex WAM middleware also offered. No transport defaults or message layout opened.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "هل الربط مباشر أم عبر Sysmex WAM/middleware؟"
+  ]
+ },
+ {
+  "id": "mindray-bc-2800-3000plus",
+  "manufacturer": "Mindray",
+  "model": "BC-2800 / BC-3000Plus (3-part)",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "proprietary",
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "3-part: sends GRAN/LYM/MID (not NEUT/MONO)"
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://moodle.fondation-merieux.org/course/section.php?id=1551"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Only a third-party list showing middleware can connect BC-2800; no Mindray document opened. Older models are often serial; protocol unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "mindray-bc-5000-5150-5380-5390",
+  "manufacturer": "Mindray",
+  "model": "BC-5000 / BC-5150 / BC-5380 / BC-5390 (5-part)",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic HL7 v2.3.1 ORU^R01 over MLLP, shape only",
+    "protocol": "hl7",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://www.hl7.org/implement/standards/",
+    "message": "<VT>MSH|^~\\&|BC-SIM|LAB|LIS|HOSP|20260101120000||ORU^R01|MSG0001|P|2.3.1\rPID|1||PID001||Test^Patient||19800101|M\rOBR|1||SMP0001|CBC^Complete Blood Count|||20260101115500\rOBX|1|NM|WBC^White Blood Cell Count||6.8|10*3/uL|4.0-10.0|N|||F\rOBX|2|NM|HGB^Hemoglobin||13.0|g/dL|12.0-16.0|N|||F\rOBX|3|NM|PLT^Platelet Count||130|10*3/uL|150-400|L|||F\r<FS><CR>\n(<VT>=0x0B start block, <FS>=0x1C then <CR>=0x0D end block, per standard HL7 v2 MLLP; segments separated by \\r. Spec URL is the HL7 standards index and was not itself readable by the researcher. NOT captured from a Mindray/Diatron/Horiba device: their OBX-3 identifiers, units, extra Z-segments (histogram/scattergram) and HL7 version are unknown to us.)"
+   }
+  ],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "CAP Today 2023 lists HL7 for BC-5390 with orders broadcast and host query; BC-5000/5150/5380 assumed same family (not verified). TCP port, instrument role, HL7 version and OBX identifiers unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "Mindray 'HL7 Communication Protocol' PDF للموديل ونسخة السوفتوير"
+  ]
+ },
+ {
+  "id": "mindray-bc-6800",
+  "manufacturer": "Mindray",
+  "model": "BC-6800 / BC-6800Plus",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Not listed in CAP table seen; BC-6800 assumed HL7 like the rest of Mindray 5-part line; no BC-6800 document found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "abbott-cell-dyn-ruby",
+  "manufacturer": "Abbott",
+  "model": "CELL-DYN Ruby",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "CELL-DYN codes unknown"
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf",
+   "https://fda.innolitics.com/device/K061667"
+  ],
+  "confidence": "low",
+  "confidenceNote": "CAP Today 2023 says 'proprietary' with demographics broadcast and host query; FDA summary says results sent via RS232. Message layout unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "Abbott CELL-DYN LIS Interface Specification (ASTM أم Abbott proprietary؟)"
+  ]
+ },
+ {
+  "id": "abbott-cell-dyn-emerald",
+  "manufacturer": "Abbott",
+  "model": "CELL-DYN Emerald / Emerald 22",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "3-part"
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Technical sheet snippet: RS232 and TCP/IP LIS interface; CAP Today 'proprietary', numeric and flag results instrument to LIS (no orders). Layout unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "beckman-dxh-600-800-900",
+  "manufacturer": "Beckman Coulter",
+  "model": "UniCel DxH 600 / 800 / 900 (+Slidemaker)",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": 9600,
+     "dataBits": 8,
+     "parity": "none",
+     "stopBits": 1,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": "instrument-is-client"
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC (corrected for NRBC)",
+    "loinc": "33256-9",
+    "unit": "10^3/uL",
+    "notes": "LOINC taken from Beckman Table A.12"
+   },
+   {
+    "instrumentCode": "UWBC",
+    "name": "WBC uncorrected",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Table A.12; unit is user-selectable on the instrument"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "RDW",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "@PDW",
+    "name": "PDW (research use only)",
+    "loinc": "32207-3",
+    "unit": "",
+    "notes": "'@' prefix = RUO; instrument adds a comment record saying not for diagnostic use"
+   },
+   {
+    "instrumentCode": "@PCT",
+    "name": "PCT (research use only)",
+    "loinc": "",
+    "unit": "%",
+    "notes": "'@' prefix = RUO; no LOINC in Table A.12"
+   },
+   {
+    "instrumentCode": "NE",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "LY",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MO",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "EO",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "BA",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "NE#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "LY#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "BA#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "NRBC",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "RET",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Table A.12 (only if retic panel ordered)"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "MRV",
+    "name": "Mean reticulocyte volume",
+    "loinc": "48706-6",
+    "unit": "fL",
+    "notes": "Table A.12"
+   },
+   {
+    "instrumentCode": "IRF",
+    "name": "Immature reticulocyte fraction",
+    "loinc": "33516-6",
+    "unit": "",
+    "notes": "Table A.12"
+   }
+  ],
+  "samples": [
+   {
+    "title": "Beckman DxH patient result upload (excerpt: header, patient, order, 6 of 33 results)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf",
+    "message": "H|\\!~|||DxH|||||LIS||P|LIS2-A|20080923072941\rP|1|||\rO|1|89338176210|00161|!!!CDR\\!!!SS!7|R|||||||||20080923072509|Whole blood|||||!DevOp|DO|20080923072928|||F\rR|1|!!!WBC!33256-9|6.8!R |10^3/uL||3.6 to 10.2|A||F||||20080923072716|AM44001\rR|3|!!!RBC!789-8|4.52!R |10^6/uL||4.06 to 5.63|A||F||||20080923072716|AM44001\rR|4|!!!HGB!718-7|13.0|g/dL||12.5 to 16.3|||F||||20080923072716|AM44001\rR|13|!!!PLT!777-3|218!R |10^3/uL||152 to 348|A||F||||20080923072716|AM44001\rR|27|!!!NRBC!34200-6|1.0!R H |/100WBC||0.0 to 0.6|A||F||||20080923072716|AM44001\rL|1|N\r  (excerpt: Beckman Host Transmission Manual PN B26711AF Appendix B 'Patient Result Upload Example'; rows omitted for brevity; the component delimiter is '!' and escape '~' per header; in the manual the lines are shown without <STX>/<ETX> framing - frames are built per LIS1-A, see framing text)"
+   },
+   {
+    "title": "Beckman DxH host query + response (bidirectional)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf",
+    "message": "Instrument -> LIS (query):\rH|\\!~|(0:0-28550#101177, 246)|| DxH|||||LIS||P|LIS2-A|200904211239062\rQ|1|!S0||ALL||||||||O3\rL|1|N\r\rLIS -> instrument (response):\rH|\\!~|||LISHOST|||||||P|1|\rP|1||PatID||Last!First!Middle||!14!Y|F|W||||||||||||||||PatLocation\rO|1|S0||!!!CDR|R||||||N||||Whole blood\rL|1|N\r  (verbatim from Beckman manual Appendix B 'Query Record Upload/Response Example')"
+   }
+  ],
+  "sources": [
+   "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf",
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf"
+  ],
+  "confidence": "high",
+  "confidenceNote": "Full Beckman Host Transmission Manual PN B26711AF (Sept 2017) opened and read: serial defaults, framing, records, test IDs, LOINC table, samples. TCP port is NOT given (LIS is TCP server, provides IP+port; DxH side is client via a NETGEAR router).",
+  "askVendor": [
+   "رقم الـ revision الحالي لـ Host Transmission Manual",
+   "هل الاتصال Serial أم TCP؟ ما IP/port الذي سيستمع عليه الـ LIS؟",
+   "هل تم تفعيل Cell Population Data/RUO parameters (علامة @)؟",
+   "هل Query وOrder download مفعّلان؟",
+   "إعداد وحدات HGB/MCHC (g/dL أم g/L)"
+  ]
+ },
+ {
+  "id": "beckman-dxh-500-520",
+  "manufacturer": "Beckman Coulter",
+  "model": "DxH 500 / DxH 520",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf",
+   "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf"
+  ],
+  "confidence": "low",
+  "confidenceNote": "CAP Today lists CLSI LIS01-A2/LIS02-A2 (ASTM) for DxH 520/560; DxH 500 not covered by the opened DxH 600/800/900 manual, so DxH 800 details cannot be assumed.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "Host Transmission Manual الخاص بـ DxH 500 تحديداً"
+  ]
+ },
+ {
+  "id": "beckman-act-diff",
+  "manufacturer": "Beckman Coulter",
+  "model": "Ac·T diff / Ac·T 5diff",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No Ac·T interface document found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "horiba-pentra-60-xl80",
+  "manufacturer": "HORIBA",
+  "model": "Pentra 60C+ / Pentra XL 80 / ES 60",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm",
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf",
+   "https://www.scribd.com/document/554954128/ML"
+  ],
+  "confidence": "low",
+  "confidenceNote": "CAP Today: Pentra 60C+ 'ASTM 1394 and 1238, HL7'; Pentra XL 80 'proprietary, ASTM 1394 and 1238, HL7'. A Scribd snippet for Pentra ML/DX/DF 120 says ASTM E1381/E1394 over RS-232 DB-9. Baud/etc. unknown (serial row has nulls).",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "horiba-micros-60",
+  "manufacturer": "HORIBA",
+  "model": "ABX Micros 60 / Micros ES 60",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "3-part, sends LYM/MON/GRA"
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.scribd.com/document/554954128/ML"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No Micros-specific document found; ASTM/RS-232 assumed from sister ABX models only.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "erba-h360",
+  "manufacturer": "Erba Mannheim",
+  "model": "H 360 / H 560 / ELite 580",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Searches returned nothing for Erba hematology interface; one GitHub project mentions an Erba EM-200 interfacing guide (different instrument).",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "diatron-abacus",
+  "manufacturer": "Diatron MI",
+  "model": "Abacus 3CP / Abacus 5 (and Abacus 380)",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "hl7",
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.captodayonline.com/2023/ProductGuides/10-23_HematologyAnalyzers.pdf"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "CAP Today 2023: Abacus 3CP 'HL7, Diatron Serial Communication'; Abacus 5 'HL7, Diatron Serial Protocol'; orders broadcast supported. Transport defaults and layout unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "Diatron Serial Protocol document"
+  ]
+ },
+ {
+  "id": "boule-medonic-m",
+  "manufacturer": "Boule",
+  "model": "Medonic M-series (M32/M51)",
+  "category": "hematology",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Nothing found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "urit-5160-5200",
+  "manufacturer": "URIT",
+  "model": "URIT-5160 / URIT-5200",
+  "category": "hematology",
+  "egyptMarket": "common",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC",
+    "loinc": "6690-2",
+    "unit": "10^3/uL",
+    "notes": "Instrument code is the commonly used abbreviation; the exact string sent MUST be confirmed from the vendor interface spec / a real capture."
+   },
+   {
+    "instrumentCode": "RBC",
+    "name": "RBC",
+    "loinc": "789-8",
+    "unit": "10^6/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "HGB",
+    "name": "Hemoglobin",
+    "loinc": "718-7",
+    "unit": "g/dL",
+    "notes": "Some instruments send g/L or mmol/L depending on configuration"
+   },
+   {
+    "instrumentCode": "HCT",
+    "name": "Hematocrit",
+    "loinc": "4544-3",
+    "unit": "%",
+    "notes": "Some instruments send L/L fraction"
+   },
+   {
+    "instrumentCode": "MCV",
+    "name": "MCV",
+    "loinc": "787-2",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCH",
+    "name": "MCH",
+    "loinc": "785-6",
+    "unit": "pg",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MCHC",
+    "name": "MCHC",
+    "loinc": "786-4",
+    "unit": "g/dL",
+    "notes": "g/L on some configs"
+   },
+   {
+    "instrumentCode": "PLT",
+    "name": "Platelets",
+    "loinc": "777-3",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RDW-CV",
+    "name": "RDW-CV",
+    "loinc": "788-0",
+    "unit": "%",
+    "notes": "May appear as RDW or RDW-CV"
+   },
+   {
+    "instrumentCode": "RDW-SD",
+    "name": "RDW-SD",
+    "loinc": "21000-5",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MPV",
+    "name": "MPV",
+    "loinc": "32623-1",
+    "unit": "fL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "PDW",
+    "name": "PDW",
+    "loinc": "32207-3",
+    "unit": "fL or %",
+    "notes": "Unit differs by vendor"
+   },
+   {
+    "instrumentCode": "PCT",
+    "name": "Plateletcrit",
+    "loinc": "51637-7",
+    "unit": "%",
+    "notes": "Verify LOINC against your LOINC release"
+   },
+   {
+    "instrumentCode": "NEUT%",
+    "name": "Neutrophils %",
+    "loinc": "770-8",
+    "unit": "%",
+    "notes": "Also sent as NE%/GRAN%/GR% on 3-part analyzers (GRAN != NEUT: 3-part reports granulocytes, LOINC 19023-1 for GRAN%)"
+   },
+   {
+    "instrumentCode": "LYMPH%",
+    "name": "Lymphocytes %",
+    "loinc": "736-9",
+    "unit": "%",
+    "notes": "Also LYM%/LY%"
+   },
+   {
+    "instrumentCode": "MONO%",
+    "name": "Monocytes %",
+    "loinc": "5905-5",
+    "unit": "%",
+    "notes": "Also MO%; on 3-part analyzers this is MID%/MXD% (a mixed population, do NOT map to monocytes silently)"
+   },
+   {
+    "instrumentCode": "EO%",
+    "name": "Eosinophils %",
+    "loinc": "713-8",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO%",
+    "name": "Basophils %",
+    "loinc": "706-2",
+    "unit": "%",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "NEUT#",
+    "name": "Neutrophils absolute",
+    "loinc": "751-8",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LYMPH#",
+    "name": "Lymphocytes absolute",
+    "loinc": "731-0",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "MONO#",
+    "name": "Monocytes absolute",
+    "loinc": "742-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "EO#",
+    "name": "Eosinophils absolute",
+    "loinc": "711-2",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BASO#",
+    "name": "Basophils absolute",
+    "loinc": "704-7",
+    "unit": "10^3/uL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "IG%",
+    "name": "Immature granulocytes %",
+    "loinc": "71695-1",
+    "unit": "%",
+    "notes": "XN/DxH/BC-6x00 class only; verify LOINC"
+   },
+   {
+    "instrumentCode": "IG#",
+    "name": "Immature granulocytes absolute",
+    "loinc": "53115-2",
+    "unit": "10^3/uL",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "NRBC#",
+    "name": "NRBC absolute",
+    "loinc": "771-6",
+    "unit": "10^3/uL",
+    "notes": "5-part class only"
+   },
+   {
+    "instrumentCode": "NRBC%",
+    "name": "NRBC per 100 WBC",
+    "loinc": "34200-6",
+    "unit": "/100WBC",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "RET%",
+    "name": "Reticulocytes %",
+    "loinc": "17849-1",
+    "unit": "%",
+    "notes": "Only where retic channel exists"
+   },
+   {
+    "instrumentCode": "RET#",
+    "name": "Reticulocytes absolute",
+    "loinc": "14196-0",
+    "unit": "10^6/uL",
+    "notes": ""
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Nothing found for URIT hematology; HL7 is a typical Chinese-OEM choice but UNVERIFIED.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "stago-sta-compact-max",
+  "manufacturer": "Diagnostica Stago",
+  "model": "STA Compact Max / STA R Max / STart Max",
+  "category": "coagulation",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": 9600,
+     "dataBits": 8,
+     "parity": "none",
+     "stopBits": 1,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "PT",
+    "name": "Prothrombin time",
+    "loinc": "5902-2",
+    "unit": "s",
+    "notes": "Seconds"
+   },
+   {
+    "instrumentCode": "PT%",
+    "name": "PT activity (Quick %)",
+    "loinc": "",
+    "unit": "%",
+    "notes": "No single LOINC confirmed; ask lab which expression they report"
+   },
+   {
+    "instrumentCode": "INR",
+    "name": "INR",
+    "loinc": "6301-6",
+    "unit": "",
+    "notes": "Derived from PT + ISI"
+   },
+   {
+    "instrumentCode": "PT-R",
+    "name": "PT ratio",
+    "loinc": "5894-1",
+    "unit": "",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "APTT",
+    "name": "aPTT",
+    "loinc": "14979-9",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "FIB",
+    "name": "Fibrinogen (Clauss)",
+    "loinc": "3255-7",
+    "unit": "mg/dL or g/L",
+    "notes": "Unit depends on lab config"
+   },
+   {
+    "instrumentCode": "TT",
+    "name": "Thrombin time",
+    "loinc": "3243-3",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "DDI",
+    "name": "D-Dimer (FEU)",
+    "loinc": "48066-5",
+    "unit": "ng/mL FEU",
+    "notes": "Units (FEU vs DDU, ng/mL vs ug/mL) vary by reagent: DDU=48065-7"
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic coagulation ASTM frames, shape only (PT/INR/aPTT)",
+    "protocol": "astm",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf",
+    "message": "<ENQ>\n<STX>1H|\\^&|||COAG-SIM|||||LIS||P|LIS2-A|20260101120000<CR><ETX>54<CR><LF>\n<STX>2P|1||PID002<CR><ETX>A6<CR><LF>\n<STX>3O|1|SMP0002||^^^PT\\^^^APTT|R|20260101115500<CR><ETX>D4<CR><LF>\n<STX>4R|1|^^^PT|12.8|s|11.0 to 13.5||N||F<CR><ETX>5B<CR><LF>\n<STX>5R|2|^^^INR|1.05||0.8 to 1.2||N||F<CR><ETX>CA<CR><LF>\n<STX>6R|3|^^^APTT|41.0|s|25.0 to 35.0|H||F<CR><ETX>70<CR><LF>\n<STX>7L|1|N<CR><ETX>0A<CR><LF>\n<EOT>\n(NOT Stago/Sysmex/Erba specific: their test-ID strings, units and extra fields are unknown to us; use only to unit-test an ASTM frame parser)"
+   }
+  ],
+  "sources": [
+   "https://pdfcoffee.com/compact-max-lis-protocol-pdf-free.html",
+   "https://pdfcoffee.com/astm-v3-protocol-diagnostica-stago-sas-pdf-free.html"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "Serial defaults (9600, 8, none, 1; DB-9 male, pin2 RX/3 TX/5 GND, no flow control) come from a search-result summary of Stago 'Compact Max LIS protocol' rev 0932209B (Sept 2016); the PDF itself returned 403 so we did not read it. Record layout and test codes unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "Stago 'ASTM Protocol' 0931999B V3 document",
+   "كود كل تحليل (PT/APTT/FIB/D-Dimer) كما يرسله الجهاز"
+  ]
+ },
+ {
+  "id": "sysmex-ca-600",
+  "manufacturer": "Sysmex",
+  "model": "CA-600 series / CA-1500",
+  "category": "coagulation",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "PT",
+    "name": "Prothrombin time",
+    "loinc": "5902-2",
+    "unit": "s",
+    "notes": "Seconds"
+   },
+   {
+    "instrumentCode": "PT%",
+    "name": "PT activity (Quick %)",
+    "loinc": "",
+    "unit": "%",
+    "notes": "No single LOINC confirmed; ask lab which expression they report"
+   },
+   {
+    "instrumentCode": "INR",
+    "name": "INR",
+    "loinc": "6301-6",
+    "unit": "",
+    "notes": "Derived from PT + ISI"
+   },
+   {
+    "instrumentCode": "PT-R",
+    "name": "PT ratio",
+    "loinc": "5894-1",
+    "unit": "",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "APTT",
+    "name": "aPTT",
+    "loinc": "14979-9",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "FIB",
+    "name": "Fibrinogen (Clauss)",
+    "loinc": "3255-7",
+    "unit": "mg/dL or g/L",
+    "notes": "Unit depends on lab config"
+   },
+   {
+    "instrumentCode": "TT",
+    "name": "Thrombin time",
+    "loinc": "3243-3",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "DDI",
+    "name": "D-Dimer (FEU)",
+    "loinc": "48066-5",
+    "unit": "ng/mL FEU",
+    "notes": "Units (FEU vs DDU, ng/mL vs ug/mL) vary by reagent: DDU=48065-7"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://academy.siemens-healthineers.com/en-us/sysmex-ca-600-series-analyzer-sample-processing-online-training",
+   "https://marketing.webassets.siemens-healthineers.com/9c8c0b8dc7c810f6/b3106f099608/CS-2500-Spec-Sheet.PDF"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Sysmex training page snippet: CA-600 uses ASTM host interface with 'ASTM' vs 'ASTM2' (traceability) format-output setting. CA-1000/1500: ASTM per CS-2500 spec sheet. Transport details unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "إعداد Format output: ASTM أم ASTM2؟"
+  ]
+ },
+ {
+  "id": "sysmex-cs-2500",
+  "manufacturer": "Sysmex",
+  "model": "CS-2000i / CS-2500 / CS-5100",
+  "category": "coagulation",
+  "egyptMarket": "rare",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "PT",
+    "name": "Prothrombin time",
+    "loinc": "5902-2",
+    "unit": "s",
+    "notes": "Seconds"
+   },
+   {
+    "instrumentCode": "PT%",
+    "name": "PT activity (Quick %)",
+    "loinc": "",
+    "unit": "%",
+    "notes": "No single LOINC confirmed; ask lab which expression they report"
+   },
+   {
+    "instrumentCode": "INR",
+    "name": "INR",
+    "loinc": "6301-6",
+    "unit": "",
+    "notes": "Derived from PT + ISI"
+   },
+   {
+    "instrumentCode": "PT-R",
+    "name": "PT ratio",
+    "loinc": "5894-1",
+    "unit": "",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "APTT",
+    "name": "aPTT",
+    "loinc": "14979-9",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "FIB",
+    "name": "Fibrinogen (Clauss)",
+    "loinc": "3255-7",
+    "unit": "mg/dL or g/L",
+    "notes": "Unit depends on lab config"
+   },
+   {
+    "instrumentCode": "TT",
+    "name": "Thrombin time",
+    "loinc": "3243-3",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "DDI",
+    "name": "D-Dimer (FEU)",
+    "loinc": "48066-5",
+    "unit": "ng/mL FEU",
+    "notes": "Units (FEU vs DDU, ng/mL vs ug/mL) vary by reagent: DDU=48065-7"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://marketing.webassets.siemens-healthineers.com/9c8c0b8dc7c810f6/b3106f099608/CS-2500-Spec-Sheet.PDF"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "Siemens spec sheet text (read): 'Host connection: Bidirectional RS-232C serial port or via Ethernet-TCP/IP'; LIS 'ASTM1381-95/1394-95, ASTM1381-02/1394-97'. No defaults/ports/layout.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "erba-ecl-412",
+  "manufacturer": "Erba Mannheim",
+  "model": "ECL 412 / ECL 105",
+  "category": "coagulation",
+  "egyptMarket": "common",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": false,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "PT",
+    "name": "Prothrombin time",
+    "loinc": "5902-2",
+    "unit": "s",
+    "notes": "Seconds"
+   },
+   {
+    "instrumentCode": "PT%",
+    "name": "PT activity (Quick %)",
+    "loinc": "",
+    "unit": "%",
+    "notes": "No single LOINC confirmed; ask lab which expression they report"
+   },
+   {
+    "instrumentCode": "INR",
+    "name": "INR",
+    "loinc": "6301-6",
+    "unit": "",
+    "notes": "Derived from PT + ISI"
+   },
+   {
+    "instrumentCode": "PT-R",
+    "name": "PT ratio",
+    "loinc": "5894-1",
+    "unit": "",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "APTT",
+    "name": "aPTT",
+    "loinc": "14979-9",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "FIB",
+    "name": "Fibrinogen (Clauss)",
+    "loinc": "3255-7",
+    "unit": "mg/dL or g/L",
+    "notes": "Unit depends on lab config"
+   },
+   {
+    "instrumentCode": "TT",
+    "name": "Thrombin time",
+    "loinc": "3243-3",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "DDI",
+    "name": "D-Dimer (FEU)",
+    "loinc": "48066-5",
+    "unit": "ng/mL FEU",
+    "notes": "Units (FEU vs DDU, ng/mL vs ug/mL) vary by reagent: DDU=48065-7"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Nothing found; semi-automated coagulometers usually have print/serial output only (unverified).",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "amelung-kc4",
+  "manufacturer": "Tcoag / Amelung",
+  "model": "KC4 Delta / KC1 Delta",
+  "category": "coagulation",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": false,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "PT",
+    "name": "Prothrombin time",
+    "loinc": "5902-2",
+    "unit": "s",
+    "notes": "Seconds"
+   },
+   {
+    "instrumentCode": "PT%",
+    "name": "PT activity (Quick %)",
+    "loinc": "",
+    "unit": "%",
+    "notes": "No single LOINC confirmed; ask lab which expression they report"
+   },
+   {
+    "instrumentCode": "INR",
+    "name": "INR",
+    "loinc": "6301-6",
+    "unit": "",
+    "notes": "Derived from PT + ISI"
+   },
+   {
+    "instrumentCode": "PT-R",
+    "name": "PT ratio",
+    "loinc": "5894-1",
+    "unit": "",
+    "notes": "verify LOINC"
+   },
+   {
+    "instrumentCode": "APTT",
+    "name": "aPTT",
+    "loinc": "14979-9",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "FIB",
+    "name": "Fibrinogen (Clauss)",
+    "loinc": "3255-7",
+    "unit": "mg/dL or g/L",
+    "notes": "Unit depends on lab config"
+   },
+   {
+    "instrumentCode": "TT",
+    "name": "Thrombin time",
+    "loinc": "3243-3",
+    "unit": "s",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "DDI",
+    "name": "D-Dimer (FEU)",
+    "loinc": "48066-5",
+    "unit": "ng/mL FEU",
+    "notes": "Units (FEU vs DDU, ng/mL vs ug/mL) vary by reagent: DDU=48065-7"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Nothing found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "siemens-clinitek-advantus",
+  "manufacturer": "Siemens Healthineers",
+  "model": "CLINITEK Advantus",
+  "category": "urinalysis",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary",
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": 8,
+     "parity": "none",
+     "stopBits": 1,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-server",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": "instrument-is-server"
+    }
+   }
+  ],
+  "lisOptionRequired": false,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://marketing.webassets.siemens-healthineers.com/1800000005977331/e6b296c4f115/10636672_CLINITEK_Advantus_Operator_Guide_v3-1_Rev2013-08_EN_1800000005977331.pdf",
+   "https://marketing.webassets.siemens-healthineers.com/0f2c4d90a12fe6b5/1c4991693d40/siemens-healthineers_POC_CLINITEK-Advantus-Analyzer-Spec-Sheet.pdf"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "Operator guide v3.1 read: Port = Off/Computer/Ethernet/Both; selectable baud 1200-19200, data/parity 8-None/7-Even/7-Odd/7-None; output format CCS (1 stop bit) / CT200+ / CT200 (2 stop bits); loadlist download requires CCS. Spec sheet: 'ASTM (CCS) format', Ethernet 10/100 bidirectional. CCS field layout and TCP port are only 'from local technical support' (default baud not stated, 'baud' null on purpose).",
+  "askVendor": [
+   "ملف CCS format specification الخاص بالـ Advantus",
+   "الـ baud الحالي المضبوط على الجهاز، وهل Ethernet port مفعّل وما رقم المنفذ؟",
+   "هل الجهاز يعمل client أم server على Ethernet؟"
+  ]
+ },
+ {
+  "id": "siemens-clinitek-status-plus",
+  "manufacturer": "Siemens Healthineers",
+  "model": "CLINITEK Status+ / Status Connect",
+  "category": "urinalysis",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": true,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://origin-punchout.fishersci.com/shop/products/clinitek-status-connector-usa-wifi/23313000"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Search shows an optional 'Connector' base (Ethernet/WiFi) for LIS and a setting 'Automatically send results to LIS'; no protocol document read (LIS2-A is only a presumption).",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "هل Status+ لديه Connector base؟ وإلا فالمخرج Serial فقط؟"
+  ]
+ },
+ {
+  "id": "siemens-clinitek-novus",
+  "manufacturer": "Siemens Healthineers",
+  "model": "CLINITEK Novus",
+  "category": "urinalysis",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Only marketing statement of LIS integration; no document.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "roche-urisys-1100",
+  "manufacturer": "Roche",
+  "model": "urisys 1100",
+  "category": "urinalysis",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm",
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic urinalysis ASTM frames, shape only",
+    "protocol": "astm",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://5.imimg.com/data5/TW/SB/MY-1134460/beckman-coulter-dxh-slidemaker-stainer-ii-cellular-analysis-system.pdf",
+    "message": "<ENQ>\n<STX>1H|\\^&|||UA-SIM|||||LIS||P|LIS2-A|20260101120000<CR><ETX>D0<CR><LF>\n<STX>2P|1||PID003<CR><ETX>A7<CR><LF>\n<STX>3O|1|SMP0003||^^^UA|R|20260101115500<CR><ETX>18<CR><LF>\n<STX>4R|1|^^^GLU|Negative|mg/dL|||N||F<CR><ETX>9F<CR><LF>\n<STX>5R|2|^^^PRO|Trace|mg/dL|||A||F<CR><ETX>59<CR><LF>\n<STX>6R|3|^^^SG|1.020||||N||F<CR><ETX>60<CR><LF>\n<STX>7R|4|^^^PH|6.0||||N||F<CR><ETX>03<CR><LF>\n<STX>0L|1|N<CR><ETX>03<CR><LF>\n<EOT>\n(NOT Siemens/Roche/Dirui specific. Many strip readers send semi-quantitative text such as Negative/Trace/1+ or Neg/Pos plus a numeric; the exact vocabulary is vendor-specific and unknown to us.)"
+   }
+  ],
+  "sources": [
+   "https://www.medshop.com.au/products/urisys-1100-analyzer-international",
+   "https://diagnostics.roche.com/gb/en/products/instruments/urisys-1100-analyzer-ins-812.html"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Reseller listing: serial interface to PC/host; host protocol selectable unidirectional/bidirectional/ASTM in settings. No baud or layout opened.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "أي وضع Host Protocol مختار (uni/bi/ASTM)؟"
+  ]
+ },
+ {
+  "id": "roche-cobas-u-411",
+  "manufacturer": "Roche",
+  "model": "cobas u 411",
+  "category": "urinalysis",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": false,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://diagnostics.roche.com/us/en/products/instruments/cobas-u-411.html",
+   "https://ltac.medtraining.org/ltac/docs/custom/2951/65502_4840-UA-28A%20Resulting%20UA%20in%20LIS.docx"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Roche page: integrated printer or transmit to LIS; a US hospital SOP describes the u411 LIS link as unidirectional. Protocol/baud unknown.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "dirui-h-series",
+  "manufacturer": "Dirui",
+  "model": "H-100 / H-500 / FUS-100/200",
+  "category": "urinalysis",
+  "egyptMarket": "common",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.praiston.pl/en/catalog/pdf/6473/86/dirui-h-500-urine-analyzer"
+  ],
+  "confidence": "low",
+  "confidenceNote": "A tender spec snippet lists RS-232 or LAN for LIS on Dirui urine analyzers; no protocol document found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟",
+   "Dirui communication protocol document (غالباً HL7 أو خاص)"
+  ]
+ },
+ {
+  "id": "urit-500b",
+  "manufacturer": "URIT",
+  "model": "URIT-500B / URIT-31 / URIT-50",
+  "category": "urinalysis",
+  "egyptMarket": "common",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://mobile.labmedica.com/expo-amp/product/19177/urine-analyzer-model-urit-500b"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Product listing only, no interface info.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "erba-urolyzer-laura",
+  "manufacturer": "Erba Lachema / Erba Mannheim",
+  "model": "Urolyzer / LAURA Smart",
+  "category": "urinalysis",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Nothing found.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "sysmex-uf-1000i-5000",
+  "manufacturer": "Sysmex",
+  "model": "UF-1000i / UF-5000",
+  "category": "urinalysis",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   },
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "WBC",
+    "name": "WBC count (flow cytometry urine)",
+    "loinc": "",
+    "unit": "/uL",
+    "notes": "UF-series flow analyzers also report RBC, EC, CAST, BACT; LOINC not confirmed; no source opened"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.sysmex.co.id/sysmex-establishes-subsidiary-in-egypt-and-begins-conducting-direct-sales-and-services/?lang=id"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No UF document found; Sysmex states plans to add urinalysis in Egypt (direct subsidiary). Flow-cytometry urine parameters not mapped.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "mission-u500",
+  "manufacturer": "ACON / Mission",
+  "model": "Mission U500",
+  "category": "urinalysis",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "proprietary"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://aconlabs.com/pn-22200027501_u500-mission-urine-analyzer_us_cr"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Product page only.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ },
+ {
+  "id": "arkray-aution",
+  "manufacturer": "Arkray",
+  "model": "AUTION Elven / AUTION MAX",
+  "category": "urinalysis",
+  "egyptMarket": "rare",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (no login/credential in the protocol; access control is physical/network only: dedicated COM port or LAN segment)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "SG",
+    "name": "Specific gravity",
+    "loinc": "5811-5",
+    "unit": "",
+    "notes": "Strip reading"
+   },
+   {
+    "instrumentCode": "PH",
+    "name": "pH",
+    "loinc": "5803-2",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "LEU",
+    "name": "Leukocyte esterase",
+    "loinc": "5799-2",
+    "unit": "",
+    "notes": "Semi-quant: neg/trace/+/++/+++ or Leu/uL"
+   },
+   {
+    "instrumentCode": "NIT",
+    "name": "Nitrite",
+    "loinc": "5802-4",
+    "unit": "",
+    "notes": "neg/pos"
+   },
+   {
+    "instrumentCode": "PRO",
+    "name": "Protein",
+    "loinc": "5804-0",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "GLU",
+    "name": "Glucose",
+    "loinc": "5792-7",
+    "unit": "mg/dL",
+    "notes": "Semi-quant"
+   },
+   {
+    "instrumentCode": "KET",
+    "name": "Ketones",
+    "loinc": "5797-6",
+    "unit": "mg/dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "UBG",
+    "name": "Urobilinogen",
+    "loinc": "5818-9",
+    "unit": "mg/dL or E.U./dL",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BIL",
+    "name": "Bilirubin",
+    "loinc": "5770-3",
+    "unit": "",
+    "notes": ""
+   },
+   {
+    "instrumentCode": "BLD",
+    "name": "Blood (occult)",
+    "loinc": "5794-2",
+    "unit": "",
+    "notes": "Ery/uL or +/++/+++"
+   },
+   {
+    "instrumentCode": "COLOR",
+    "name": "Color",
+    "loinc": "5778-6",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "CLA",
+    "name": "Clarity / turbidity",
+    "loinc": "5767-9",
+    "unit": "",
+    "notes": "Text"
+   },
+   {
+    "instrumentCode": "ASC",
+    "name": "Ascorbic acid",
+    "loinc": "25364-2",
+    "unit": "",
+    "notes": "Only on strips that have the pad; verify LOINC"
+   },
+   {
+    "instrumentCode": "ALB",
+    "name": "Albumin (microalbumin strip)",
+    "loinc": "14957-5",
+    "unit": "mg/L",
+    "notes": "Only on Micral/ACR strips"
+   },
+   {
+    "instrumentCode": "CRE",
+    "name": "Creatinine (strip)",
+    "loinc": "2161-8",
+    "unit": "mg/dL",
+    "notes": "Only on ACR strips; verify LOINC"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "Nothing researched beyond name; included because requested.",
+  "askVendor": [
+   "أي بروتوكول (ASTM E1394/LIS2-A2 أم HL7 أم صيغة خاصة) وأي إصدار؟",
+   "هل خيار/ترخيص الـ LIS مفعّل على الجهاز وهل يحتاج مهندس الخدمة (service menu)؟",
+   "إعدادات المنفذ التسلسلي الافتراضية (baud/data/parity/stop) أو عنوان IP/المنفذ ودور الجهاز (client أم server)؟",
+   "هل الجهاز ثنائي الاتجاه (worklist/host query) وهل يحتاج ترخيصاً؟",
+   "جدول أكواد النتائج (test IDs) والوحدات والـ flags وملف interface specification الرسمي (PDF)؟",
+   "نموذج رسالة حقيقية (capture) من جهاز بنفس الإصدار؟"
+  ]
+ }
+]

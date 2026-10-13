@@ -103,14 +103,89 @@ function Invoke-Pnpm([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "pnpm $($Arguments -join ' ') failed (exit code $LASTEXITCODE)." }
 }
 
+# Node.js bundled by the Windows installer (runtime\node), preferred over any node on PATH.
+function Get-BundledNode {
+    foreach ($name in @('node.exe', 'node')) {
+        $candidate = Join-Path $script:ProjectRoot (Join-Path 'runtime' (Join-Path 'node' $name))
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+    }
+    return $null
+}
+
 function Get-NodeCommand {
+    $bundled = Get-BundledNode
+    if ($null -ne $bundled) { return $bundled }
     $node = Get-Command node -ErrorAction SilentlyContinue
     if ($null -eq $node) { throw 'Node.js was not found. Install Node.js 20.19 or newer (LTS) from https://nodejs.org and run the installer again.' }
     return $node.Source
 }
 
+# True when the server manages the PostgreSQL bundled with the installer (EMBEDDED_PG=true in .env).
+function Test-EmbeddedDatabase {
+    return ([Environment]::GetEnvironmentVariable('EMBEDDED_PG', 'Process') -eq 'true')
+}
+
 function Test-UsesDockerDatabase {
+    if (Test-EmbeddedDatabase) { return $false }
     return ([Environment]::GetEnvironmentVariable('USE_DOCKER_DATABASE', 'Process') -ne 'false')
+}
+
+function Resolve-ProjectPath([string]$Path) {
+    if ([System.IO.Path]::IsPathRooted($Path)) { return $Path }
+    return (Join-Path $script:ProjectRoot $Path)
+}
+
+function Get-PgTool([string]$Name) {
+    $binDir = Resolve-ProjectPath $env:PG_BIN_DIR
+    foreach ($candidate in @("$Name.exe", $Name)) {
+        $path = Join-Path $binDir $candidate
+        if (Test-Path -LiteralPath $path) { return $path }
+    }
+    throw "PostgreSQL tool '$Name' was not found in $binDir."
+}
+
+function Get-EmbeddedDataDirectory {
+    $dir = if ($env:PG_DATA_DIR) { $env:PG_DATA_DIR } else { 'data\pgdata' }
+    return (Resolve-ProjectPath $dir)
+}
+
+function Get-EmbeddedCredentials {
+    $file = Join-Path (Split-Path (Get-EmbeddedDataDirectory) -Parent) 'pg-credentials.json'
+    if (-not (Test-Path -LiteralPath $file)) { throw "The database has not been created yet (missing $file). Start A.Y Scan once first." }
+    $credentials = Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json
+    return $credentials
+}
+
+function Test-EmbeddedDatabaseRunning {
+    & (Get-PgTool 'pg_ctl') status -D (Get-EmbeddedDataDirectory) *> $null
+    return $LASTEXITCODE -eq 0
+}
+
+# Starts the bundled PostgreSQL when it is not running (used by backup/restore while the app is stopped).
+# Returns $true when this call started it, so the caller can stop it again.
+function Start-EmbeddedDatabaseIfNeeded {
+    if (Test-EmbeddedDatabaseRunning) { return $false }
+    $credentials = Get-EmbeddedCredentials
+    $dataDir = Get-EmbeddedDataDirectory
+    $logFile = Join-Path (Split-Path $dataDir -Parent) 'postgres.log'
+    Invoke-Checked (Get-PgTool 'pg_ctl') @('start', '-D', $dataDir, '-w', '-t', '60', '-l', $logFile, '-o', "-p $($credentials.port) -c listen_addresses=127.0.0.1 -c unix_socket_directories= -c max_connections=60") 'Could not start the local database.'
+    return $true
+}
+
+function Stop-EmbeddedDatabase {
+    if (Test-EmbeddedDatabaseRunning) { & (Get-PgTool 'pg_ctl') stop -D (Get-EmbeddedDataDirectory) -m fast -w -t 30 | Out-Null }
+}
+
+# Runs a PostgreSQL client tool (pg_dump, pg_restore) against the bundled database; the password never appears on the command line.
+function Invoke-EmbeddedPg([string]$Tool, [string[]]$Arguments, [string]$FailureMessage) {
+    $credentials = Get-EmbeddedCredentials
+    $previous = $env:PGPASSWORD
+    $env:PGPASSWORD = $credentials.password
+    try {
+        Invoke-Checked (Get-PgTool $Tool) (@('-h', '127.0.0.1', '-p', "$($credentials.port)", '-U', $credentials.user) + $Arguments) $FailureMessage
+    } finally {
+        if ($null -eq $previous) { Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue } else { $env:PGPASSWORD = $previous }
+    }
 }
 
 function Get-DockerCommand {

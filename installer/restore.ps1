@@ -36,7 +36,15 @@ try {
     & (Join-Path $PSScriptRoot 'stop.ps1') -ServerOnly
 
     Write-Step 'Restoring the database'
-    if (Test-UsesDockerDatabase) {
+    if (Test-EmbeddedDatabase) {
+        $startedHere = Start-EmbeddedDatabaseIfNeeded
+        try {
+            $credentials = Get-EmbeddedCredentials
+            Invoke-EmbeddedPg 'pg_restore' @('-d', $credentials.database, '--clean', '--if-exists', '--no-owner', '--single-transaction', '--exit-on-error', $resolved) 'pg_restore failed; the database was left unchanged.'
+        } finally {
+            if ($startedHere) { Stop-EmbeddedDatabase }
+        }
+    } elseif (Test-UsesDockerDatabase) {
         Start-Database
         $docker = Get-DockerCommand
         $containerPath = '/tmp/ayscan-restore.dump'

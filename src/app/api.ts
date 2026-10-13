@@ -130,6 +130,8 @@ const KNOWN_SERVER_MESSAGES: Record<string, string> = {
   'Catalog test was not found.': 'لم يتم العثور على التحليل.',
   'One or more tests are not in the active catalog.': 'تحليل أو أكثر غير مفعّل في الدليل. حدّث القائمة وحاول مرة أخرى.',
   'patientId does not reference an existing patient.': 'المريض المحدد غير موجود في السجل.',
+  'First-time setup must be done from the computer that runs A.Y Scan.': 'يجب إجراء الإعداد الأول من الجهاز الذي يشغّل A.Y Scan نفسه.',
+  'The system is already set up.': 'تم إعداد النظام من قبل. سجّل الدخول.',
 }
 
 export class ApiError extends Error {
@@ -645,6 +647,14 @@ export function updateUser(id: string, update: UserAccountUpdate): Promise<UserA
 
 export function resetUserPassword(id: string, password: string): Promise<void> {
   return requestJson<void>(`/api/users/${encodeURIComponent(id)}/reset-password`, { method: 'POST', body: JSON.stringify({ password }) })
+}
+
+export function fetchSetupStatus(): Promise<{ needsSetup: boolean }> {
+  return requestJson<{ needsSetup: boolean }>('/api/setup/status')
+}
+
+export function completeSetup(account: { email: string; displayName: string; password: string }): Promise<{ user: AuthenticatedUser }> {
+  return requestJson<{ user: AuthenticatedUser }>('/api/setup', { method: 'POST', body: JSON.stringify(account) })
 }
 
 export function logout(): Promise<void> {

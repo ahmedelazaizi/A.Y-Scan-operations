@@ -22,6 +22,11 @@ try {
     }
     Remove-Item -LiteralPath $script:PidFile -ErrorAction SilentlyContinue
 
+    if (-not $ServerOnly -and (Test-EmbeddedDatabase)) {
+        # The server was just killed, so it could not stop the bundled PostgreSQL itself.
+        Stop-EmbeddedDatabase
+        Write-Host 'Local database stopped (data kept).'
+    }
     if (-not $ServerOnly -and (Test-UsesDockerDatabase)) {
         Invoke-Compose @('stop', 'ay-scan-postgres')
         Write-Host 'PostgreSQL stopped (data kept).'

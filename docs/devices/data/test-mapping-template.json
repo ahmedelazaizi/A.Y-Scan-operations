@@ -1,0 +1,1282 @@
+{
+ "_readme": "Starter catalog. LOINC codes verified 2026-10-13 against the HL7 terminology server (tx.fhir.org, LOINC 2.82) by $lookup; null = not verified. SI conversion hints in commonReferenceNote are general knowledge and must be validated. No reference ranges are given: the lab director owns them. 'mmol/mol' for HbA1c needs IFCC conversion, not a simple factor.",
+ "mappingFormat": {
+  "description": "Per-device mapping row stored by the app: maps an instrument test code to our catalog code.",
+  "schema": {
+   "deviceId": "string - our device record id",
+   "instrumentCode": "string - code as sent by the instrument (ASTM R.3 / HL7 OBX.3 component 1 or per vendor doc)",
+   "testCode": "string - our catalog code (see tests[].code)",
+   "unitConversion": {
+    "factor": "number, result = raw*factor+offset",
+    "offset": "number"
+   },
+   "resultType": "numeric | text | categorical | titer | semi-quantitative",
+   "decimals": "integer - display rounding (null = keep as received)",
+   "abnormalFlagMap": "object - instrument flag -> {flag: H|L|HH|LL|N|A|POS|NEG, critical: bool}",
+   "notes": "string"
+  },
+  "examples": [
+   {
+    "deviceId": "dev-chem-01",
+    "instrumentCode": "GLU",
+    "testCode": "CHEM-GLU",
+    "unitConversion": {
+     "factor": 18.016,
+     "offset": 0
+    },
+    "resultType": "numeric",
+    "decimals": 0,
+    "abnormalFlagMap": {
+     "H": {
+      "flag": "H",
+      "critical": false
+     },
+     "L": {
+      "flag": "L",
+      "critical": false
+     },
+     "HH": {
+      "flag": "HH",
+      "critical": true
+     },
+     "LL": {
+      "flag": "LL",
+      "critical": true
+     },
+     "N": {
+      "flag": "N",
+      "critical": false
+     }
+    },
+    "notes": "EXAMPLE ONLY: device reports mmol/L, app stores mg/dL (x18.016). Confirm unit setting on the real device."
+   },
+   {
+    "deviceId": "dev-hema-01",
+    "instrumentCode": "WBC",
+    "testCode": "CBC-WBC",
+    "unitConversion": {
+     "factor": 1,
+     "offset": 0
+    },
+    "resultType": "numeric",
+    "decimals": 2,
+    "abnormalFlagMap": {
+     "H": {
+      "flag": "H",
+      "critical": false
+     },
+     "L": {
+      "flag": "L",
+      "critical": false
+     },
+     "*": {
+      "flag": "A",
+      "critical": false
+     }
+    },
+    "notes": "EXAMPLE ONLY: 10^9/L equals 10^3/uL numerically. Instrument code is a placeholder; take it from the vendor LIS spec."
+   }
+  ]
+ },
+ "tests": [
+  {
+   "code": "CBC-WBC",
+   "nameAr": "كرات الدم البيضاء",
+   "nameEn": "WBC (Leukocytes)",
+   "specimen": "Whole blood EDTA",
+   "loinc": "6690-2",
+   "conventionalUnit": "10^3/uL",
+   "siUnit": "10^9/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal; ranges vary by age/sex",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-RBC",
+   "nameAr": "كرات الدم الحمراء",
+   "nameEn": "RBC (Erythrocytes)",
+   "specimen": "Whole blood EDTA",
+   "loinc": "789-8",
+   "conventionalUnit": "10^6/uL",
+   "siUnit": "10^12/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-HGB",
+   "nameAr": "الهيموجلوبين",
+   "nameEn": "Hemoglobin",
+   "specimen": "Whole blood EDTA",
+   "loinc": "718-7",
+   "conventionalUnit": "g/dL",
+   "siUnit": "g/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 10",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-HCT",
+   "nameAr": "الهيماتوكريت",
+   "nameEn": "Hematocrit",
+   "specimen": "Whole blood EDTA",
+   "loinc": "4544-3",
+   "conventionalUnit": "%",
+   "siUnit": "L/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional / 100",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-MCV",
+   "nameAr": "متوسط حجم الكرية",
+   "nameEn": "MCV",
+   "specimen": "Whole blood EDTA",
+   "loinc": "787-2",
+   "conventionalUnit": "fL",
+   "siUnit": "fL",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-MCH",
+   "nameAr": "متوسط هيموجلوبين الكرية",
+   "nameEn": "MCH",
+   "specimen": "Whole blood EDTA",
+   "loinc": "785-6",
+   "conventionalUnit": "pg",
+   "siUnit": "pg",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-MCHC",
+   "nameAr": "تركيز هيموجلوبين الكرية",
+   "nameEn": "MCHC",
+   "specimen": "Whole blood EDTA",
+   "loinc": "786-4",
+   "conventionalUnit": "g/dL",
+   "siUnit": "g/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 10",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-RDW",
+   "nameAr": "عرض توزيع الكريات الحمراء",
+   "nameEn": "RDW-CV",
+   "specimen": "Whole blood EDTA",
+   "loinc": "788-0",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-PLT",
+   "nameAr": "الصفائح الدموية",
+   "nameEn": "Platelets",
+   "specimen": "Whole blood EDTA",
+   "loinc": "777-3",
+   "conventionalUnit": "10^3/uL",
+   "siUnit": "10^9/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-MPV",
+   "nameAr": "متوسط حجم الصفيحة",
+   "nameEn": "MPV",
+   "specimen": "Whole blood EDTA",
+   "loinc": "32623-1",
+   "conventionalUnit": "fL",
+   "siUnit": "fL",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-NEUTP",
+   "nameAr": "العدلات %",
+   "nameEn": "Neutrophils %",
+   "specimen": "Whole blood EDTA",
+   "loinc": "770-8",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-LYMP",
+   "nameAr": "الليمفاويات %",
+   "nameEn": "Lymphocytes %",
+   "specimen": "Whole blood EDTA",
+   "loinc": "736-9",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-MONOP",
+   "nameAr": "الوحيدات %",
+   "nameEn": "Monocytes %",
+   "specimen": "Whole blood EDTA",
+   "loinc": "5905-5",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-EOSP",
+   "nameAr": "الحمضات %",
+   "nameEn": "Eosinophils %",
+   "specimen": "Whole blood EDTA",
+   "loinc": "713-8",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-BASOP",
+   "nameAr": "القعدات %",
+   "nameEn": "Basophils %",
+   "specimen": "Whole blood EDTA",
+   "loinc": "706-2",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-NEUTA",
+   "nameAr": "العدلات (عدد مطلق)",
+   "nameEn": "Neutrophils absolute",
+   "specimen": "Whole blood EDTA",
+   "loinc": "751-8",
+   "conventionalUnit": "10^3/uL",
+   "siUnit": "10^9/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "CBC-LYMA",
+   "nameAr": "الليمفاويات (عدد مطلق)",
+   "nameEn": "Lymphocytes absolute",
+   "specimen": "Whole blood EDTA",
+   "loinc": "731-0",
+   "conventionalUnit": "10^3/uL",
+   "siUnit": "10^9/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "HEM-ESR",
+   "nameAr": "سرعة الترسيب",
+   "nameEn": "ESR (Westergren)",
+   "specimen": "Whole blood EDTA/citrate",
+   "loinc": "4537-7",
+   "conventionalUnit": "mm/h",
+   "siUnit": "mm/h",
+   "commonReferenceNote": "hint only, validate with lab director: method-dependent",
+   "category": "hematology"
+  },
+  {
+   "code": "HEM-RETIC",
+   "nameAr": "الخلايا الشبكية %",
+   "nameEn": "Reticulocytes %",
+   "specimen": "Whole blood EDTA",
+   "loinc": "4679-7",
+   "conventionalUnit": "%",
+   "siUnit": "%",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "hematology"
+  },
+  {
+   "code": "BB-ABO",
+   "nameAr": "فصيلة الدم ABO",
+   "nameEn": "ABO group",
+   "specimen": "Whole blood EDTA",
+   "loinc": "883-9",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "hematology"
+  },
+  {
+   "code": "BB-RH",
+   "nameAr": "عامل Rh",
+   "nameEn": "Rh type",
+   "specimen": "Whole blood EDTA",
+   "loinc": "10331-7",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "hematology"
+  },
+  {
+   "code": "COAG-PT",
+   "nameAr": "زمن البروثرومبين",
+   "nameEn": "Prothrombin time (PT)",
+   "specimen": "Citrate plasma",
+   "loinc": "5902-2",
+   "conventionalUnit": "s",
+   "siUnit": "s",
+   "commonReferenceNote": "hint only, validate with lab director: reagent/ISI dependent",
+   "category": "coag"
+  },
+  {
+   "code": "COAG-INR",
+   "nameAr": "INR",
+   "nameEn": "INR",
+   "specimen": "Citrate plasma",
+   "loinc": "6301-6",
+   "conventionalUnit": "ratio",
+   "siUnit": "ratio",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "coag"
+  },
+  {
+   "code": "COAG-APTT",
+   "nameAr": "زمن الثرومبوبلاستين الجزئي",
+   "nameEn": "aPTT",
+   "specimen": "Citrate plasma",
+   "loinc": "3173-2",
+   "conventionalUnit": "s",
+   "siUnit": "s",
+   "commonReferenceNote": "hint only, validate with lab director: reagent dependent",
+   "category": "coag"
+  },
+  {
+   "code": "COAG-FIB",
+   "nameAr": "الفيبرينوجين",
+   "nameEn": "Fibrinogen",
+   "specimen": "Citrate plasma",
+   "loinc": "3255-7",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "g/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional / 100",
+   "category": "coag"
+  },
+  {
+   "code": "COAG-DDIMER",
+   "nameAr": "D-Dimer",
+   "nameEn": "D-dimer (DDU)",
+   "specimen": "Citrate plasma",
+   "loinc": "48066-5",
+   "conventionalUnit": "ng/mL DDU",
+   "siUnit": "mg/L DDU",
+   "commonReferenceNote": "hint only, validate with lab director: DDU vs FEU differs by assay; confirm with kit insert",
+   "category": "coag"
+  },
+  {
+   "code": "CHEM-GLU",
+   "nameAr": "سكر الدم",
+   "nameEn": "Glucose",
+   "specimen": "Serum/plasma",
+   "loinc": "2345-7",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.0555",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-GLUF",
+   "nameAr": "سكر صائم",
+   "nameEn": "Fasting glucose",
+   "specimen": "Serum/plasma",
+   "loinc": "1558-6",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.0555",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-HBA1C",
+   "nameAr": "الهيموجلوبين السكري",
+   "nameEn": "HbA1c",
+   "specimen": "Whole blood EDTA",
+   "loinc": "4548-4",
+   "conventionalUnit": "%",
+   "siUnit": "mmol/mol",
+   "commonReferenceNote": "hint only, validate with lab director: IFCC/NGSP conversion; confirm method traceability",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-BUN",
+   "nameAr": "نيتروجين اليوريا",
+   "nameEn": "Urea nitrogen (BUN)",
+   "specimen": "Serum/plasma",
+   "loinc": "3094-0",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L (urea)",
+   "commonReferenceNote": "hint only, validate with lab director: urea vs BUN conversion factor 2.14; confirm which the device reports",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CREA",
+   "nameAr": "الكرياتينين",
+   "nameEn": "Creatinine",
+   "specimen": "Serum/plasma",
+   "loinc": "2160-0",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "umol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 88.4",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-UA",
+   "nameAr": "حمض اليوريك",
+   "nameEn": "Uric acid (Urate)",
+   "specimen": "Serum/plasma",
+   "loinc": "3084-1",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "umol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 59.48",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-NA",
+   "nameAr": "الصوديوم",
+   "nameEn": "Sodium",
+   "specimen": "Serum/plasma",
+   "loinc": "2951-2",
+   "conventionalUnit": "mmol/L",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-K",
+   "nameAr": "البوتاسيوم",
+   "nameEn": "Potassium",
+   "specimen": "Serum/plasma",
+   "loinc": "2823-3",
+   "conventionalUnit": "mmol/L",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CL",
+   "nameAr": "الكلوريد",
+   "nameEn": "Chloride",
+   "specimen": "Serum/plasma",
+   "loinc": "2075-0",
+   "conventionalUnit": "mmol/L",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CA",
+   "nameAr": "الكالسيوم",
+   "nameEn": "Calcium (total)",
+   "specimen": "Serum/plasma",
+   "loinc": "17861-6",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.2495",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-PHOS",
+   "nameAr": "الفوسفور",
+   "nameEn": "Phosphate",
+   "specimen": "Serum/plasma",
+   "loinc": "2777-1",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.3229",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-MG",
+   "nameAr": "المغنيسيوم",
+   "nameEn": "Magnesium",
+   "specimen": "Serum/plasma",
+   "loinc": "19123-9",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.4114",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-ALT",
+   "nameAr": "إنزيم ALT",
+   "nameEn": "ALT (SGPT)",
+   "specimen": "Serum/plasma",
+   "loinc": "1742-6",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only, validate with lab director: assay temperature dependent",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-AST",
+   "nameAr": "إنزيم AST",
+   "nameEn": "AST (SGOT)",
+   "specimen": "Serum/plasma",
+   "loinc": "1920-8",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only, validate with lab director: assay temperature dependent",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-ALP",
+   "nameAr": "الفوسفاتيز القلوي",
+   "nameEn": "Alkaline phosphatase",
+   "specimen": "Serum/plasma",
+   "loinc": "6768-6",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only, validate with lab director: age dependent",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-GGT",
+   "nameAr": "جاما جلوتاميل",
+   "nameEn": "GGT",
+   "specimen": "Serum/plasma",
+   "loinc": "2324-2",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-TBIL",
+   "nameAr": "البيليروبين الكلي",
+   "nameEn": "Bilirubin total",
+   "specimen": "Serum/plasma",
+   "loinc": "1975-2",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "umol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 17.1",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-DBIL",
+   "nameAr": "البيليروبين المباشر",
+   "nameEn": "Bilirubin direct",
+   "specimen": "Serum/plasma",
+   "loinc": "1968-7",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "umol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 17.1",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-TP",
+   "nameAr": "البروتين الكلي",
+   "nameEn": "Total protein",
+   "specimen": "Serum/plasma",
+   "loinc": "2885-2",
+   "conventionalUnit": "g/dL",
+   "siUnit": "g/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 10",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-ALB",
+   "nameAr": "الألبومين",
+   "nameEn": "Albumin",
+   "specimen": "Serum/plasma",
+   "loinc": "1751-7",
+   "conventionalUnit": "g/dL",
+   "siUnit": "g/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 10",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CHOL",
+   "nameAr": "الكوليسترول الكلي",
+   "nameEn": "Cholesterol total",
+   "specimen": "Serum/plasma",
+   "loinc": "2093-3",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.02586",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-TG",
+   "nameAr": "الدهون الثلاثية",
+   "nameEn": "Triglycerides",
+   "specimen": "Serum/plasma",
+   "loinc": "2571-8",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.01129",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-HDL",
+   "nameAr": "الكوليسترول HDL",
+   "nameEn": "HDL cholesterol",
+   "specimen": "Serum/plasma",
+   "loinc": "2085-9",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.02586",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-LDLC",
+   "nameAr": "الكوليسترول LDL (محسوب)",
+   "nameEn": "LDL cholesterol (calculated)",
+   "specimen": "Serum/plasma",
+   "loinc": "13457-7",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: formula (Friedewald etc.) must be chosen by lab",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-LDLD",
+   "nameAr": "الكوليسترول LDL (مباشر)",
+   "nameEn": "LDL cholesterol (direct)",
+   "specimen": "Serum/plasma",
+   "loinc": "18262-6",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-LDH",
+   "nameAr": "LDH",
+   "nameEn": "Lactate dehydrogenase",
+   "specimen": "Serum/plasma",
+   "loinc": "2532-0",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only, validate with lab director: method (L-P vs P-L) dependent",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CK",
+   "nameAr": "CK",
+   "nameEn": "Creatine kinase",
+   "specimen": "Serum/plasma",
+   "loinc": "2157-6",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CKMB",
+   "nameAr": "CK-MB (كتلة)",
+   "nameEn": "CK-MB mass",
+   "specimen": "Serum/plasma",
+   "loinc": "13969-1",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-AMY",
+   "nameAr": "الأميليز",
+   "nameEn": "Amylase",
+   "specimen": "Serum/plasma",
+   "loinc": "1798-8",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-LIP",
+   "nameAr": "الليباز",
+   "nameEn": "Lipase",
+   "specimen": "Serum/plasma",
+   "loinc": "3040-3",
+   "conventionalUnit": "U/L",
+   "siUnit": "U/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-FE",
+   "nameAr": "الحديد",
+   "nameEn": "Iron",
+   "specimen": "Serum",
+   "loinc": "2498-4",
+   "conventionalUnit": "ug/dL",
+   "siUnit": "umol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.1791",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-TIBC",
+   "nameAr": "السعة الرابطة للحديد",
+   "nameEn": "TIBC",
+   "specimen": "Serum",
+   "loinc": "2500-7",
+   "conventionalUnit": "ug/dL",
+   "siUnit": "umol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.1791",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-CRP",
+   "nameAr": "بروتين سي التفاعلي",
+   "nameEn": "CRP",
+   "specimen": "Serum/plasma",
+   "loinc": "1988-5",
+   "conventionalUnit": "mg/L",
+   "siUnit": "mg/L",
+   "commonReferenceNote": "hint only, validate with lab director: vs hs-CRP: separate assay",
+   "category": "chemistry"
+  },
+  {
+   "code": "CHEM-HSCRP",
+   "nameAr": "CRP عالي الحساسية",
+   "nameEn": "hs-CRP",
+   "specimen": "Serum/plasma",
+   "loinc": "30522-7",
+   "conventionalUnit": "mg/L",
+   "siUnit": "mg/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "chemistry"
+  },
+  {
+   "code": "IMM-FERR",
+   "nameAr": "الفيريتين",
+   "nameEn": "Ferritin",
+   "specimen": "Serum/plasma",
+   "loinc": "2276-4",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-VITD",
+   "nameAr": "فيتامين د 25-OH",
+   "nameEn": "25-OH Vitamin D (D2+D3)",
+   "specimen": "Serum/plasma",
+   "loinc": "62292-8",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 2.496",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-B12",
+   "nameAr": "فيتامين ب12",
+   "nameEn": "Vitamin B12",
+   "specimen": "Serum/plasma",
+   "loinc": "2132-9",
+   "conventionalUnit": "pg/mL",
+   "siUnit": "pmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.738",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-FOL",
+   "nameAr": "حمض الفوليك",
+   "nameEn": "Folate",
+   "specimen": "Serum/plasma",
+   "loinc": "2284-8",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 2.266",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-TSH",
+   "nameAr": "الهرمون المنبه للدرقية",
+   "nameEn": "TSH",
+   "specimen": "Serum/plasma",
+   "loinc": "3016-3",
+   "conventionalUnit": "uIU/mL",
+   "siUnit": "mIU/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-FT4",
+   "nameAr": "ثيروكسين حر",
+   "nameEn": "Free T4",
+   "specimen": "Serum/plasma",
+   "loinc": "3024-7",
+   "conventionalUnit": "ng/dL",
+   "siUnit": "pmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 12.87",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-FT3",
+   "nameAr": "ثلاثي يودو ثيرونين حر",
+   "nameEn": "Free T3",
+   "specimen": "Serum/plasma",
+   "loinc": "3051-0",
+   "conventionalUnit": "pg/mL",
+   "siUnit": "pmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 1.536",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-T3",
+   "nameAr": "T3 الكلي",
+   "nameEn": "Total T3",
+   "specimen": "Serum/plasma",
+   "loinc": "3053-6",
+   "conventionalUnit": "ng/dL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.0154",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-T4",
+   "nameAr": "T4 الكلي",
+   "nameEn": "Total T4",
+   "specimen": "Serum/plasma",
+   "loinc": "3026-2",
+   "conventionalUnit": "ug/dL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 12.87",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-PSA",
+   "nameAr": "PSA الكلي",
+   "nameEn": "PSA total",
+   "specimen": "Serum",
+   "loinc": "2857-1",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-FPSA",
+   "nameAr": "PSA الحر",
+   "nameEn": "PSA free",
+   "specimen": "Serum",
+   "loinc": "10886-0",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-TROPI",
+   "nameAr": "تروبونين I عالي الحساسية",
+   "nameEn": "hs-Troponin I",
+   "specimen": "Serum/plasma",
+   "loinc": "89579-7",
+   "conventionalUnit": "ng/L",
+   "siUnit": "ng/L",
+   "commonReferenceNote": "hint only, validate with lab director: assay-specific cutoffs/99th percentile",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-TROPT",
+   "nameAr": "تروبونين T",
+   "nameEn": "Troponin T",
+   "specimen": "Serum/plasma",
+   "loinc": "6598-7",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only, validate with lab director: hs-TnT has a different LOINC; confirm assay",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-BHCG",
+   "nameAr": "هرمون الحمل (بيتا)",
+   "nameEn": "Beta-hCG",
+   "specimen": "Serum",
+   "loinc": "21198-7",
+   "conventionalUnit": "mIU/mL",
+   "siUnit": "IU/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-PRL",
+   "nameAr": "البرولاكتين",
+   "nameEn": "Prolactin",
+   "specimen": "Serum",
+   "loinc": "2842-3",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-FSH",
+   "nameAr": "FSH",
+   "nameEn": "FSH",
+   "specimen": "Serum",
+   "loinc": "15067-2",
+   "conventionalUnit": "mIU/mL",
+   "siUnit": "IU/L",
+   "commonReferenceNote": "hint only, validate with lab director: phase of cycle dependent",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-LH",
+   "nameAr": "LH",
+   "nameEn": "LH",
+   "specimen": "Serum",
+   "loinc": "10501-5",
+   "conventionalUnit": "mIU/mL",
+   "siUnit": "IU/L",
+   "commonReferenceNote": "hint only, validate with lab director: phase of cycle dependent",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-E2",
+   "nameAr": "استراديول",
+   "nameEn": "Estradiol",
+   "specimen": "Serum",
+   "loinc": "2243-4",
+   "conventionalUnit": "pg/mL",
+   "siUnit": "pmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 3.671",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-PROG",
+   "nameAr": "بروجسترون",
+   "nameEn": "Progesterone",
+   "specimen": "Serum",
+   "loinc": "2839-9",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 3.18",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-TESTO",
+   "nameAr": "تستوستيرون",
+   "nameEn": "Testosterone",
+   "specimen": "Serum",
+   "loinc": "2986-8",
+   "conventionalUnit": "ng/dL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 0.0347",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-CORT",
+   "nameAr": "كورتيزول",
+   "nameEn": "Cortisol",
+   "specimen": "Serum",
+   "loinc": "2143-6",
+   "conventionalUnit": "ug/dL",
+   "siUnit": "nmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 27.59; time-of-day dependent",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-INS",
+   "nameAr": "الأنسولين",
+   "nameEn": "Insulin",
+   "specimen": "Serum",
+   "loinc": "20448-7",
+   "conventionalUnit": "uIU/mL",
+   "siUnit": "pmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: SI = conventional x 6.945",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-PTH",
+   "nameAr": "الغدة جار الدرقية",
+   "nameEn": "PTH intact",
+   "specimen": "Plasma EDTA/serum",
+   "loinc": "2731-8",
+   "conventionalUnit": "pg/mL",
+   "siUnit": "ng/L",
+   "commonReferenceNote": "hint only, validate with lab director: units numerically equal",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-PCT",
+   "nameAr": "بروكالسيتونين",
+   "nameEn": "Procalcitonin",
+   "specimen": "Serum/plasma",
+   "loinc": "33959-8",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-AFP",
+   "nameAr": "ألفا فيتوبروتين",
+   "nameEn": "AFP",
+   "specimen": "Serum",
+   "loinc": "1834-1",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-CEA",
+   "nameAr": "CEA",
+   "nameEn": "CEA",
+   "specimen": "Serum",
+   "loinc": "2039-6",
+   "conventionalUnit": "ng/mL",
+   "siUnit": "ug/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-CA125",
+   "nameAr": "CA 125",
+   "nameEn": "CA 125",
+   "specimen": "Serum",
+   "loinc": "10334-1",
+   "conventionalUnit": "U/mL",
+   "siUnit": "kU/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-CA199",
+   "nameAr": "CA 19-9",
+   "nameEn": "CA 19-9",
+   "specimen": "Serum",
+   "loinc": "24108-3",
+   "conventionalUnit": "U/mL",
+   "siUnit": "kU/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-HBSAG",
+   "nameAr": "HBsAg",
+   "nameEn": "HBsAg",
+   "specimen": "Serum/plasma",
+   "loinc": "5196-1",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: qualitative/cutoff index; interpretation per kit",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-HBSAB",
+   "nameAr": "Anti-HBs",
+   "nameEn": "Anti-HBs",
+   "specimen": "Serum/plasma",
+   "loinc": "5193-8",
+   "conventionalUnit": "mIU/mL",
+   "siUnit": "IU/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-HBCAB",
+   "nameAr": "Anti-HBc",
+   "nameEn": "Anti-HBc",
+   "specimen": "Serum/plasma",
+   "loinc": "13952-7",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: qualitative",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-HCV",
+   "nameAr": "أجسام مضادة لفيروس C",
+   "nameEn": "Anti-HCV",
+   "specimen": "Serum",
+   "loinc": "16128-1",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: qualitative/cutoff index",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-HIV",
+   "nameAr": "فيروس HIV (Ag/Ab)",
+   "nameEn": "HIV Ag/Ab combo",
+   "specimen": "Serum/plasma",
+   "loinc": null,
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: combined Ag/Ab LOINC not verified here (7917-8 is HIV 1 Ab only)",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-RF",
+   "nameAr": "العامل الروماتويدي",
+   "nameEn": "Rheumatoid factor",
+   "specimen": "Serum",
+   "loinc": "11572-5",
+   "conventionalUnit": "IU/mL",
+   "siUnit": "IU/mL",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "IMM-ASO",
+   "nameAr": "ASO",
+   "nameEn": "ASO titer",
+   "specimen": "Serum",
+   "loinc": "5370-2",
+   "conventionalUnit": "IU/mL",
+   "siUnit": "IU/mL",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "immunoassay"
+  },
+  {
+   "code": "URI-GLU",
+   "nameAr": "جلوكوز البول",
+   "nameEn": "Urine glucose (dipstick)",
+   "specimen": "Urine",
+   "loinc": "5792-7",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "mmol/L",
+   "commonReferenceNote": "hint only, validate with lab director: dipstick reports vary (neg/trace/+)",
+   "category": "urine"
+  },
+  {
+   "code": "URI-PRO",
+   "nameAr": "بروتين البول",
+   "nameEn": "Urine protein (dipstick)",
+   "specimen": "Urine",
+   "loinc": "5804-0",
+   "conventionalUnit": "mg/dL",
+   "siUnit": "g/L",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "urine"
+  },
+  {
+   "code": "URI-KET",
+   "nameAr": "كيتونات البول",
+   "nameEn": "Urine ketones (dipstick)",
+   "specimen": "Urine",
+   "loinc": "2514-8",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "urine"
+  },
+  {
+   "code": "URI-BLD",
+   "nameAr": "دم في البول",
+   "nameEn": "Urine blood (dipstick)",
+   "specimen": "Urine",
+   "loinc": "5794-3",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "urine"
+  },
+  {
+   "code": "URI-PH",
+   "nameAr": "حموضة البول",
+   "nameEn": "Urine pH",
+   "specimen": "Urine",
+   "loinc": "5803-2",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "urine"
+  },
+  {
+   "code": "URI-SG",
+   "nameAr": "الكثافة النوعية للبول",
+   "nameEn": "Urine specific gravity",
+   "specimen": "Urine",
+   "loinc": "5811-5",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "urine"
+  },
+  {
+   "code": "URI-LEU",
+   "nameAr": "كرات بيضاء (شريط)",
+   "nameEn": "Urine leukocyte esterase",
+   "specimen": "Urine",
+   "loinc": "5799-2",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "urine"
+  },
+  {
+   "code": "URI-NIT",
+   "nameAr": "نيتريت البول",
+   "nameEn": "Urine nitrite",
+   "specimen": "Urine",
+   "loinc": "5802-4",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "urine"
+  },
+  {
+   "code": "URI-BIL",
+   "nameAr": "بيليروبين البول",
+   "nameEn": "Urine bilirubin",
+   "specimen": "Urine",
+   "loinc": "5770-3",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "urine"
+  },
+  {
+   "code": "URI-UBG",
+   "nameAr": "يوروبيلينوجين البول",
+   "nameEn": "Urine urobilinogen",
+   "specimen": "Urine",
+   "loinc": "5818-0",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: categorical",
+   "category": "urine"
+  },
+  {
+   "code": "URI-COL",
+   "nameAr": "لون البول",
+   "nameEn": "Urine color",
+   "specimen": "Urine",
+   "loinc": "5778-6",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: text",
+   "category": "urine"
+  },
+  {
+   "code": "URI-WBC",
+   "nameAr": "كرات بيضاء (مجهري)",
+   "nameEn": "Urine sediment WBC /HPF",
+   "specimen": "Urine",
+   "loinc": "5821-4",
+   "conventionalUnit": "/HPF",
+   "siUnit": "/HPF",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "urine"
+  },
+  {
+   "code": "URI-RBC",
+   "nameAr": "كرات حمراء (مجهري)",
+   "nameEn": "Urine sediment RBC /HPF",
+   "specimen": "Urine",
+   "loinc": "13945-1",
+   "conventionalUnit": "/HPF",
+   "siUnit": "/HPF",
+   "commonReferenceNote": "hint only: lab-director to define ranges",
+   "category": "urine"
+  },
+  {
+   "code": "URI-HCG",
+   "nameAr": "اختبار حمل بولي",
+   "nameEn": "Urine hCG (qualitative)",
+   "specimen": "Urine",
+   "loinc": "2106-3",
+   "conventionalUnit": "",
+   "siUnit": "",
+   "commonReferenceNote": "hint only, validate with lab director: qualitative",
+   "category": "urine"
+  }
+ ]
+}

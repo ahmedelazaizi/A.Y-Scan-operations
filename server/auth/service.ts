@@ -63,6 +63,7 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
   const sessionTtlMs = options.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS
   const throttle = options.throttle ?? new LoginThrottle()
   const now = options.now ?? Date.now
+  let setupInProgress = false
 
   async function issueSession(user: AuthenticatedUser): Promise<{ token: string; expiresAt: string }> {
     const token = randomBytes(TOKEN_BYTES).toString('base64url')
@@ -184,6 +185,18 @@ export function createAuthService(store: UserStore, options: { sessionTtlMs?: nu
     },
 
     hasUsers: async (): Promise<boolean> => (await store.countUsers()) > 0,
+
+    /** Creates the very first admin; refuses once any account exists. Serialized so concurrent calls cannot create two. */
+    async setupFirstAdmin(input: Omit<NewUserInput, 'role'>): Promise<UserAccount> {
+      if (setupInProgress) throw new AuthConflictError('Setup is already in progress.')
+      setupInProgress = true
+      try {
+        if ((await store.countUsers()) > 0) throw new AuthConflictError('The system is already set up.')
+        return await createUser({ ...input, role: 'admin' }, { mustChangePassword: false })
+      } finally {
+        setupInProgress = false
+      }
+    },
 
     pruneSessions: (): Promise<number> => store.deleteExpiredSessions(),
   }

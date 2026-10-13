@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { Pool } from 'pg'
 import { createApp } from './app.js'
 import { ConfigError, loadServerConfig } from './config.js'
+import { startEmbeddedPostgres, type EmbeddedPostgres } from './embedded-postgres.js'
 import { runMigrations } from './migrations.js'
 import { createStores } from './storage/factory.js'
 
@@ -24,24 +25,38 @@ try {
   throw error
 }
 
-if (config.databaseUrl && config.migrateOnStart) {
-  const migrationPool = new Pool({ connectionString: config.databaseUrl, max: 1 })
+let embeddedPostgres: EmbeddedPostgres | null = null
+let databaseUrl = config.databaseUrl
+if (config.embeddedPostgres) {
+  try {
+    embeddedPostgres = await startEmbeddedPostgres({ ...config.embeddedPostgres, log: (message) => console.log(message) })
+    databaseUrl = embeddedPostgres.url
+  } catch (error) {
+    console.error(`Could not start the local database: ${describeError(error)}`)
+    process.exit(1)
+  }
+}
+
+if (databaseUrl && config.migrateOnStart) {
+  const migrationPool = new Pool({ connectionString: databaseUrl, max: 1 })
   try {
     await runMigrations(migrationPool)
   } catch (error) {
     console.error(`Database migration failed: ${describeError(error)}`)
+    await embeddedPostgres?.stop()
     process.exit(1)
   } finally {
     await migrationPool.end()
   }
 }
 
-const stores = createStores(config.databaseUrl, { timeZone: config.timeZone })
+const stores = createStores(databaseUrl, { timeZone: config.timeZone })
 try {
   if ((await stores.auth.bootstrapAdmin()) === 'created') console.log('Created the first admin account from AUTH_ADMIN_EMAIL.')
 } catch (error) {
   console.error(`Could not create the first admin account: ${describeError(error)}`)
   await stores.close()
+  await embeddedPostgres?.stop()
   process.exit(1)
 }
 const server = createServer(createApp({ repository: stores.repository, auth: stores.auth, webRoot: config.webRoot ?? undefined }))
@@ -71,6 +86,11 @@ async function shutdown(signal: string): Promise<void> {
   } catch (error) {
     console.error('Failed to close the repository cleanly:', describeError(error))
   }
+  try {
+    await embeddedPostgres?.stop()
+  } catch (error) {
+    console.error('Failed to stop the local database cleanly:', describeError(error))
+  }
   process.exit(0)
 }
 process.on('SIGINT', () => { void shutdown('SIGINT') })
@@ -78,7 +98,7 @@ process.on('SIGTERM', () => { void shutdown('SIGTERM') })
 
 server.on('error', (error) => {
   console.error(`A.Y Scan API failed to start: ${describeError(error)}`)
-  process.exit(1)
+  void (embeddedPostgres?.stop() ?? Promise.resolve()).finally(() => process.exit(1))
 })
 
 server.listen(config.port, config.host, () => {

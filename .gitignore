@@ -36,3 +36,6 @@ pnpm-debug.log*
 # Installer runtime state and database backups (may contain patient data)
 /run/
 /backups/
+
+# Release build output (staging folder, downloads cache, installer exe)
+/release/
