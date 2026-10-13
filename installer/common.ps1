@@ -307,3 +307,17 @@ function Import-RuntimeEnvironment {
         throw 'A.Y Scan is not installed yet (.env is missing). Run installer\install.cmd first.'
     }
 }
+
+# Opens the app in its own window (no address bar) with Edge or Chrome when present, otherwise in the default browser.
+function Open-AppWindow([string]$Url) {
+    if (-not (Test-IsWindowsHost)) { return }
+    foreach ($browser in @('msedge.exe', 'chrome.exe')) {
+        try {
+            Start-Process -FilePath $browser -ArgumentList "--app=$Url" -ErrorAction Stop | Out-Null
+            return
+        } catch {
+            continue
+        }
+    }
+    Start-Process $Url | Out-Null
+}

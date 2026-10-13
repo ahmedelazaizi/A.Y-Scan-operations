@@ -64,7 +64,18 @@ export function createStaticHandler(root: string): StaticHandler {
     let filePath: string | null = null
     if (insideRoot && pathname !== '/' && await fileExists(candidate)) filePath = candidate
     else if (!path.extname(pathname) && await fileExists(indexPath)) filePath = indexPath
-    if (!filePath) return false
+    if (!filePath) {
+      // A browser opening the app while its files are missing should see why, not a bare JSON error.
+      const wantsPage = !path.extname(pathname) && String(request.headers.accept ?? '').includes('text/html')
+      if (wantsPage && !(await fileExists(indexPath))) {
+        response.statusCode = 503
+        response.setHeader('Content-Type', 'text/html; charset=utf-8')
+        response.setHeader('Cache-Control', 'no-store')
+        response.end(`<!doctype html><meta charset="utf-8"><title>A.Y Scan</title><body dir="rtl" style="font-family:Segoe UI,Tahoma,sans-serif;max-width:640px;margin:60px auto;line-height:1.9"><h2>ملفات الواجهة غير موجودة</h2><p>الخادم يعمل، لكن ملف <b>index.html</b> غير موجود في المجلد التالي:</p><pre dir="ltr" style="background:#f3f5f8;padding:12px;border-radius:8px">${resolvedRoot.replace(/[<>&]/g, '')}</pre><p>أعد تثبيت البرنامج بنسخة جديدة من المثبّت. إن استمرت المشكلة أرسل محتوى مجلد <b>logs</b> للدعم.</p></body>`)
+        return true
+      }
+      return false
+    }
 
     const isIndex = filePath === indexPath
     const isHashedAsset = filePath.startsWith(path.join(resolvedRoot, 'assets') + path.sep)

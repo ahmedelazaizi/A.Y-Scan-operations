@@ -45,7 +45,7 @@ try {
         }
         Write-Host "A.Y Scan is running at $url"
     }
-    if (-not $NoBrowser -and (Test-IsWindowsHost)) { Start-Process $url | Out-Null }
+    if (-not $NoBrowser) { Open-AppWindow $url }
 } catch {
     Write-Host "Could not start A.Y Scan: $($_.Exception.Message)" -ForegroundColor Red
     if ($Host.Name -eq 'ConsoleHost' -and (Test-IsWindowsHost)) { Read-Host 'Press Enter to close' | Out-Null }

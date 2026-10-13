@@ -1,4 +1,6 @@
+import { existsSync } from 'node:fs'
 import { createServer } from 'node:http'
+import path from 'node:path'
 import { Pool } from 'pg'
 import { createApp } from './app.js'
 import { ConfigError, loadServerConfig } from './config.js'
@@ -48,6 +50,10 @@ if (databaseUrl && config.migrateOnStart) {
   } finally {
     await migrationPool.end()
   }
+}
+
+if (config.webRoot && !existsSync(path.join(config.webRoot, 'index.html'))) {
+  console.error(`WARNING: the web app was not found at ${config.webRoot} (index.html is missing). The server will answer API requests only.`)
 }
 
 const stores = createStores(databaseUrl, { timeZone: config.timeZone })
@@ -105,5 +111,5 @@ server.on('error', (error) => {
 
 server.listen(config.port, config.host, () => {
   const displayHost = config.host === '0.0.0.0' ? 'localhost' : config.host
-  console.log(`A.Y Scan is running: http://${displayHost}:${config.port}${config.webRoot ? '' : ' (API only)'}`)
+  console.log(`A.Y Scan is running: http://${displayHost}:${config.port} (web app: ${config.webRoot ?? 'none, API only'})`)
 })

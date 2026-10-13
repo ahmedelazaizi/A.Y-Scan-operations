@@ -1,4 +1,6 @@
+import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 export type ServerConfig = {
   port: number
@@ -15,6 +17,23 @@ export type ServerConfig = {
 }
 
 export class ConfigError extends Error {}
+
+/**
+ * The folder that holds package.json (the install folder in the Windows layout, the repo root in development).
+ * Relative paths in the configuration are resolved against it, never against the process working directory.
+ */
+export function findAppRoot(): string {
+  let directory = path.dirname(fileURLToPath(import.meta.url))
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (existsSync(path.join(directory, 'package.json'))) return directory
+    directory = path.dirname(directory)
+  }
+  return process.cwd()
+}
+
+function fromAppRoot(target: string): string {
+  return path.isAbsolute(target) ? target : path.resolve(findAppRoot(), target)
+}
 
 function parseTimeZone(value: string | undefined): string {
   const timeZone = value?.trim() || 'Africa/Cairo'
@@ -33,7 +52,7 @@ function parseEmbeddedPostgres(environment: NodeJS.ProcessEnv): ServerConfig['em
   if (!binDir) throw new ConfigError('PG_BIN_DIR is required when EMBEDDED_PG=true.')
   const port = Number.parseInt(environment.PG_PORT ?? '55432', 10)
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new ConfigError('PG_PORT must be an integer between 1 and 65535.')
-  return { binDir: path.resolve(binDir), dataDir: path.resolve(environment.PG_DATA_DIR?.trim() || path.join('data', 'pgdata')), port }
+  return { binDir: fromAppRoot(binDir), dataDir: fromAppRoot(environment.PG_DATA_DIR?.trim() || path.join('data', 'pgdata')), port }
 }
 
 function parsePort(value: string | undefined): number {
@@ -58,7 +77,7 @@ export function loadServerConfig(environment: NodeJS.ProcessEnv = process.env): 
     embeddedPostgres,
     allowInMemoryStore,
     migrateOnStart: environment.MIGRATE_ON_START?.trim().toLowerCase() !== 'false',
-    webRoot: environment.WEB_ROOT?.trim() || (isProduction ? path.resolve(process.cwd(), 'dist') : null),
+    webRoot: environment.WEB_ROOT?.trim() ? fromAppRoot(environment.WEB_ROOT.trim()) : (isProduction ? fromAppRoot('dist') : null),
     timeZone: parseTimeZone(environment.APP_TIMEZONE),
     isProduction,
   }
