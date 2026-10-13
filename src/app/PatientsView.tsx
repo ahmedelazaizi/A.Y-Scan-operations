@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPatient, fetchPatients, type NewPatient, type Patient, type PatientSex } from './api'
+import { useCan } from './session'
 import { ViewHeader } from './ViewHeader'
 
 type PatientsViewProps = { onBack: () => void; onToast: (message: string) => void }
@@ -51,6 +52,8 @@ function PatientFormModal({ onClose, onCreated }: { onClose: () => void; onCreat
 }
 
 function PatientsView({ onBack, onToast }: PatientsViewProps) {
+  const can = useCan()
+  const canCreate = can('patients.create')
   const [patients, setPatients] = useState<Patient[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -82,7 +85,7 @@ function PatientsView({ onBack, onToast }: PatientsViewProps) {
     void loadPatients(search)
   }
 
-  return <><ViewHeader title="المرضى" description="ابحث في سجل المرضى أو أضف ملفًا جديدًا." onBack={onBack} action={<button className="primary-button" type="button" onClick={() => setModalOpen(true)}>تسجيل مريض</button>} /><section className="panel patients-panel" aria-labelledby="patients-list-title"><div className="patient-toolbar"><div><h2 id="patients-list-title">سجل المرضى</h2><p>ابحث بالاسم أو رقم الهاتف.</p></div><label className="search-field"><span className="sr-only">البحث في المرضى</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن اسم أو هاتف…" /></label></div>{loading && <div className="state-card" role="status">جارٍ تحميل قائمة المرضى…</div>}{!loading && error && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل قائمة المرضى</strong><span>{error}</span><button className="secondary-button" type="button" onClick={() => void loadPatients(search)}>إعادة المحاولة</button></div>}{!loading && !error && patients.length === 0 && <div className="state-card" role="status">لا توجد نتائج مطابقة. جرّب بحثًا مختلفًا أو سجّل مريضًا جديدًا.</div>}{!loading && !error && patients.length > 0 && <div className="patients-table-wrap"><table className="patients-table"><caption className="sr-only">قائمة المرضى</caption><thead><tr><th scope="col">الاسم</th><th scope="col">الهاتف</th><th scope="col">تاريخ الميلاد</th><th scope="col">الجنس</th><th scope="col">تاريخ التسجيل</th></tr></thead><tbody>{patients.map((patient) => <tr key={patient.id}><td><strong>{patient.fullName}</strong></td><td dir="ltr">{patient.phone || 'غير محدد'}</td><td>{formatDate(patient.dateOfBirth)}</td><td>{getSexLabel(patient.sex)}</td><td>{formatDate(patient.createdAt)}</td></tr>)}</tbody></table></div>}</section>{isModalOpen && <PatientFormModal onClose={() => setModalOpen(false)} onCreated={handlePatientCreated} />}</>
+  return <><ViewHeader title="المرضى" description={canCreate ? 'ابحث في سجل المرضى أو أضف ملفًا جديدًا.' : 'ابحث في سجل المرضى.'} onBack={onBack} action={canCreate ? <button className="primary-button" type="button" onClick={() => setModalOpen(true)}>تسجيل مريض</button> : undefined} /><section className="panel patients-panel" aria-labelledby="patients-list-title"><div className="patient-toolbar"><div><h2 id="patients-list-title">سجل المرضى</h2><p>ابحث بالاسم أو رقم الهاتف.</p></div><label className="search-field"><span className="sr-only">البحث في المرضى</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن اسم أو هاتف…" /></label></div>{loading && <div className="state-card" role="status">جارٍ تحميل قائمة المرضى…</div>}{!loading && error && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل قائمة المرضى</strong><span>{error}</span><button className="secondary-button" type="button" onClick={() => void loadPatients(search)}>إعادة المحاولة</button></div>}{!loading && !error && patients.length === 0 && <div className="state-card" role="status">لا توجد نتائج مطابقة. جرّب بحثًا مختلفًا{canCreate ? ' أو سجّل مريضًا جديدًا' : ''}.</div>}{!loading && !error && patients.length > 0 && <div className="patients-table-wrap"><table className="patients-table"><caption className="sr-only">قائمة المرضى</caption><thead><tr><th scope="col">الاسم</th><th scope="col">الهاتف</th><th scope="col">تاريخ الميلاد</th><th scope="col">الجنس</th><th scope="col">تاريخ التسجيل</th></tr></thead><tbody>{patients.map((patient) => <tr key={patient.id}><td><strong>{patient.fullName}</strong></td><td dir="ltr">{patient.phone || 'غير محدد'}</td><td>{formatDate(patient.dateOfBirth)}</td><td>{getSexLabel(patient.sex)}</td><td>{formatDate(patient.createdAt)}</td></tr>)}</tbody></table></div>}</section>{canCreate && isModalOpen && <PatientFormModal onClose={() => setModalOpen(false)} onCreated={handlePatientCreated} />}</>
 }
 
 export default PatientsView

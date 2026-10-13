@@ -14,6 +14,7 @@ import {
   type Specimen,
   type SpecimenStatus,
 } from './api'
+import { useCan } from './session'
 import { ViewHeader } from './ViewHeader'
 
 type ToastTone = 'success' | 'error'
@@ -43,6 +44,7 @@ function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
 }
 
 function SpecimensPanel({ onToast }: { onToast: OperationsViewProps['onToast'] }) {
+  const canManage = useCan()('specimens.manage')
   const [specimens, setSpecimens] = useState<Specimen[]>([])
   const [specimenFilter, setSpecimenFilter] = useState<SpecimenFilter>('all')
   const [specimensLoading, setSpecimensLoading] = useState(true)
@@ -94,8 +96,8 @@ function SpecimensPanel({ onToast }: { onToast: OperationsViewProps['onToast'] }
 
   return (
     <section className="panel operation-panel" aria-labelledby="specimens-title">
-      <div className="panel-heading operation-panel-heading"><div><h2 id="specimens-title">العينات</h2><p>أنشئ العينة ثم سجّل سحب العينات المعلّقة.</p></div><span className="operation-count">{specimens.length}</span></div>
-      <form className="operation-form" onSubmit={submitSpecimen} noValidate aria-describedby={specimenFormError ? 'specimen-form-error' : undefined}>
+      <div className="panel-heading operation-panel-heading"><div><h2 id="specimens-title">العينات</h2><p>{canManage ? 'أنشئ العينة ثم سجّل سحب العينات المعلّقة.' : 'تابع حالة العينات.'}</p></div><span className="operation-count">{specimens.length}</span></div>
+      {canManage && <form className="operation-form" onSubmit={submitSpecimen} noValidate aria-describedby={specimenFormError ? 'specimen-form-error' : undefined}>
         <div className="operation-fields operation-fields-specimen">
           <div><label className="form-label" htmlFor="specimen-order-id">رقم الطلب <span className="required-mark">*</span></label><input id="specimen-order-id" className="form-input" value={specimenForm.orderId} onChange={(event) => updateSpecimenField('orderId', event.target.value)} placeholder="AY-10482" dir="ltr" required /></div>
           <div><label className="form-label" htmlFor="specimen-type">نوع العينة <span className="required-mark">*</span></label><input id="specimen-type" className="form-input" value={specimenForm.specimenType} onChange={(event) => updateSpecimenField('specimenType', event.target.value)} placeholder="blood" required /></div>
@@ -103,17 +105,20 @@ function SpecimensPanel({ onToast }: { onToast: OperationsViewProps['onToast'] }
         </div>
         {specimenFormError && <p id="specimen-form-error" className="form-error" role="alert">{specimenFormError}</p>}
         <button className="primary-button operation-submit" type="submit" disabled={creatingSpecimen}>{creatingSpecimen ? 'جارٍ إنشاء العينة…' : 'إنشاء عينة'}</button>
-      </form>
+      </form>}
       <div className="operation-toolbar"><label className="filter-field" htmlFor="specimen-status-filter"><span>تصفية الحالة</span><select id="specimen-status-filter" className="form-input" value={specimenFilter} onChange={(event) => setSpecimenFilter(event.target.value as SpecimenFilter)}><option value="all">كل الحالات</option>{Object.entries(SPECIMEN_STATUS_LABELS).map(([status, label]) => <option value={status} key={status}>{label}</option>)}</select></label></div>
       {specimensLoading && <div className="state-card" role="status">جارٍ تحميل العينات…</div>}
       {!specimensLoading && specimensError && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل العينات</strong><span>{specimensError}</span><button className="secondary-button" type="button" onClick={() => void loadSpecimens()}>إعادة المحاولة</button></div>}
-      {!specimensLoading && !specimensError && specimens.length === 0 && <div className="state-card" role="status">لا توجد عينات بهذه الحالة. أنشئ عينة جديدة أو غيّر الفلتر.</div>}
-      {!specimensLoading && !specimensError && specimens.length > 0 && <div className="operation-table-wrap"><table className="operation-table specimens-table"><caption className="sr-only">قائمة العينات</caption><thead><tr><th scope="col">الباركود</th><th scope="col">رقم الطلب</th><th scope="col">نوع العينة</th><th scope="col">الحالة</th><th scope="col">تاريخ الإنشاء</th><th scope="col">تاريخ السحب</th><th scope="col"><span className="sr-only">إجراء</span></th></tr></thead><tbody>{specimens.map((specimen) => <tr key={specimen.id}><td><strong className="operation-code" dir="ltr">{specimen.barcode}</strong></td><td><span className="operation-code" dir="ltr">{specimen.orderId}</span></td><td>{specimen.specimenType}</td><td><StatusBadge label={SPECIMEN_STATUS_LABELS[specimen.status]} tone={SPECIMEN_STATUS_TONES[specimen.status]} /></td><td dir="ltr">{formatTimestamp(specimen.createdAt)}</td><td dir="ltr">{formatTimestamp(specimen.collectedAt)}</td><td>{specimen.status === 'pending' && <button className="secondary-button row-action-button" type="button" onClick={() => void collectPendingSpecimen(specimen.barcode)} disabled={collectingBarcode !== null}>{collectingBarcode === specimen.barcode ? 'جارٍ التسجيل…' : 'تسجيل السحب'}</button>}</td></tr>)}</tbody></table></div>}
+      {!specimensLoading && !specimensError && specimens.length === 0 && <div className="state-card" role="status">لا توجد عينات بهذه الحالة. {canManage ? 'أنشئ عينة جديدة أو غيّر الفلتر.' : 'غيّر الفلتر.'}</div>}
+      {!specimensLoading && !specimensError && specimens.length > 0 && <div className="operation-table-wrap"><table className="operation-table specimens-table"><caption className="sr-only">قائمة العينات</caption><thead><tr><th scope="col">الباركود</th><th scope="col">رقم الطلب</th><th scope="col">نوع العينة</th><th scope="col">الحالة</th><th scope="col">تاريخ الإنشاء</th><th scope="col">تاريخ السحب</th><th scope="col"><span className="sr-only">إجراء</span></th></tr></thead><tbody>{specimens.map((specimen) => <tr key={specimen.id}><td><strong className="operation-code" dir="ltr">{specimen.barcode}</strong></td><td><span className="operation-code" dir="ltr">{specimen.orderId}</span></td><td>{specimen.specimenType}</td><td><StatusBadge label={SPECIMEN_STATUS_LABELS[specimen.status]} tone={SPECIMEN_STATUS_TONES[specimen.status]} /></td><td dir="ltr">{formatTimestamp(specimen.createdAt)}</td><td dir="ltr">{formatTimestamp(specimen.collectedAt)}</td><td>{canManage && specimen.status === 'pending' && <button className="secondary-button row-action-button" type="button" onClick={() => void collectPendingSpecimen(specimen.barcode)} disabled={collectingBarcode !== null}>{collectingBarcode === specimen.barcode ? 'جارٍ التسجيل…' : 'تسجيل السحب'}</button>}</td></tr>)}</tbody></table></div>}
     </section>
   )
 }
 
 function ResultsPanel({ onToast }: { onToast: OperationsViewProps['onToast'] }) {
+  const can = useCan()
+  const canEnter = can('results.enter')
+  const canReview = can('results.review')
   const [labResults, setLabResults] = useState<LabResult[]>([])
   const [resultsLoading, setResultsLoading] = useState(true)
   const [resultsError, setResultsError] = useState('')
@@ -158,9 +163,9 @@ function ResultsPanel({ onToast }: { onToast: OperationsViewProps['onToast'] }) 
 
   return (
     <section className="panel operation-panel" aria-labelledby="results-title">
-      <div className="panel-heading operation-panel-heading"><div><h2 id="results-title">النتائج</h2><p>أدخل النتيجة كمسودة ثم مرّرها للمراجعة على مرحلتين.</p></div><span className="operation-count">{labResults.length}</span></div>
+      <div className="panel-heading operation-panel-heading"><div><h2 id="results-title">النتائج</h2><p>{canEnter ? 'أدخل النتيجة كمسودة ثم مرّرها للمراجعة على مرحلتين.' : 'تابع حالة النتائج ومراجعتها.'}</p></div><span className="operation-count">{labResults.length}</span></div>
       <p className="workflow-note"><strong>مسار المراجعة:</strong> تنتقل النتيجة من <span>مسودة</span> إلى <span>قيد المراجعة</span> ثم إلى <span>معتمدة</span> عبر ضغط زر المراجعة مرتين.</p>
-      <form className="operation-form" onSubmit={submitResult} noValidate aria-describedby={resultFormError ? 'result-form-error' : undefined}>
+      {canEnter && <form className="operation-form" onSubmit={submitResult} noValidate aria-describedby={resultFormError ? 'result-form-error' : undefined}>
         <div className="operation-fields operation-fields-result">
           <div><label className="form-label" htmlFor="result-order-item-id">رقم بند الطلب <span className="required-mark">*</span></label><input id="result-order-item-id" className="form-input" value={resultForm.orderItemId} onChange={(event) => updateResultField('orderItemId', event.target.value)} placeholder="order-item-id" dir="ltr" required /></div>
           <div><label className="form-label" htmlFor="result-value">القيمة <span className="required-mark">*</span></label><input id="result-value" className="form-input" value={resultForm.value} onChange={(event) => updateResultField('value', event.target.value)} placeholder="5.4" dir="ltr" required /></div>
@@ -170,11 +175,11 @@ function ResultsPanel({ onToast }: { onToast: OperationsViewProps['onToast'] }) 
         </div>
         {resultFormError && <p id="result-form-error" className="form-error" role="alert">{resultFormError}</p>}
         <button className="primary-button operation-submit" type="submit" disabled={creatingResult}>{creatingResult ? 'جارٍ حفظ النتيجة…' : 'حفظ كمسودة'}</button>
-      </form>
+      </form>}
       {resultsLoading && <div className="state-card" role="status">جارٍ تحميل النتائج…</div>}
       {!resultsLoading && resultsError && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل النتائج</strong><span>{resultsError}</span><button className="secondary-button" type="button" onClick={() => void loadResults()}>إعادة المحاولة</button></div>}
-      {!resultsLoading && !resultsError && labResults.length === 0 && <div className="state-card" role="status">لا توجد نتائج بعد. أدخل نتيجة جديدة لتظهر هنا كمسودة.</div>}
-      {!resultsLoading && !resultsError && labResults.length > 0 && <div className="operation-table-wrap"><table className="operation-table results-table"><caption className="sr-only">قائمة نتائج المختبر</caption><thead><tr><th scope="col">رقم بند الطلب</th><th scope="col">القيمة</th><th scope="col">الوحدة</th><th scope="col">المدى المرجعي</th><th scope="col">التصنيف</th><th scope="col">الحالة</th><th scope="col"><span className="sr-only">إجراء</span></th></tr></thead><tbody>{labResults.map((labResult) => <tr key={labResult.id}><td><span className="operation-code" dir="ltr">{labResult.orderItemId}</span></td><td><strong dir="ltr">{labResult.resultValue}</strong></td><td dir="ltr">{labResult.unit || '—'}</td><td dir="ltr">{labResult.referenceRange || '—'}</td><td>{RESULT_FLAG_LABELS[labResult.flag]}</td><td><StatusBadge label={RESULT_STATUS_LABELS[labResult.status]} tone={RESULT_STATUS_TONES[labResult.status]} /></td><td>{(labResult.status === 'draft' || labResult.status === 'in_review') && <button className="secondary-button row-action-button" type="button" onClick={() => void reviewLabResult(labResult)} disabled={reviewingResultId !== null}>{labResult.status === 'draft' ? 'إرسال للمراجعة' : 'اعتماد النتيجة'}</button>}</td></tr>)}</tbody></table></div>}
+      {!resultsLoading && !resultsError && labResults.length === 0 && <div className="state-card" role="status">لا توجد نتائج بعد.{canEnter ? ' أدخل نتيجة جديدة لتظهر هنا كمسودة.' : ''}</div>}
+      {!resultsLoading && !resultsError && labResults.length > 0 && <div className="operation-table-wrap"><table className="operation-table results-table"><caption className="sr-only">قائمة نتائج المختبر</caption><thead><tr><th scope="col">رقم بند الطلب</th><th scope="col">القيمة</th><th scope="col">الوحدة</th><th scope="col">المدى المرجعي</th><th scope="col">التصنيف</th><th scope="col">الحالة</th><th scope="col">أدخلها</th><th scope="col">راجعها</th>{canReview && <th scope="col"><span className="sr-only">إجراء</span></th>}</tr></thead><tbody>{labResults.map((labResult) => <tr key={labResult.id}><td><span className="operation-code" dir="ltr">{labResult.orderItemId}</span></td><td><strong dir="ltr">{labResult.resultValue}</strong></td><td dir="ltr">{labResult.unit || '—'}</td><td dir="ltr">{labResult.referenceRange || '—'}</td><td>{RESULT_FLAG_LABELS[labResult.flag]}</td><td><StatusBadge label={RESULT_STATUS_LABELS[labResult.status]} tone={RESULT_STATUS_TONES[labResult.status]} /></td><td>{labResult.enteredBy}</td><td>{labResult.reviewedBy || '—'}</td>{canReview && <td>{(labResult.status === 'draft' || labResult.status === 'in_review') && <button className="secondary-button row-action-button" type="button" onClick={() => void reviewLabResult(labResult)} disabled={reviewingResultId !== null}>{labResult.status === 'draft' ? 'إرسال للمراجعة' : 'اعتماد النتيجة'}</button>}</td>}</tr>)}</tbody></table></div>}
     </section>
   )
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { checkDeviceConnection, createDevice, fetchDevices, type DeviceProtocol, type DeviceStatus, type LabDevice, type NewDevice } from './api'
+import { useCan } from './session'
 import { ViewHeader } from './ViewHeader'
 
 type DevicesViewProps = { onBack: () => void; onToast: (message: string, tone?: 'success' | 'error') => void }
@@ -19,6 +20,9 @@ function deviceError(error: unknown): string {
 }
 
 export default function DevicesView({ onBack, onToast }: DevicesViewProps) {
+  const can = useCan()
+  const canManage = can('devices.manage')
+  const canCheck = can('devices.check')
   const [devices, setDevices] = useState<LabDevice[]>([])
   const [form, setForm] = useState<DeviceFormState>(INITIAL_FORM)
   const [loading, setLoading] = useState(true)
@@ -89,9 +93,9 @@ export default function DevicesView({ onBack, onToast }: DevicesViewProps) {
   }
 
   return <div dir="rtl" className="devices-view">
-    <ViewHeader title="سجل الأجهزة" description="سجّل أجهزة المختبر وبروتوكولها وحالتها. لا يُنفّذ هذا المسار أي اتصال فعلي بالجهاز." onBack={onBack} />
+    <ViewHeader title="سجل الأجهزة" description={canManage ? 'سجّل أجهزة المختبر وبروتوكولها وحالتها. لا يُنفّذ هذا المسار أي اتصال فعلي بالجهاز.' : 'تابع أجهزة المختبر وبروتوكولها وحالتها. لا يُنفّذ هذا المسار أي اتصال فعلي بالجهاز.'} onBack={onBack} />
     <div className="devices-layout">
-      <section className="panel devices-create-panel" aria-labelledby="device-create-title">
+      {canManage && <section className="panel devices-create-panel" aria-labelledby="device-create-title">
         <div className="panel-heading"><div><h2 id="device-create-title">تسجيل جهاز</h2><p>أدخل endpoint آمنًا بلا username أو password.</p></div></div>
         <form className="devices-form" onSubmit={submit} noValidate>
           <div className="devices-form-grid">
@@ -106,10 +110,10 @@ export default function DevicesView({ onBack, onToast }: DevicesViewProps) {
           {error && <p className="form-error" role="alert">{error}</p>}
           <button className="primary-button devices-submit" type="submit" disabled={saving}>{saving ? 'جارٍ الحفظ…' : 'تسجيل الجهاز'}</button>
         </form>
-      </section>
+      </section>}
       <section className="panel devices-list-panel" aria-labelledby="device-list-title">
         <div className="panel-heading devices-list-heading"><div><h2 id="device-list-title">الأجهزة المسجلة</h2><p>الحالة المعروضة هي الحالة المخزنة؛ check لا يدّعي اتصالًا فعليًا.</p></div><button className="secondary-button" type="button" onClick={() => void loadDevices()} disabled={loading}>تحديث</button></div>
-        {loading ? <div className="state-card" role="status">جارٍ تحميل الأجهزة…</div> : devices.length === 0 ? <div className="empty-state">لا توجد أجهزة مسجلة بعد.</div> : <div className="devices-table-wrap"><table className="devices-table"><thead><tr><th scope="col">الجهاز</th><th scope="col">البروتوكول</th><th scope="col">Endpoint</th><th scope="col">الحالة</th><th scope="col">إجراء</th></tr></thead><tbody>{devices.map((device) => <tr key={device.id}><td data-label="الجهاز"><strong>{device.name}</strong><span className="table-subtext">{[device.manufacturer, device.model].filter(Boolean).join(' · ') || 'دون بيانات تصنيع'}</span></td><td data-label="البروتوكول"><span className="device-protocol">{PROTOCOL_LABELS[device.protocol]}</span></td><td data-label="Endpoint"><code className="device-endpoint" dir="ltr">{device.endpoint}</code></td><td data-label="الحالة"><DeviceStatusBadge status={device.status} /></td><td data-label="إجراء"><button className="secondary-button row-action-button" type="button" onClick={() => void runCheck(device)} disabled={busyDeviceId === device.id}>{busyDeviceId === device.id ? 'جارٍ الفحص…' : 'Check connection'}</button>{checkMessages[device.id] && <span className="device-check-message" role="status">{checkMessages[device.id]}</span>}</td></tr>)}</tbody></table></div>}
+        {!canManage && error && <p className="form-error" role="alert">{error}</p>}{loading ? <div className="state-card" role="status">جارٍ تحميل الأجهزة…</div> : devices.length === 0 ? <div className="empty-state">لا توجد أجهزة مسجلة بعد.{canManage ? ' سجّل أول جهاز من النموذج.' : ''}</div> : <div className="devices-table-wrap"><table className="devices-table"><thead><tr><th scope="col">الجهاز</th><th scope="col">البروتوكول</th><th scope="col">Endpoint</th><th scope="col">الحالة</th>{canCheck && <th scope="col">إجراء</th>}</tr></thead><tbody>{devices.map((device) => <tr key={device.id}><td data-label="الجهاز"><strong>{device.name}</strong><span className="table-subtext">{[device.manufacturer, device.model].filter(Boolean).join(' · ') || 'دون بيانات تصنيع'}</span></td><td data-label="البروتوكول"><span className="device-protocol">{PROTOCOL_LABELS[device.protocol]}</span></td><td data-label="Endpoint"><code className="device-endpoint" dir="ltr">{device.endpoint}</code></td><td data-label="الحالة"><DeviceStatusBadge status={device.status} /></td>{canCheck && <td data-label="إجراء"><button className="secondary-button row-action-button" type="button" onClick={() => void runCheck(device)} disabled={busyDeviceId === device.id}>{busyDeviceId === device.id ? 'جارٍ الفحص…' : 'Check connection'}</button>{checkMessages[device.id] && <span className="device-check-message" role="status">{checkMessages[device.id]}</span>}</td>}</tr>)}</tbody></table></div>}
       </section>
     </div>
   </div>
