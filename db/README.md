@@ -1,33 +1,41 @@
-# Database foundation
+# Database
 
-The local database is PostgreSQL 16.4 and is for development only. The compose file uses placeholders/default development credentials; do not use them outside local development.
+PostgreSQL 16 (Docker, `docker-compose.yml`). The container listens on `127.0.0.1` only and `POSTGRES_PASSWORD` has no default — the installer generates it into `.env`.
 
-## Start PostgreSQL
+## Migrations
 
-Copy `.env.example` to `.env` and adjust only local values if needed, then run:
-
-```sh
-pnpm db:up
-```
-
-The service is named `ay-scan-postgres` and persists data in the Docker volume `ay-scan-postgres-data-v2`.
-
-## Apply the migration manually
-
-Set `DATABASE_URL` in the environment, ensure the database is healthy, and run:
+Files in `db/migrations/NNN_snake_case.sql`, applied in order by one runner:
 
 ```sh
-pnpm db:migrate
+pnpm db:migrate        # development (tsx)
+pnpm db:migrate:prod   # after pnpm server:build
 ```
 
-Migrations are intentionally not applied automatically when the server starts. `db:migrate` applies `db/migrations/001_initial.sql` through the `pg` client and fails if `DATABASE_URL` is absent or PostgreSQL is unavailable. The feature runners apply their individual schema files: `db:migrate:lab` (`002`), `db:migrate:auth` (`003`), `db:migrate:billing` (`004`), `db:migrate:radiology` (`005`), and `db:migrate:inventory` (`006`). Inventory `receipt` and `issue` quantities are positive; `adjustment` also requires `adjustmentDirection` set to `increase` or `decrease`.
+- Applied versions are recorded in `schema_migrations` (version, name, SHA-256 checksum, time).
+- Each file runs in its own transaction; a failure rolls that file back and stops.
+- An advisory lock prevents two runners from interleaving.
+- A file that was already applied must not be edited (its checksum is verified) — add a new migration instead.
+- The server runs pending migrations on start unless `MIGRATE_ON_START=false`.
+- Databases created by the old per-file scripts are adopted automatically: every historical migration is idempotent, so the first run just records them.
 
-The auth migration is a future DB-backed user/session foundation: the current login flow uses the environment bootstrap credentials (`AUTH_ADMIN_EMAIL`, `AUTH_ADMIN_PASSWORD`, and `AUTH_TOKEN_SECRET`) and does not insert a user or session row. Access tokens are stateless HMAC tokens, so `POST /api/auth/logout` returns `204` without revoking a token; restart or rotate `AUTH_TOKEN_SECRET` to invalidate issued tokens.
+| Version | Content |
+|---|---|
+| 001 | patients, catalog, orders, audit events |
+| 002 | specimens, lab results |
+| 003 | users, auth sessions |
+| 004 | invoices, payments |
+| 005 | radiology studies |
+| 006 | inventory |
+| 007 | insurance policies and claims |
+| 008 | home visits |
+| 009 | laboratory devices |
+| 010 | per-user accounts: forced password change, last login, case-insensitive email |
+| 011 | trigram patient search, recency indexes, inactive seed catalog (20 common tests) |
 
-Stop the local service with:
+## Accounts and sessions
 
-```sh
-pnpm db:down
-```
+Users live in `users` (scrypt password hash with a per-user salt). A session token is 256 random bits sent to the browser; only its SHA-256 hash is stored in `auth_sessions`, so a database leak does not reveal usable tokens. Logout, password changes, deactivation and role changes revoke sessions server-side.
 
-The migration contains schema only. It has no patient records, catalog fixtures, credentials, or other real data. The current HTTP development fallback remains in-memory when `DATABASE_URL` is not configured.
+## Backup / restore
+
+See `installer/backup.ps1` and `installer/restore.ps1` (pg_dump custom format, single-transaction restore).

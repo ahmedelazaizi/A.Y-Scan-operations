@@ -1,98 +1,136 @@
-# A.Y Scan
+# A.Y Scan — نظام تشغيل مركز التحاليل والأشعة
 
-حزمة تشغيل محلية لمشروع A.Y Scan: واجهة React/Vite، خادم Node/TypeScript، وPostgreSQL عبر Docker Compose. هذه الحزمة لا تنشئ secrets ولا تحتوي على real patient data.
+نظام ويب يعمل على جهازك المحلي: واجهة عربية (RTL) وخادم Node.js وقاعدة بيانات PostgreSQL داخل Docker. يغطي المرضى، دليل التحاليل، العينات والنتائج، الأشعة، الزيارات المنزلية، الفوترة، التأمين، المخزون، الأجهزة، التقارير، وإدارة المستخدمين بصلاحيات حسب الدور.
+
+> **حالة الإصدار 1.0:** النظام جاهز للتشغيل الداخلي. **الربط الفعلي مع أجهزة التحاليل (HL7/ASTM/Serial) غير منفّذ بعد**، فشاشة الأجهزة تسجّل الأجهزة فقط. التفاصيل في قسم [حدود النظام](#حدود-النظام).
 
 ## المتطلبات
 
-- Windows PowerShell.
-- Node.js `>=20`.
-- Docker CLI مع Docker daemon يعمل (Docker Desktop مناسب للتطوير المحلي).
-- `pnpm` عبر Corepack أو تثبيت `pnpm` متاح في `PATH`. لا تعتمد scripts على مسار جهاز محدد.
+| المطلوب | ملاحظات |
+|---|---|
+| Windows 10/11 | الـ installer مكتوب لـ Windows PowerShell 5.1 أو PowerShell 7 |
+| [Node.js LTS](https://nodejs.org) 20.19 أو أحدث | يأتي معه Corepack (يوفّر pnpm) |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop) | يشغّل قاعدة البيانات. بديل: قاعدة PostgreSQL جاهزة (انظر `-ExternalDatabaseUrl`) |
 
-## التثبيت المحلي
+## التثبيت (مرة واحدة)
 
-من جذر المشروع:
-
-```powershell
-pwsh -ExecutionPolicy Bypass -File .\installer\install.ps1
-```
-
-ينشئ installer ملف `.env` من `.env.example` فقط إذا لم يكن موجودًا، ولا يستبدل ملفًا موجودًا. إذا كانت `AUTH_REQUIRED=true`، يجب ضبط `AUTH_ADMIN_PASSWORD` و`AUTH_TOKEN_SECRET` يدويًا في `.env`؛ لا ينشئ installer قيمًا سرية.
-
-يشغّل installer مشروع Docker باسم `ay-scan-local-v2`، ينتظر health لـ PostgreSQL، يطبق migrations `001` إلى `009` بالـ scripts الموجودة، ثم يبني الواجهة والخادم. لا ينفذ `down -v` ولا يحذف Docker volumes.
-
-## التشغيل والإيقاف
-
-شغّل الخادم في foreground كي تظهر logs في نفس النافذة:
+1. حمّل المشروع وفكّ ضغطه في مجلد ثابت، مثل `C:\AYScan`.
+2. شغّل Docker Desktop.
+3. اضغط مرتين على **`installer\install.cmd`** (أو من PowerShell):
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File .\installer\start.ps1
+powershell -ExecutionPolicy Bypass -File .\installer\install.ps1
 ```
 
-لواجهة التطوير افتح نافذة PowerShell أخرى وشغّل:
+المثبّت يقوم بالآتي:
+
+- يفحص Node.js و Docker.
+- ينشئ ملف `.env` ويولّد كلمة سر قاعدة البيانات عشوائيًا (لا توجد كلمات سر افتراضية).
+- يبني التطبيق ويشغّل PostgreSQL ويطبّق الـ migrations.
+- **يسألك عن بريد وكلمة سر مدير النظام** (10 أحرف على الأقل، حروف وأرقام). كلمة السر لا تُحفظ في أي ملف.
+- ينشئ اختصارات على سطح المكتب (**A.Y Scan** و **A.Y Scan - Stop**)، ويشغّل النظام تلقائيًا عند دخول Windows، ويجدول نسخة احتياطية يومية الساعة 10 مساءً.
+
+خيارات إضافية:
+
+| الخيار | الوظيفة |
+|---|---|
+| `-Port 8080` | تغيير المنفذ (الافتراضي 3001) |
+| `-AllowNetworkAccess` | السماح لأجهزة أخرى في شبكة المركز بالدخول (يفتح منفذ Windows Firewall للشبكات الخاصة) |
+| `-ExternalDatabaseUrl "postgresql://..."` | استخدام PostgreSQL موجود بدل Docker |
+| `-NoAutoStart` / `-NoShortcuts` / `-NoBackupSchedule` | تعطيل التشغيل التلقائي / الاختصارات / النسخ المجدول |
+| `-NonInteractive -AdminEmail ... ` | تثبيت بدون أسئلة (كلمة السر من متغير البيئة `AYSCAN_ADMIN_PASSWORD`) |
+
+**الترقية:** شغّل `install.cmd` مرة أخرى بعد تحديث الملفات. البيانات و`.env` والنسخ الاحتياطية تبقى كما هي، وتُطبّق الـ migrations الجديدة تلقائيًا.
+
+## الاستخدام اليومي
+
+- **التشغيل:** اختصار **A.Y Scan** (أو `installer\start.cmd`) — يشغّل قاعدة البيانات والخادم ويفتح المتصفح على `http://localhost:3001`.
+- **الإيقاف:** اختصار **A.Y Scan - Stop** (أو `installer\stop.cmd`). البيانات لا تُحذف أبدًا.
+- **السجلات:** مجلد `logs\` (`server.log` و `server-error.log` و `backup.log`).
+
+### تسجيل الدخول والمستخدمون
+
+1. ادخل بحساب المدير الذي أنشأته أثناء التثبيت.
+2. من **المستخدمون** أنشئ حساب كل موظف واختر دوره. يحصل الموظف على **كلمة سر مؤقتة** ويُجبَر على تغييرها عند أول دخول.
+3. نسيت موظف كلمة السر؟ من **المستخدمون ← كلمة المرور** تعيّن له كلمة مؤقتة جديدة (تُنهى جلساته الحالية).
+4. بعد 5 محاولات دخول خاطئة يُقفل الحساب 15 دقيقة.
+5. لا يمكن حذف آخر مدير نشط أو تعطيله، ولا يستطيع المدير تعطيل نفسه.
+
+| الدور | يستطيع |
+|---|---|
+| مدير النظام | كل شيء، بما فيه المستخدمون |
+| مدير الفرع | كل العمليات والتقارير وسجل التدقيق وتسعير دليل التحاليل والأجهزة (بدون إدارة المستخدمين) |
+| الاستقبال | المرضى والطلبات والعينات والزيارات المنزلية والفوترة والتأمين (عرض/إنشاء) |
+| فني المختبر | العينات والنتائج (إدخال ومراجعة) والمخزون والأجهزة |
+| أخصائي الأشعة | دراسات الأشعة (تنفيذ وتقرير واعتماد) والمخزون |
+| المحاسبة | الفوترة والتأمين والمخزون والتقارير |
+
+اسم المستخدم الذي أدخل النتيجة أو اعتمد التقرير أو استلم الدفعة يُسجَّل على السجل نفسه، وكل عملية كتابة تُسجَّل في **سجل التدقيق**.
+
+### بدء العمل بعد التثبيت
+
+دليل التحاليل يأتي بـ 20 تحليلًا شائعًا **غير مفعّلة وسعرها صفر**. قبل إنشاء أول طلب:
+
+1. **دليل التحاليل ← تعديل** على كل تحليل: حدّد السعر وفعّله (أو أضف تحاليلك بزر «إضافة تحليل»).
+2. **المرضى**: سجّل المريض.
+3. **نظرة عامة ← طلب تحليل جديد**: اختر المريض ثم التحاليل.
+
+الطلب لا يُنشأ إلا لمريض مسجّل وتحاليل مفعّلة من الدليل.
+
+## النسخ الاحتياطي والاسترجاع
+
+- **تلقائي:** يوميًا 10 مساءً إلى مجلد `backups\` (يحتفظ بآخر 30 يومًا وبما لا يقل عن 7 نسخ).
+- **يدوي:** `installer\backup.cmd` أو `installer\backup.ps1 -Destination D:\AYScanBackups -KeepDays 60`.
+- **مهم:** النسخ تحتوي بيانات المرضى. انسخ مجلد `backups\` دوريًا إلى قرص خارجي أو مكان آخر خارج هذا الجهاز؛ نسخة على نفس الجهاز لا تحميك من تلف القرص.
+- **الاسترجاع:**
 
 ```powershell
-pnpm dev
+powershell -ExecutionPolicy Bypass -File .\installer\restore.ps1 -BackupFile .\backups\ayscan-20261013-220000.dump
 ```
 
-ولواجهة build:
+يستبدل **كل** البيانات الحالية بمحتوى النسخة (بعد تأكيد بكتابة `RESTORE`)، ويأخذ نسخة أمان من الوضع الحالي أولًا، ويتم داخل transaction واحدة فلا يترك قاعدة نصف مسترجعة. بعده شغّل النظام من الاختصار.
+
+## الإعدادات (`.env`)
+
+يولّده المثبّت. أهم المفاتيح:
+
+| المفتاح | المعنى |
+|---|---|
+| `PORT` / `HOST` | المنفذ والعنوان. `HOST=127.0.0.1` لهذا الجهاز فقط، `0.0.0.0` لشبكة المركز |
+| `DATABASE_URL` / `POSTGRES_*` | اتصال قاعدة البيانات (ولّدها المثبّت — لا تشاركها) |
+| `APP_TIMEZONE` | المنطقة الزمنية التي تحدد «اليوم» في لوحة التحكم والتقارير (الافتراضي `Africa/Cairo`) |
+| `MIGRATE_ON_START` | تطبيق migrations تلقائيًا عند تشغيل الخادم (`true`) |
+| `CORS_ORIGIN` | اتركه فارغًا في الإنتاج؛ التطبيق يُخدَّم من نفس العنوان |
+| `BACKUP_DIR` | مسار بديل للنسخ الاحتياطية |
+
+الخادم يرفض العمل بدون `DATABASE_URL`، ولا توجد وسيلة لتعطيل تسجيل الدخول.
+
+## للمطوّرين
 
 ```powershell
-pnpm preview
+pnpm install --frozen-lockfile
+pnpm db:up                 # PostgreSQL في Docker (يحتاج POSTGRES_PASSWORD في .env)
+pnpm db:migrate            # برنامج migrations واحد مع جدول schema_migrations
+pnpm server:dev            # الخادم مع إعادة التشغيل (يحتاج ALLOW_IN_MEMORY_STORE=true أو DATABASE_URL)
+pnpm dev                   # واجهة Vite على http://localhost:5173 (تمرّر /api إلى :3001)
+pnpm build && pnpm server:build
+pnpm lint
+pnpm test                  # TEST_DATABASE_URL=postgresql://... يفعّل اختبارات PostgreSQL والـ integration
 ```
 
-أوقف PostgreSQL دون حذف volume:
+- الهيكل: `server/` (الخادم: `router.ts` جدول مسارات، `routes/` المسارات، `permissions.ts` مصفوفة الصلاحيات، `auth/` الحسابات والجلسات، `storage/` المستودعات)، `src/app/` الواجهة، `db/migrations/` المخطط (`NNN_name.sql`، لا تعدّل ملفًا طُبّق — أضف جديدًا؛ يُفحص الـ checksum)، `installer/` سكربتات Windows.
+- إنشاء مدير من سطر الأوامر: `AUTH_ADMIN_EMAIL=... AUTH_ADMIN_PASSWORD=... pnpm admin:create` (يعمل فقط عندما لا يوجد أي مستخدم).
+- الأمان: الجلسات توكنات عشوائية تُخزَّن مجزّأة (SHA-256) ويمكن إلغاؤها، كلمات السر scrypt بملح لكل مستخدم، حد 1MB للطلبات، رؤوس أمان و CSP صارمة (لا موارد خارجية: الخطوط محلية).
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File .\installer\stop.ps1
-```
+## حدود النظام
 
-## الإعدادات والروابط
-
-المفاتيح الأساسية في `.env.example` هي `PORT` و`DATABASE_URL` و`CORS_ORIGIN` و`AUTH_REQUIRED` و`AUTH_ADMIN_EMAIL` و`AUTH_ADMIN_PASSWORD` و`AUTH_ADMIN_ROLE` و`AUTH_ADMIN_DISPLAY_NAME` و`AUTH_TOKEN_SECRET`. يعرّف `docker-compose.yml` أيضًا `POSTGRES_DB` و`POSTGRES_USER` و`POSTGRES_PASSWORD` و`POSTGRES_PORT` بقيم development defaults.
-
-- Frontend development: `http://localhost:5173`
-- Frontend preview: `http://localhost:4173`
-- API: `http://localhost:3001` (أو قيمة `PORT`)
-- API health: `http://localhost:3001/api/health`
-- API readiness: `http://localhost:3001/api/ready`
-- PostgreSQL host port الافتراضي: `55433`
-
-قيمة `.env.example` الحالية لـ `DATABASE_URL` تستخدم `localhost:5432`. عند استخدام Docker Compose الافتراضي، scripts التشغيل تستخدم host port `55433` لهذه القيمة الافتراضية دون تعديل `.env`. إذا غيّرت `POSTGRES_PORT` أو `DATABASE_URL`، راجع تطابقهما.
-
-## Migrations
-
-تُطبّق بالترتيب عبر:
-
-```powershell
-pnpm db:migrate
-pnpm db:migrate:lab
-pnpm db:migrate:auth
-pnpm db:migrate:billing
-pnpm db:migrate:radiology
-pnpm db:migrate:inventory
-pnpm db:migrate:insurance
-pnpm db:migrate:home-visits
-pnpm db:migrate:devices
-```
-
-تبقى migrations `001` إلى `008` كما هي، وتضيف `db/migrations/009_devices.sql` جدول سجل الأجهزة. الأمر `pnpm db:migrate:devices` يطبّق هذه migration صراحةً. هذه migrations schema فقط؛ لا تضيف patient records أو credentials أو fixtures حقيقية. لا تُطبّق تلقائيًا عند تشغيل الخادم.
-
-## سجل الأجهزة والتقارير
-
-- شاشة الأجهزة تسجّل الأجهزة وتعرضها عبر `/api/devices`، وتوفر فحصًا عبر `/api/devices/:id/check-connection`. البروتوكولات المدعومة هي HL7 وASTM وTCP/IP وSerial (`hl7` و`astm` و`tcp_ip` و`serial`). حقل endpoint يقبل host/port أو إعدادات Serial ولا يحتوي credentials؛ كما تُرفض endpoints التي تتضمن username أو password.
-- `check-connection` لا ينفّذ network أو serial access فعليًا، ويعيد `adapterConfigured:false`. actual driver integration يتطلب manufacturer/model وprotocol وhost/port أو serial settings وmessage samples وauth وresult mapping.
-- شاشة Reports تعرض مؤشرات تشغيلية aggregate-only بلا PII، وتستخدم endpoint `/api/reports/operations` مع date filter اختياري عبر `from` و`to`.
+- **أجهزة التحاليل:** شاشة الأجهزة تسجّل الجهاز وبروتوكوله (HL7/ASTM/TCP-IP/Serial) وعنوانه، وزر «فحص الاتصال» **لا يتصل فعليًا بالجهاز** (يعيد `adapterConfigured:false`). الربط الفعلي يحتاج لكل جهاز: الشركة المصنّعة والموديل، البروتوكول وعنوان الاتصال (host/port أو إعدادات Serial)، عيّنات رسائل حقيقية من الجهاز، المصادقة إن وُجدت، وجدول مطابقة رموز الفحوصات بين الجهاز ودليل التحاليل.
+- **لا يوجد:** PACS/DICOM، رسائل SMS/واتساب، فواتير إلكترونية ضريبية، تعدد فروع بقاعدة مشتركة.
+- النظام للتشغيل الإداري؛ لا يُعدّ موافقة قانونية أو طبية. راجع المتطلبات التنظيمية في بلدك لحفظ بيانات المرضى.
+- اختُبر المثبّت على PowerShell 7 مع Docker على Linux؛ الاختصارات والمهمة المجدولة وقاعدة Firewall خاصة بـ Windows ويلزم تجربتها على جهازك.
 
 ## الفحوصات
 
-```powershell
-pnpm build
-pnpm server:build
-pnpm test
-pnpm lint
-```
+آخر تحقق: `pnpm build` و `pnpm server:build` و `pnpm lint` نظيفة، و `pnpm test` ⇒ 110 اختبار ناجح (بما فيها اختبارات PostgreSQL ورحلة كاملة على قاعدة جديدة)، ورحلة متصفح حقيقية (تسجيل الدخول، المستخدمون، التسعير، تغيير كلمة السر الإجباري، تسجيل مريض، إنشاء طلب).
 
-آخر تحقق مسجل لهذه الأوامر كان ناجحًا؛ نتيجة الاختبارات `77` passed و`0` failed. تم تشغيل browser automation محليًا للتحقق من مسار الواجهة، ولا يشمل ذلك physical device integration. لا يوجد installer EXE ولا device drivers ضمن المستودع.
-
-للتفاصيل التأسيسية الخاصة بالوثائق، راجع [`docs/README.md`](docs/README.md).
+وثائق التأسيس: [`docs/README.md`](docs/README.md).
