@@ -12,7 +12,7 @@ param(
 Set-Location -LiteralPath $script:ProjectRoot
 
 try {
-    if (Test-Path -LiteralPath $script:EnvFile) { Import-DotEnv | Out-Null }
+    Import-RuntimeEnvironment
     $server = Get-ServerProcess
     if ($null -ne $server) {
         Stop-Process -Id $server.Id -Force

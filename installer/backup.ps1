@@ -24,8 +24,7 @@ function Get-BackupDirectory {
 }
 
 try {
-    if (-not (Test-Path -LiteralPath $script:EnvFile)) { throw 'A.Y Scan is not installed (.env is missing).' }
-    Import-DotEnv | Out-Null
+    Import-RuntimeEnvironment
     $directory = Get-BackupDirectory
     New-Item -ItemType Directory -Force -Path $directory | Out-Null
     $fileName = "ayscan-$(Get-Date -Format 'yyyyMMdd-HHmmss').dump"

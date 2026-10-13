@@ -13,6 +13,7 @@
 #define AppPort "3001"
 #define PowerShell "{sys}\WindowsPowerShell\v1.0\powershell.exe"
 #define HasArabic FileExists(CompilerPath + "Languages\Arabic.isl")
+#define HasLauncher FileExists(StageDir + "\AYScan.exe")
 
 [Setup]
 ; Never change AppId: it is how upgrades find the previous installation.
@@ -33,6 +34,12 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+SetupIconFile=ay-scan.ico
+#if HasLauncher
+UninstallDisplayIcon={app}\AYScan.exe
+#else
+UninstallDisplayIcon={app}\installer\ay-scan.ico
+#endif
 UninstallDisplayName={#AppName}
 CloseApplications=no
 RestartApplications=no
@@ -83,18 +90,31 @@ Name: "{app}\run"; Permissions: users-modify
 Name: "{app}\backups"; Permissions: users-modify
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"""; WorkingDir: "{app}"
-Name: "{autoprograms}\{#AppName} - Stop"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\stop.ps1"""; WorkingDir: "{app}"
-Name: "{autoprograms}\{#AppName} - Backup now"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\backup.ps1"""; WorkingDir: "{app}"
-Name: "{autoprograms}\{#AppName} - Backups folder"; Filename: "{app}\backups"
-Name: "{autodesktop}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"""; WorkingDir: "{app}"; Tasks: desktopicon
-Name: "{commonstartup}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"" -NoBrowser"; WorkingDir: "{app}"; Tasks: autostart
+#if HasLauncher
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\AYScan.exe"; WorkingDir: "{app}"
+Name: "{autoprograms}\{#AppName} - Stop"; Filename: "{app}\AYScan.exe"; Parameters: "--stop"; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autoprograms}\{#AppName} - Backup now"; Filename: "{app}\AYScan.exe"; Parameters: "--backup"; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autoprograms}\{#AppName} - Backups folder"; Filename: "{app}\backups"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\AYScan.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{commonstartup}\{#AppName}"; Filename: "{app}\AYScan.exe"; Parameters: "--no-browser"; WorkingDir: "{app}"; Tasks: autostart
+#else
+Name: "{autoprograms}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autoprograms}\{#AppName} - Stop"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\stop.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autoprograms}\{#AppName} - Backup now"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\backup.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autoprograms}\{#AppName} - Backups folder"; Filename: "{app}\backups"; IconFilename: "{app}\installer\ay-scan.ico"
+Name: "{autodesktop}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"; Tasks: desktopicon
+Name: "{commonstartup}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"" -NoBrowser"; WorkingDir: "{app}"; IconFilename: "{app}\installer\ay-scan.ico"; Tasks: autostart
+#endif
 
 [Run]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#AppName}"" dir=in action=allow protocol=TCP localport={#AppPort} profile=private,domain"; Flags: runhidden; Tasks: lan
 ; runasoriginaluser: the backup task must belong to the Windows user who uses the app, not to the elevated installer account.
 Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\schedule-backup.ps1"""; Flags: runhidden runasoriginaluser; Tasks: backup
+#if HasLauncher
+Filename: "{app}\AYScan.exe"; WorkingDir: "{app}"; Description: "{cm:StartNow}"; Flags: postinstall nowait skipifsilent runasoriginaluser
+#else
 Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installer\start.ps1"""; WorkingDir: "{app}"; Description: "{cm:StartNow}"; Flags: postinstall nowait skipifsilent runasoriginaluser
+#endif
 
 [UninstallRun]
 Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\stop.ps1"""; Flags: runhidden; RunOnceId: "StopAYScan"
@@ -127,7 +147,7 @@ begin
 end;
 
 // First install only: write .env (ASCII, relative paths). An existing .env is a customer's configuration and is kept.
-procedure CurrentStepChanged(CurStep: TSetupStep);
+procedure CurStepChanged(CurStep: TSetupStep);
 var
   EnvPath, HostValue: String;
   Lines: TArrayOfString;

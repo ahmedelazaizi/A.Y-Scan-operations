@@ -101,6 +101,29 @@ try {
     foreach ($script in @('common.ps1', 'start.ps1', 'stop.ps1', 'backup.ps1', 'restore.ps1', 'schedule-backup.ps1', 'start.cmd', 'stop.cmd', 'backup.cmd')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $script) -Destination (Join-Path $StageDir "installer\$script")
     }
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ay-scan.ico') -Destination (Join-Path $StageDir 'installer\ay-scan.ico')
+
+    Write-Step 'Building the launcher (AYScan.exe)'
+    $launcherBuild = Join-Path $ReleaseRoot 'launcher-build'
+    New-Item -ItemType Directory -Force -Path $launcherBuild | Out-Null
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'launcher\Launcher.cs') -Destination $launcherBuild -Force
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ay-scan.ico') -Destination $launcherBuild -Force
+    $csc = $null
+    foreach ($frameworkDir in @('Framework64', 'Framework')) {
+        $candidate = Join-Path $env:WINDIR "Microsoft.NET\$frameworkDir\v4.0.30319\csc.exe"
+        if (Test-Path -LiteralPath $candidate) { $csc = $candidate; break }
+    }
+    if ($null -eq $csc) {
+        Write-Warning 'csc.exe (.NET Framework 4) was not found; the installer will use PowerShell shortcuts instead of AYScan.exe.'
+    } else {
+        $launcherOutput = Join-Path $StageDir 'AYScan.exe'
+        $compileLog = & $csc /nologo /target:winexe /optimize+ "/out:$launcherOutput" "/win32icon:$(Join-Path $launcherBuild 'ay-scan.ico')" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll (Join-Path $launcherBuild 'Launcher.cs') 2>&1
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $launcherOutput)) {
+            Write-Warning "The launcher did not compile; the installer will use PowerShell shortcuts instead. Compiler output:`n$($compileLog | Out-String)"
+        } else {
+            Write-Host 'AYScan.exe built.'
+        }
+    }
     foreach ($document in @('README.md', 'LICENSE')) {
         $source = Join-Path $script:ProjectRoot $document
         if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $StageDir }

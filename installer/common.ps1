@@ -285,3 +285,25 @@ function Get-ServerProcess {
     if ($null -eq $process -or $process.ProcessName -notmatch '^node') { return $null }
     return $process
 }
+
+# The Windows installer layout ships its own PostgreSQL under runtime\pgsql.
+function Test-BundledLayout {
+    return (Test-Path -LiteralPath (Join-Path (Join-Path $script:ProjectRoot 'runtime') 'pgsql'))
+}
+
+# Loads the settings every script needs. In the bundled layout the defaults below apply even when .env is missing,
+# so a lost or unwritten .env can never leave the app unable to start; values in .env override them.
+function Import-RuntimeEnvironment {
+    if (Test-BundledLayout) {
+        $defaults = [ordered]@{
+            PORT = '3001'; HOST = '127.0.0.1'; NODE_ENV = 'production'; APP_TIMEZONE = 'Africa/Cairo'; MIGRATE_ON_START = 'true'
+            EMBEDDED_PG = 'true'; PG_BIN_DIR = 'runtime/pgsql/bin'; PG_DATA_DIR = 'data/pgdata'; PG_PORT = '55432'; WEB_ROOT = 'dist'
+        }
+        foreach ($key in $defaults.Keys) { [Environment]::SetEnvironmentVariable($key, $defaults[$key], 'Process') }
+    }
+    if (Test-Path -LiteralPath $script:EnvFile) {
+        Import-DotEnv | Out-Null
+    } elseif (-not (Test-BundledLayout)) {
+        throw 'A.Y Scan is not installed yet (.env is missing). Run installer\install.cmd first.'
+    }
+}

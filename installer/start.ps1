@@ -11,9 +11,8 @@ param(
 Set-Location -LiteralPath $script:ProjectRoot
 
 try {
-    if (-not (Test-Path -LiteralPath $script:EnvFile)) { throw 'A.Y Scan is not installed yet. Run installer\install.cmd first.' }
     if (-not (Test-Path -LiteralPath (Join-Path $script:ProjectRoot 'dist-server\server\index.js'))) { throw 'The server build is missing. Run installer\install.cmd again.' }
-    Import-DotEnv | Out-Null
+    Import-RuntimeEnvironment
 
     $url = Get-ServerUrl
     if ($null -ne (Get-ServerProcess) -and (Test-ServerHealthy)) {

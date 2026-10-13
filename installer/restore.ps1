@@ -18,9 +18,8 @@ param(
 Set-Location -LiteralPath $script:ProjectRoot
 
 try {
-    if (-not (Test-Path -LiteralPath $script:EnvFile)) { throw 'A.Y Scan is not installed (.env is missing).' }
     $resolved = (Resolve-Path -LiteralPath $BackupFile).Path
-    Import-DotEnv | Out-Null
+    Import-RuntimeEnvironment
 
     if (-not $Force) {
         Write-Host "This replaces ALL current A.Y Scan data with: $resolved" -ForegroundColor Yellow
