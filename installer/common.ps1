@@ -81,25 +81,40 @@ function New-RandomSecret([int]$Bytes = 24) {
     return (($buffer | ForEach-Object { $_.ToString('x2') }) -join '')
 }
 
+# Get-Command can return several matches for one tool on Windows (tool.cmd and tool.ps1). Pick exactly one real
+# executable, preferring .cmd/.exe so that no PowerShell script (and no execution policy) is involved.
+function Find-Tool([string]$Name) {
+    foreach ($candidate in @("$Name.cmd", "$Name.exe", $Name)) {
+        $found = Get-Command $candidate -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -ne $found) { return [string]$found.Source }
+    }
+    return $null
+}
+
 function Select-Pnpm {
-    $corepack = Get-Command corepack -ErrorAction SilentlyContinue
+    $pnpm = Find-Tool 'pnpm'
+    if ($null -ne $pnpm) {
+        $script:PnpmCommand = $pnpm
+        $script:PnpmPrefix = @()
+        return
+    }
+    $corepack = Find-Tool 'corepack'
     if ($null -ne $corepack) {
-        & $corepack.Source pnpm --version *> $null
+        & $corepack pnpm --version *> $null
         if ($LASTEXITCODE -eq 0) {
-            $script:PnpmCommand = $corepack.Source
+            $script:PnpmCommand = $corepack
             $script:PnpmPrefix = @('pnpm')
             return
         }
     }
-    $pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
-    if ($null -eq $pnpm) { throw 'pnpm was not found. Install Node.js 20.19+ (it includes Corepack) and run the installer again.' }
-    $script:PnpmCommand = $pnpm.Source
-    $script:PnpmPrefix = @()
+    throw 'pnpm was not found. Install it with: npm install -g pnpm@10.28.0  (then open a new PowerShell window).'
 }
 
 function Invoke-Pnpm([string[]]$Arguments) {
     if ($null -eq $script:PnpmCommand) { Select-Pnpm }
-    & $script:PnpmCommand @($script:PnpmPrefix + $Arguments)
+    $allArguments = @($script:PnpmPrefix) + @($Arguments)
+    Write-Host "> $script:PnpmCommand $($allArguments -join ' ')" -ForegroundColor DarkGray
+    & $script:PnpmCommand @allArguments
     if ($LASTEXITCODE -ne 0) { throw "pnpm $($Arguments -join ' ') failed (exit code $LASTEXITCODE)." }
 }
 
@@ -115,9 +130,9 @@ function Get-BundledNode {
 function Get-NodeCommand {
     $bundled = Get-BundledNode
     if ($null -ne $bundled) { return $bundled }
-    $node = Get-Command node -ErrorAction SilentlyContinue
+    $node = Find-Tool 'node'
     if ($null -eq $node) { throw 'Node.js was not found. Install Node.js 20.19 or newer (LTS) from https://nodejs.org and run the installer again.' }
-    return $node.Source
+    return $node
 }
 
 # True when the server manages the PostgreSQL bundled with the installer (EMBEDDED_PG=true in .env).
@@ -189,9 +204,9 @@ function Invoke-EmbeddedPg([string]$Tool, [string[]]$Arguments, [string]$Failure
 }
 
 function Get-DockerCommand {
-    $docker = Get-Command docker -ErrorAction SilentlyContinue
+    $docker = Find-Tool 'docker'
     if ($null -eq $docker) { throw 'Docker was not found. Install Docker Desktop (https://www.docker.com/products/docker-desktop) or rerun the installer with -ExternalDatabaseUrl.' }
-    return $docker.Source
+    return $docker
 }
 
 # Waits for the Docker engine, starting Docker Desktop on Windows when it is installed but not running.
