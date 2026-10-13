@@ -50,15 +50,33 @@ export function isPaymentMethod(value: unknown): value is PaymentMethod {
   return typeof value === 'string' && PAYMENT_METHODS.includes(value as PaymentMethod)
 }
 
-export function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
+/** Money is computed in integer minor units (piastres) and only converted to decimal at the edges. */
+export function toMinorUnits(value: number): number {
+  return Math.round((value + Math.sign(value) * Number.EPSILON) * 100)
 }
 
-function validateMoney(value: number, field: string): number {
+export function fromMinorUnits(value: number): number {
+  return value / 100
+}
+
+export function roundMoney(value: number): number {
+  return fromMinorUnits(toMinorUnits(value))
+}
+
+const MAX_MINOR_UNITS = 999_999_999_999 // NUMERIC(14, 2) upper bound in piastres
+
+function validateMinor(value: number, field: string): number {
   if (!Number.isFinite(value) || value < 0) throw new RepositoryInputError(`${field} must be a non-negative number.`)
-  const rounded = roundMoney(value)
-  if (!Number.isFinite(rounded)) throw new RepositoryInputError(`${field} is invalid.`)
-  return rounded
+  const minor = toMinorUnits(value)
+  if (!Number.isSafeInteger(minor) || minor > MAX_MINOR_UNITS) throw new RepositoryInputError(`${field} is too large.`)
+  return minor
+}
+
+const QUANTITY_SCALE = 1000
+
+export function lineTotalMinor(quantity: number, unitPrice: number): number {
+  const scaledQuantity = Math.round(quantity * QUANTITY_SCALE)
+  return Math.round((scaledQuantity * toMinorUnits(unitPrice)) / QUANTITY_SCALE)
 }
 
 export function calculateInvoiceTotals(
@@ -74,29 +92,41 @@ export function calculateInvoiceTotals(
     if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
       throw new RepositoryInputError('Invoice item quantity must be positive.')
     }
-    const quantity = Math.round(item.quantity * 1000) / 1000
+    const quantity = Math.round(item.quantity * QUANTITY_SCALE) / QUANTITY_SCALE
     if (!Number.isFinite(quantity) || quantity <= 0) throw new RepositoryInputError('Invoice item quantity must be positive.')
     return {
       description: item.description.trim(),
       quantity,
-      unitPrice: validateMoney(item.unitPrice, 'Invoice item unitPrice'),
+      unitPrice: fromMinorUnits(validateMinor(item.unitPrice, 'Invoice item unitPrice')),
     }
   })
-  const subtotal = roundMoney(normalizedItems.reduce((sum, item) => sum + roundMoney(item.quantity * item.unitPrice), 0))
-  const normalizedDiscount = validateMoney(discount, 'discount')
-  const normalizedTax = validateMoney(tax, 'tax')
-  if (!Number.isFinite(subtotal)) throw new RepositoryInputError('Invoice totals are too large.')
-  if (normalizedDiscount > subtotal) throw new RepositoryInputError('discount cannot exceed subtotal.')
-  const total = roundMoney(subtotal - normalizedDiscount + normalizedTax)
-  if (!Number.isFinite(total)) throw new RepositoryInputError('Invoice totals are too large.')
-  return { items: normalizedItems, subtotal, discount: normalizedDiscount, tax: normalizedTax, total }
+  const subtotalMinor = normalizedItems.reduce((sum, item) => sum + lineTotalMinor(item.quantity, item.unitPrice), 0)
+  const discountMinor = validateMinor(discount, 'discount')
+  const taxMinor = validateMinor(tax, 'tax')
+  if (subtotalMinor > MAX_MINOR_UNITS) throw new RepositoryInputError('Invoice totals are too large.')
+  if (discountMinor > subtotalMinor) throw new RepositoryInputError('discount cannot exceed subtotal.')
+  const totalMinor = subtotalMinor - discountMinor + taxMinor
+  if (totalMinor > MAX_MINOR_UNITS) throw new RepositoryInputError('Invoice totals are too large.')
+  return {
+    items: normalizedItems,
+    subtotal: fromMinorUnits(subtotalMinor),
+    discount: fromMinorUnits(discountMinor),
+    tax: fromMinorUnits(taxMinor),
+    total: fromMinorUnits(totalMinor),
+  }
 }
 
 export function normalizePaymentAmount(amount: number): number {
   if (!Number.isFinite(amount) || amount <= 0) throw new RepositoryInputError('amount must be a positive number.')
-  const normalized = roundMoney(amount)
-  if (normalized <= 0) throw new RepositoryInputError('amount must be a positive number.')
-  return normalized
+  const minor = toMinorUnits(amount)
+  if (minor <= 0) throw new RepositoryInputError('amount must be a positive number.')
+  if (minor > MAX_MINOR_UNITS) throw new RepositoryInputError('amount is too large.')
+  return fromMinorUnits(minor)
+}
+
+/** Remaining balance in minor units; payments never exceed it. */
+export function outstandingMinor(total: number, payments: readonly number[]): number {
+  return toMinorUnits(total) - payments.reduce((sum, amount) => sum + toMinorUnits(amount), 0)
 }
 
 export function cloneInvoice(invoice: Invoice): Invoice {

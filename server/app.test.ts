@@ -2,9 +2,13 @@ import assert from 'node:assert/strict'
 import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { mockRepository } from './domain.js'
+import { createMemoryRepository, mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
-import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
+import { startTestServer, TEST_ADMIN_TOKEN, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
+
+const MOCK_PATIENT_ID = '00000000-0000-4000-8000-000000000001'
+const MOCK_CBC_ID = '00000000-0000-4000-8000-000000000101'
+const MOCK_URINALYSIS_ID = '00000000-0000-4000-8000-000000000103'
 
 async function request(server: Server, baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
   try {
@@ -72,12 +76,13 @@ test('creating an order returns a sequenced awaiting-sample order', async () => 
   const testServer = await startTestServer()
   const response = await request(testServer.server, testServer.baseUrl, '/api/orders', {
     method: 'POST',
-    body: JSON.stringify({ patientName: 'مريض تجريبي جديد', tests: ['صورة دم كاملة'], priority: 'urgent' }),
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID, MOCK_URINALYSIS_ID], priority: 'urgent' }),
   })
   const order = await response.json() as Record<string, unknown>
   assert.equal(response.status, 201)
   assert.match(order.id as string, /^AY-\d+$/)
-  assert.equal(order.patient, 'مريض تجريبي جديد')
+  assert.equal(order.patient, 'مريض تجريبي 01')
+  assert.equal(order.tests, 'CBC / صورة دم كاملة · Urinalysis / تحليل بول كامل')
   assert.equal(order.state, 'بانتظار العينة')
   assert.equal(order.status, 'awaiting_sample')
   assert.equal(order.tone, 'warning')
@@ -88,7 +93,7 @@ test('creating an order without priority defaults to normal', async () => {
   const testServer = await startTestServer()
   const response = await request(testServer.server, testServer.baseUrl, '/api/orders', {
     method: 'POST',
-    body: JSON.stringify({ patientName: 'مريض تجريبي بدون أولوية', tests: ['تحليل بول كامل'] }),
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [MOCK_URINALYSIS_ID] }),
   })
   const order = await response.json() as Record<string, unknown>
   assert.equal(response.status, 201)
@@ -99,10 +104,65 @@ test('invalid order body returns clear JSON validation error', async () => {
   const testServer = await startTestServer()
   const response = await request(testServer.server, testServer.baseUrl, '/api/orders', {
     method: 'POST',
-    body: JSON.stringify({ patientName: ' ', tests: [''] }),
+    body: JSON.stringify({ patientName: 'مريض غير مسجل', tests: ['صورة دم كاملة'] }),
   })
   assert.equal(response.status, 400)
-  assert.deepEqual(await response.json(), { error: 'Bad Request', message: 'patientName, tests, and priority are invalid.' })
+  assert.deepEqual(await response.json(), { error: 'Bad Request', message: 'patientId, testIds (unique catalog ids), and priority are invalid.' })
+})
+
+test('orders reject duplicate, unknown, or inactive catalog tests', async () => {
+  const duplicateServer = await startTestServer()
+  const duplicate = await request(duplicateServer.server, duplicateServer.baseUrl, '/api/orders', {
+    method: 'POST',
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID, MOCK_CBC_ID] }),
+  })
+  assert.equal(duplicate.status, 400)
+
+  const unknownServer = await startTestServer()
+  const unknown = await request(unknownServer.server, unknownServer.baseUrl, '/api/orders', {
+    method: 'POST',
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: ['00000000-0000-4000-8000-000000000999'] }),
+  })
+  assert.equal(unknown.status, 400)
+  assert.deepEqual(await unknown.json(), { error: 'Bad Request', message: 'One or more tests are not in the active catalog.' })
+
+  const missingPatientServer = await startTestServer()
+  const missingPatient = await request(missingPatientServer.server, missingPatientServer.baseUrl, '/api/orders', {
+    method: 'POST',
+    body: JSON.stringify({ patientId: '00000000-0000-4000-8000-000000000999', testIds: [MOCK_CBC_ID] }),
+  })
+  assert.equal(missingPatient.status, 400)
+  assert.deepEqual(await missingPatient.json(), { error: 'Bad Request', message: 'patientId does not reference an existing patient.' })
+})
+
+test('catalog tests can be created and repriced by managers only', async () => {
+  const repository = createMemoryRepository()
+  const { server, baseUrl } = await startTestServer(repository)
+  try {
+    const call = (path: string, method: string, body: unknown, token: string | null = TEST_ADMIN_TOKEN) => fetch(`${baseUrl}${path}`, {
+      method, body: JSON.stringify(body), headers: testHeaders({ body: JSON.stringify(body), token }),
+    })
+    const forbidden = await call('/api/catalog', 'POST', { code: 'TSH', name: 'TSH', specimenType: 'مصل', price: 200 }, TEST_TOKENS.receptionist)
+    assert.equal(forbidden.status, 403)
+    const created = await call('/api/catalog', 'POST', { code: 'tsh', name: 'هرمون الغدة', specimenType: 'مصل', price: 200, isActive: false }, TEST_TOKENS.branch_manager)
+    assert.equal(created.status, 201)
+    const item = await created.json() as Record<string, unknown>
+    assert.equal(item.code, 'TSH')
+    assert.equal(item.isActive, false)
+    assert.equal((await call('/api/catalog', 'POST', { code: 'TSH', name: 'x', specimenType: 'y', price: 1 })).status, 409)
+    assert.equal((await call('/api/catalog', 'POST', { code: 'bad code', name: 'x', specimenType: 'y', price: 1 })).status, 400)
+
+    const inactiveOrder = await call('/api/orders', 'POST', { patientId: MOCK_PATIENT_ID, testIds: [item.id] })
+    assert.equal(inactiveOrder.status, 400)
+    const updated = await call(`/api/catalog/${item.id as string}`, 'PATCH', { price: 225.5, isActive: true })
+    assert.equal(updated.status, 200)
+    assert.deepEqual(await updated.json(), { ...item, price: 225.5, isActive: true })
+    assert.equal((await call('/api/orders', 'POST', { patientId: MOCK_PATIENT_ID, testIds: [item.id] })).status, 201)
+    assert.equal((await call(`/api/catalog/${item.id as string}`, 'PATCH', {})).status, 400)
+    assert.equal((await call('/api/catalog/00000000-0000-4000-8000-000000000999', 'PATCH', { price: 1 })).status, 404)
+  } finally {
+    server.close()
+  }
 })
 
 test('malformed order JSON returns clear JSON error', async () => {
@@ -155,7 +215,7 @@ test('roles without the capability are forbidden from clinical writes', async ()
   const orderServer = await startTestServer()
   const orderResponse = await request(orderServer.server, orderServer.baseUrl, '/api/orders', {
     method: 'POST',
-    body: JSON.stringify({ patientName: 'مريض تجريبي', tests: ['صورة دم كاملة'] }),
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID] }),
     token: TEST_TOKENS.accountant,
   })
   assert.equal(orderResponse.status, 403)
@@ -265,7 +325,7 @@ test('creating an order with patientId reuses the registered patient', async () 
   const orderServer = await startTestServer()
   const orderResponse = await request(orderServer.server, orderServer.baseUrl, '/api/orders', {
     method: 'POST',
-    body: JSON.stringify({ patientId: patient.id, tests: ['صورة دم كاملة'] }),
+    body: JSON.stringify({ patientId: patient.id, testIds: [MOCK_CBC_ID] }),
   })
   const order = await orderResponse.json() as Record<string, unknown>
   assert.equal(orderResponse.status, 201)
@@ -411,5 +471,5 @@ test('postgres result listing resolves public AY order numbers before UUID filte
   assert.deepEqual(await repository.listResults('AY-10482'), [])
   assert.match(queries[0].sql, /order_number/)
   assert.deepEqual(queries[0].params, ['10482'])
-  assert.deepEqual(queries[1].params, [internalOrderId])
+  assert.deepEqual(queries[1].params, [internalOrderId, 100, 0])
 })

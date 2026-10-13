@@ -7,10 +7,23 @@ export type ServerConfig = {
   allowInMemoryStore: boolean
   migrateOnStart: boolean
   webRoot: string | null
+  /** IANA zone that defines "today" for dashboards and report date ranges. */
+  timeZone: string
   isProduction: boolean
 }
 
 export class ConfigError extends Error {}
+
+function parseTimeZone(value: string | undefined): string {
+  const timeZone = value?.trim() || 'Africa/Cairo'
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone })
+  } catch {
+    throw new ConfigError(`APP_TIMEZONE is not a valid IANA time zone: ${timeZone}`)
+  }
+  if (!/^[A-Za-z0-9_+\-/]+$/.test(timeZone)) throw new ConfigError('APP_TIMEZONE contains unsupported characters.')
+  return timeZone
+}
 
 function parsePort(value: string | undefined): number {
   const port = Number.parseInt(value ?? '3001', 10)
@@ -33,6 +46,7 @@ export function loadServerConfig(environment: NodeJS.ProcessEnv = process.env): 
     allowInMemoryStore,
     migrateOnStart: environment.MIGRATE_ON_START?.trim().toLowerCase() !== 'false',
     webRoot: environment.WEB_ROOT?.trim() || (isProduction ? path.resolve(process.cwd(), 'dist') : null),
+    timeZone: parseTimeZone(environment.APP_TIMEZONE),
     isProduction,
   }
 }

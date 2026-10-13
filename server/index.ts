@@ -36,7 +36,7 @@ if (config.databaseUrl && config.migrateOnStart) {
   }
 }
 
-const stores = createStores(config.databaseUrl)
+const stores = createStores(config.databaseUrl, { timeZone: config.timeZone })
 try {
   if ((await stores.auth.bootstrapAdmin()) === 'created') console.log('Created the first admin account from AUTH_ADMIN_EMAIL.')
 } catch (error) {

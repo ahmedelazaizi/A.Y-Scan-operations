@@ -5,7 +5,10 @@ import {
   isSpecimenStatus,
   isUuid,
   MAX_PAGE_SIZE,
+  parseListPage,
   parsePageValue,
+  validateCatalogTestInput,
+  validateCatalogTestUpdate,
   validateOrderInput,
   validatePatientInput,
   validateResultInput,
@@ -31,8 +34,8 @@ export function labRoutes(repository: OrderRepository): Route[] {
 
     route('POST', '/api/orders', requires('orders.create'), async (context) => {
       const input = validateOrderInput(await context.body())
-      if (!input) throw new ValidationError('patientName, tests, and priority are invalid.')
-      if (input.patientId && !(await repository.getPatientById(input.patientId))) {
+      if (!input) throw new ValidationError('patientId, testIds (unique catalog ids), and priority are invalid.')
+      if (!(await repository.getPatientById(input.patientId))) {
         throw new ValidationError('patientId does not reference an existing patient.')
       }
       const order = await repository.createOrder(input)
@@ -60,10 +63,27 @@ export function labRoutes(repository: OrderRepository): Route[] {
       context.json(200, await repository.listCatalog())
     }),
 
+    route('POST', '/api/catalog', requires('catalog.manage'), async (context) => {
+      const input = validateCatalogTestInput(await context.body())
+      if (!input) throw new ValidationError('code (A-Z, 0-9, _ or -), name, specimenType, price, and isActive are invalid.')
+      const item = await repository.createCatalogTest(input)
+      await context.audit({ action: 'catalog.created', entityType: 'test_catalog', entityId: item.id, metadata: { amount: item.price } })
+      context.json(201, item)
+    }),
+
+    route('PATCH', '/api/catalog/:id', requires('catalog.manage'), async (context) => {
+      if (!isUuid(context.params.id)) throw new ValidationError('id must be a valid UUID.')
+      const update = validateCatalogTestUpdate(await context.body())
+      if (!update) throw new ValidationError('name, specimenType, price, or isActive is invalid.')
+      const item = await repository.updateCatalogTest(context.params.id, update)
+      await context.audit({ action: 'catalog.updated', entityType: 'test_catalog', entityId: item.id, metadata: { amount: item.price, status: item.isActive ? 'active' : 'inactive' } })
+      context.json(200, item)
+    }),
+
     route('GET', '/api/specimens', requires('specimens.view'), async (context) => {
       const statusValue = context.query.get('status')
       if (statusValue !== null && !isSpecimenStatus(statusValue)) throw new ValidationError('status is invalid.')
-      context.json(200, await repository.listSpecimens(statusValue ?? undefined))
+      context.json(200, await repository.listSpecimens(statusValue ?? undefined, parseListPage(context.query)))
     }),
 
     route('POST', '/api/specimens', requires('specimens.manage'), async (context) => {
@@ -84,7 +104,7 @@ export function labRoutes(repository: OrderRepository): Route[] {
       const orderIdValue = context.query.get('orderId')
       const orderId = orderIdValue === null ? undefined : validateText(orderIdValue, 100)
       if (orderId === null) throw new ValidationError('orderId is invalid.')
-      context.json(200, await repository.listResults(orderId))
+      context.json(200, await repository.listResults(orderId, parseListPage(context.query)))
     }),
 
     route('POST', '/api/results', requires('results.enter'), async (context) => {

@@ -70,7 +70,7 @@ test('successful patient and order writes create safe audit events', async () =>
 
     const orderResponse = await request(testServer.baseUrl, '/api/orders', {
       method: 'POST',
-      body: JSON.stringify({ patientId: patient.id, tests: ['CBC'], priority: 'urgent' }),
+      body: JSON.stringify({ patientId: patient.id, testIds: ['00000000-0000-4000-8000-000000000101'], priority: 'urgent' }),
     })
     assert.equal(orderResponse.status, 201)
 

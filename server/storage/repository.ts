@@ -1,4 +1,6 @@
 import type {
+  CatalogTestInput,
+  CatalogTestUpdate,
   CreateOrderInput,
   CreatePatientInput,
   DashboardSummary,
@@ -21,6 +23,19 @@ import type { HomeVisit, HomeVisitStatus } from '../home-visits.js'
 import type { CreateDeviceInput, DeviceConnectionResult, LabDevice } from '../devices.js'
 
 export type RepositoryValue<T> = T | Promise<T>
+
+export type PageOptions = { limit: number; offset: number }
+export const DEFAULT_LIST_LIMIT = 100
+export const MAX_LIST_LIMIT = 500
+
+export function resolvePage(page: PageOptions | undefined): PageOptions {
+  return page ?? { limit: DEFAULT_LIST_LIMIT, offset: 0 }
+}
+
+export function paginate<T>(items: readonly T[], page: PageOptions | undefined): T[] {
+  const { limit, offset } = resolvePage(page)
+  return items.slice(offset, offset + limit)
+}
 
 export class RepositoryNotFoundError extends Error {
   readonly code = 'not_found'
@@ -51,16 +66,18 @@ export type OrderRepository = {
   getPatientById(patientId: string): RepositoryValue<Patient | null>
   createPatient(input: CreatePatientInput): RepositoryValue<Patient>
   listCatalog(): RepositoryValue<TestCatalogItem[]>
-  listSpecimens(status?: SpecimenStatus): RepositoryValue<Specimen[]>
+  createCatalogTest(input: CatalogTestInput): RepositoryValue<TestCatalogItem>
+  updateCatalogTest(id: string, update: CatalogTestUpdate): RepositoryValue<TestCatalogItem>
+  listSpecimens(status?: SpecimenStatus, page?: PageOptions): RepositoryValue<Specimen[]>
   createSpecimen(orderId: string, specimenType: string, barcode: string): RepositoryValue<Specimen>
   collectSpecimen(barcode: string): RepositoryValue<Specimen>
-  listResults(orderId?: string): RepositoryValue<LabResult[]>
+  listResults(orderId?: string, page?: PageOptions): RepositoryValue<LabResult[]>
   enterResult(orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag, enteredBy: string): RepositoryValue<LabResult>
   reviewResult(id: string, reviewedBy: string): RepositoryValue<LabResult>
-  listInvoices(status?: InvoiceStatus): RepositoryValue<Invoice[]>
+  listInvoices(status?: InvoiceStatus, page?: PageOptions): RepositoryValue<Invoice[]>
   createInvoice(orderId: string, items: InvoiceItemInput[], discount?: number, tax?: number): RepositoryValue<Invoice>
   recordPayment(invoiceId: string, amount: number, method: PaymentMethod, reference: string | undefined, receivedBy: string): RepositoryValue<Invoice>
-  listRadiologyStudies(status?: RadiologyStudyStatus): RepositoryValue<RadiologyStudy[]>
+  listRadiologyStudies(status?: RadiologyStudyStatus, page?: PageOptions): RepositoryValue<RadiologyStudy[]>
   createRadiologyStudy(
     patientId: string,
     modality: RadiologyModality,
@@ -85,7 +102,7 @@ export type OrderRepository = {
   ): RepositoryValue<InventoryMovementResult>
   recordAuditEvent(input: AuditEventInput): RepositoryValue<AuditEvent>
   listAuditEvents(options?: AuditEventListOptions): RepositoryValue<AuditEvent[]>
-  listInsurancePolicies(patientId?: string): RepositoryValue<InsurancePolicy[]>
+  listInsurancePolicies(patientId?: string, page?: PageOptions): RepositoryValue<InsurancePolicy[]>
   createInsurancePolicy(
     patientId: string,
     payerName: string,
@@ -95,10 +112,10 @@ export type OrderRepository = {
     validFrom: string,
     validTo?: string,
   ): RepositoryValue<InsurancePolicy>
-  listInsuranceClaims(status?: InsuranceClaimStatus): RepositoryValue<InsuranceClaim[]>
+  listInsuranceClaims(status?: InsuranceClaimStatus, page?: PageOptions): RepositoryValue<InsuranceClaim[]>
   createInsuranceClaim(policyId: string, orderId: string | undefined, amount: number): RepositoryValue<InsuranceClaim>
   transitionInsuranceClaim(id: string, nextStatus: InsuranceClaimStatus): RepositoryValue<InsuranceClaim>
-  listHomeVisits(patientId?: string, status?: HomeVisitStatus): RepositoryValue<HomeVisit[]>
+  listHomeVisits(patientId?: string, status?: HomeVisitStatus, page?: PageOptions): RepositoryValue<HomeVisit[]>
   createHomeVisit(
     patientId: string,
     orderId: string | undefined,

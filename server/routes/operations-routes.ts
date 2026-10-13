@@ -16,6 +16,7 @@ import type { OrderRepository } from '../storage/repository.js'
 import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
+  parseListPage,
   parsePageValue,
   validateCreateInventoryItemInput,
   validateInvoiceInput,
@@ -55,7 +56,7 @@ function optionalUuidQuery(value: string | null, isValid: (candidate: unknown) =
 function billingRoutes(repository: OrderRepository): Route[] {
   return [
     route('GET', '/api/billing/invoices', requires('billing.view'), async (context) => {
-      context.json(200, await repository.listInvoices(parseStatus(context.query.get('status'), isInvoiceStatus)))
+      context.json(200, await repository.listInvoices(parseStatus(context.query.get('status'), isInvoiceStatus), parseListPage(context.query)))
     }),
     route('POST', '/api/billing/invoices', requires('billing.manage'), async (context) => {
       const input = validateInvoiceInput(await context.body())
@@ -80,7 +81,7 @@ function billingRoutes(repository: OrderRepository): Route[] {
 function radiologyRoutes(repository: OrderRepository): Route[] {
   return [
     route('GET', '/api/radiology/studies', requires('radiology.view'), async (context) => {
-      context.json(200, await repository.listRadiologyStudies(parseStatus(context.query.get('status'), isRadiologyStudyStatus)))
+      context.json(200, await repository.listRadiologyStudies(parseStatus(context.query.get('status'), isRadiologyStudyStatus), parseListPage(context.query)))
     }),
     route('POST', '/api/radiology/studies', requires('radiology.schedule'), async (context) => {
       const input = validateRadiologyStudyInput(await context.body())
@@ -139,7 +140,7 @@ function inventoryRoutes(repository: OrderRepository): Route[] {
 function insuranceRoutes(repository: OrderRepository): Route[] {
   return [
     route('GET', '/api/insurance/policies', requires('insurance.view'), async (context) => {
-      context.json(200, await repository.listInsurancePolicies(optionalUuidQuery(context.query.get('patientId'), isInsuranceUuid)))
+      context.json(200, await repository.listInsurancePolicies(optionalUuidQuery(context.query.get('patientId'), isInsuranceUuid), parseListPage(context.query)))
     }),
     route('POST', '/api/insurance/policies', requires('insurance.policies'), async (context) => {
       const input = validateInsurancePolicyInput(await context.body())
@@ -151,7 +152,7 @@ function insuranceRoutes(repository: OrderRepository): Route[] {
       context.json(201, policy)
     }),
     route('GET', '/api/insurance/claims', requires('insurance.view'), async (context) => {
-      context.json(200, await repository.listInsuranceClaims(parseStatus(context.query.get('status'), isInsuranceClaimStatus)))
+      context.json(200, await repository.listInsuranceClaims(parseStatus(context.query.get('status'), isInsuranceClaimStatus), parseListPage(context.query)))
     }),
     route('POST', '/api/insurance/claims', requires('insurance.claims'), async (context) => {
       const input = validateInsuranceClaimInput(await context.body())
@@ -175,7 +176,7 @@ function homeVisitRoutes(repository: OrderRepository): Route[] {
   return [
     route('GET', '/api/home-visits', requires('homeVisits.view'), async (context) => {
       const patientId = optionalUuidQuery(context.query.get('patientId'), isHomeVisitUuid)
-      context.json(200, await repository.listHomeVisits(patientId, parseStatus(context.query.get('status'), isHomeVisitStatus)))
+      context.json(200, await repository.listHomeVisits(patientId, parseStatus(context.query.get('status'), isHomeVisitStatus), parseListPage(context.query)))
     }),
     route('POST', '/api/home-visits', requires('homeVisits.schedule'), async (context) => {
       const input = validateCreateHomeVisitInput(await context.body())

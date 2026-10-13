@@ -68,4 +68,6 @@ test('server config requires DATABASE_URL unless in-memory mode is explicitly al
   assert.equal(config.port, 4000)
   assert.equal(config.host, '127.0.0.1')
   assert.throws(() => loadServerConfig({ DATABASE_URL: 'postgresql://x', PORT: '70000' }), ConfigError)
+  assert.equal(config.timeZone, 'Africa/Cairo')
+  assert.throws(() => loadServerConfig({ DATABASE_URL: 'postgresql://x', APP_TIMEZONE: 'Mars/Base' }), ConfigError)
 })

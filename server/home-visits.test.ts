@@ -163,5 +163,5 @@ test('postgres home visit listing uses parameterized patient and status filters'
   assert.deepEqual(await repository.listHomeVisits(PATIENT_ID, 'confirmed'), [])
   assert.match(queries[0].sql, /hv\.patient_id = \$1/)
   assert.match(queries[0].sql, /hv\.status = \$2/)
-  assert.deepEqual(queries[0].params, [PATIENT_ID, 'confirmed'])
+  assert.deepEqual(queries[0].params, [PATIENT_ID, 'confirmed', 100, 0])
 })

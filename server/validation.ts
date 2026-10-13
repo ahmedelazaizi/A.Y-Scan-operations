@@ -1,4 +1,4 @@
-import type { CreateOrderInput, CreatePatientInput, OrderPriority, PatientSex, ResultFlag, SpecimenStatus } from './domain.js'
+import type { CatalogTestInput, CatalogTestUpdate, CreateOrderInput, CreatePatientInput, OrderPriority, PatientSex, ResultFlag, SpecimenStatus } from './domain.js'
 import { isPaymentMethod, type InvoiceItemInput, type PaymentMethod } from './billing.js'
 import { isRadiologyModality, isRadiologyPriority, type RadiologyModality, type RadiologyPriority } from './radiology.js'
 import {
@@ -9,7 +9,7 @@ import {
   type InventoryAdjustmentDirection,
   type InventoryMovementType,
 } from './inventory.js'
-import { RepositoryInputError } from './storage/repository.js'
+import { DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT, RepositoryInputError, type PageOptions } from './storage/repository.js'
 
 export const DEFAULT_PAGE_SIZE = 50
 export const MAX_PAGE_SIZE = 100
@@ -97,26 +97,58 @@ export function validatePatientInput(value: unknown): CreatePatientInput | null 
   }
 }
 
+const MAX_TESTS_PER_ORDER = 50
+
 export function validateOrderInput(value: unknown): CreateOrderInput | null {
-  if (!isRecord(value)) return null
-  const patientName = value.patientName === undefined
-    ? undefined
-    : typeof value.patientName === 'string' ? value.patientName.trim() : null
-  const patientId = value.patientId === undefined
-    ? undefined
-    : typeof value.patientId === 'string' ? value.patientId.trim() : null
-  const tests = Array.isArray(value.tests) && value.tests.every((test) => typeof test === 'string' && test.trim())
-    ? value.tests.map((test) => test.trim())
-    : []
+  if (!isRecord(value) || typeof value.patientId !== 'string' || !isUuid(value.patientId.trim())) return null
+  if (!Array.isArray(value.testIds) || value.testIds.length === 0 || value.testIds.length > MAX_TESTS_PER_ORDER) return null
+  if (!value.testIds.every((id): id is string => typeof id === 'string' && isUuid(id))) return null
+  if (new Set(value.testIds).size !== value.testIds.length) return null
   const priority = value.priority === undefined ? 'normal' : value.priority
-  if (patientName === null || patientId === null || (patientId && !isUuid(patientId))) return null
-  if ((!patientName && !patientId) || tests.length === 0 || !isPriority(priority)) return null
-  return {
-    ...(patientId ? { patientId } : {}),
-    ...(patientName ? { patientName } : {}),
-    tests,
-    priority,
+  if (!isPriority(priority)) return null
+  return { patientId: value.patientId.trim(), testIds: value.testIds, priority }
+}
+
+const CATALOG_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,63}$/
+
+function validateCatalogPrice(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1_000_000 ? value : null
+}
+
+export function validateCatalogTestInput(value: unknown): CatalogTestInput | null {
+  if (!isRecord(value)) return null
+  const code = typeof value.code === 'string' ? value.code.trim().toUpperCase() : ''
+  const name = validateText(value.name, 200)
+  const specimenType = validateText(value.specimenType, 100)
+  const price = validateCatalogPrice(value.price)
+  const isActive = value.isActive === undefined ? true : value.isActive
+  if (!CATALOG_CODE_PATTERN.test(code) || !name || !specimenType || price === null || typeof isActive !== 'boolean') return null
+  return { code, name, specimenType, price, isActive }
+}
+
+export function validateCatalogTestUpdate(value: unknown): CatalogTestUpdate | null {
+  if (!isRecord(value)) return null
+  const update: CatalogTestUpdate = {}
+  if (value.name !== undefined) {
+    const name = validateText(value.name, 200)
+    if (!name) return null
+    update.name = name
   }
+  if (value.specimenType !== undefined) {
+    const specimenType = validateText(value.specimenType, 100)
+    if (!specimenType) return null
+    update.specimenType = specimenType
+  }
+  if (value.price !== undefined) {
+    const price = validateCatalogPrice(value.price)
+    if (price === null) return null
+    update.price = price
+  }
+  if (value.isActive !== undefined) {
+    if (typeof value.isActive !== 'boolean') return null
+    update.isActive = value.isActive
+  }
+  return Object.keys(update).length > 0 ? update : null
 }
 
 export function validateSpecimenInput(value: unknown): CreateSpecimenInput | null {
@@ -215,6 +247,14 @@ export function validateRecordInventoryMovementInput(value: unknown): RecordInve
   } catch (error) {
     if (error instanceof RepositoryInputError) return null
     throw error
+  }
+}
+
+/** Reads ?limit=&offset= for list endpoints; limit is clamped to MAX_LIST_LIMIT. */
+export function parseListPage(query: URLSearchParams): PageOptions {
+  return {
+    limit: parsePageValue(query.get('limit'), DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT) || DEFAULT_LIST_LIMIT,
+    offset: parsePageValue(query.get('offset'), 0),
   }
 }
 

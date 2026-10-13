@@ -1,17 +1,22 @@
 import { Pool, type PoolClient } from 'pg'
-import type {
-  CreatePatientInput,
-  DashboardSummary,
-  LabResult,
-  Order,
-  Patient,
-  ResultFlag,
-  Specimen,
-  SpecimenStatus,
-  TestCatalogItem,
+import {
+  ORDER_STATE_LABELS,
+  ORDER_STATE_TONES,
+  type CatalogTestInput,
+  type CatalogTestUpdate,
+  type CreateOrderInput,
+  type CreatePatientInput,
+  type DashboardSummary,
+  type LabResult,
+  type Order,
+  type Patient,
+  type ResultFlag,
+  type Specimen,
+  type SpecimenStatus,
+  type TestCatalogItem,
 } from '../domain.js'
 import { emptyOperationsReport, validateReportQuery, type OperationsReport } from '../reports.js'
-import { calculateInvoiceTotals, isInvoiceStatus, isPaymentMethod, normalizePaymentAmount, roundMoney, type Invoice, type InvoiceItem, type InvoiceItemInput, type Payment, type PaymentMethod } from '../billing.js'
+import { calculateInvoiceTotals, isInvoiceStatus, isPaymentMethod, normalizePaymentAmount, outstandingMinor, roundMoney, toMinorUnits, type Invoice, type InvoiceItem, type InvoiceItemInput, type Payment, type PaymentMethod } from '../billing.js'
 import { isRadiologyModality, isRadiologyPriority, isRadiologyStudyStatus, type RadiologyModality, type RadiologyPriority, type RadiologyStudy, type RadiologyStudyStatus } from '../radiology.js'
 import {
   movementDelta,
@@ -43,7 +48,7 @@ import {
   type HomeVisitStatus,
 } from '../home-visits.js'
 import { checkDeviceConnection as evaluateDeviceConnection, isDeviceUuid, validateCreateDeviceInput, type DeviceConnectionResult, type LabDevice } from '../devices.js'
-import { normalizeActor, RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './repository.js'
+import { normalizeActor, resolvePage, RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository, type PageOptions } from './repository.js'
 
 const ORDER_STATUS = 'awaiting_sample'
 
@@ -283,8 +288,8 @@ function formatOrder(row: Record<string, unknown>): Order {
     tests: String(row.tests),
     time: new Date(String(row.created_at)).toISOString(),
     status: row.status as Order['status'],
-    state: row.status === ORDER_STATUS ? 'بانتظار العينة' : String(row.status),
-    tone: row.status === 'completed' ? 'success' : row.status === ORDER_STATUS ? 'warning' : 'info',
+    state: ORDER_STATE_LABELS[row.status as Order['status']] ?? String(row.status),
+    tone: ORDER_STATE_TONES[row.status as Order['status']] ?? 'info',
     priority: row.priority as Order['priority'],
   }
 }
@@ -304,13 +309,56 @@ async function findRecentOrders(pool: Pool): Promise<Order[]> {
   return result.rows.map(formatOrder)
 }
 
-function dashboardMetrics(): DashboardSummary['metrics'] {
-  return [
-    { label: 'طلبات اليوم', value: '0', note: 'من قاعدة البيانات', icon: 'receipt', tone: 'cyan' },
-    { label: 'عينات قيد المعالجة', value: '0', note: 'من قاعدة البيانات', icon: 'flask', tone: 'orange' },
-    { label: 'نتائج جاهزة', value: '0', note: 'من قاعدة البيانات', icon: 'check', tone: 'lime' },
-    { label: 'إيرادات اليوم', value: '0', note: 'من قاعدة البيانات', icon: 'chart', tone: 'navy' },
-  ]
+const IN_PROGRESS_SPECIMEN_STATUSES = "('collected', 'received', 'processing')"
+
+function formatCount(value: unknown): string {
+  return Number(value ?? 0).toLocaleString('en-US')
+}
+
+/** "Today" follows the session time zone, which the pool sets to the clinic's APP_TIMEZONE. */
+async function getDashboard(pool: Pool): Promise<DashboardSummary> {
+  const [summary, recentOrders] = await Promise.all([
+    pool.query<Record<string, unknown>>(`
+      SELECT
+        (SELECT COUNT(*) FROM orders WHERE created_at >= date_trunc('day', now())) AS orders_today,
+        (SELECT COUNT(*) FROM orders WHERE created_at >= date_trunc('day', now()) AND priority = 'urgent') AS urgent_today,
+        (SELECT COUNT(*) FROM specimens WHERE status IN ${IN_PROGRESS_SPECIMEN_STATUSES}) AS specimens_in_progress,
+        (SELECT COUNT(*) FROM lab_results WHERE status = 'in_review') AS results_awaiting_review,
+        (SELECT COUNT(*) FROM lab_results WHERE status = 'approved' AND updated_at >= date_trunc('day', now())) AS results_approved_today,
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE paid_at >= date_trunc('day', now())) AS revenue_today,
+        (SELECT COUNT(*) FROM specimens WHERE created_at >= date_trunc('day', now())) AS specimens_today,
+        (SELECT COUNT(*) FROM specimens WHERE created_at >= date_trunc('day', now()) AND status = 'completed') AS specimens_completed_today,
+        (SELECT COUNT(*) FROM specimens WHERE created_at >= date_trunc('day', now()) AND status IN ${IN_PROGRESS_SPECIMEN_STATUSES}) AS specimens_in_progress_today,
+        (SELECT COUNT(*) FROM specimens WHERE status = 'rejected' AND updated_at >= date_trunc('day', now()))
+          + (SELECT COUNT(*) FROM lab_results WHERE flag = 'critical' AND status IN ('draft', 'in_review')) AS needs_attention
+    `),
+    findRecentOrders(pool),
+  ])
+  const row = summary.rows[0] ?? {}
+  const specimensToday = Number(row.specimens_today ?? 0)
+  const completedToday = Number(row.specimens_completed_today ?? 0)
+  return {
+    metrics: [
+      { label: 'طلبات اليوم', value: formatCount(row.orders_today), note: `${formatCount(row.urgent_today)} عاجل`, icon: 'receipt', tone: 'cyan' },
+      { label: 'عينات قيد المعالجة', value: formatCount(row.specimens_in_progress), note: 'كل العينات المفتوحة', icon: 'flask', tone: 'orange' },
+      { label: 'نتائج معتمدة اليوم', value: formatCount(row.results_approved_today), note: `${formatCount(row.results_awaiting_review)} بانتظار المراجعة`, icon: 'check', tone: 'lime' },
+      {
+        label: 'تحصيل اليوم',
+        value: Number(row.revenue_today ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        note: 'جنيه مصري',
+        icon: 'chart',
+        tone: 'navy',
+      },
+    ],
+    recentOrders,
+    samples: {
+      total: specimensToday,
+      completed: completedToday,
+      inProgress: Number(row.specimens_in_progress_today ?? 0),
+      needsAttention: Number(row.needs_attention ?? 0),
+      completionRate: specimensToday === 0 ? 0 : Math.round((completedToday / specimensToday) * 100),
+    },
+  }
 }
 
 async function findPatient(client: PoolClient, patientId: string): Promise<StoredPatient> {
@@ -319,28 +367,18 @@ async function findPatient(client: PoolClient, patientId: string): Promise<Store
     [patientId],
   )
   const patient = result.rows[0]
-  if (!patient) throw new Error('patientId does not reference an existing patient.')
+  if (!patient) throw new RepositoryNotFoundError('Patient was not found.')
   return { id: patient.id, fullName: patient.full_name }
 }
 
-async function insertPatient(client: PoolClient, patientName: string): Promise<StoredPatient> {
-  const result = await client.query<{ id: string; full_name: string }>(
-    'INSERT INTO patients (full_name) VALUES ($1) RETURNING id, full_name',
-    [patientName.trim()],
+async function findActiveCatalogTests(client: PoolClient, testIds: string[]): Promise<Array<{ id: string; name: string }>> {
+  const result = await client.query<{ id: string; name: string }>(
+    'SELECT id, name FROM test_catalog WHERE id = ANY($1::uuid[]) AND is_active',
+    [testIds],
   )
-  return { id: result.rows[0].id, fullName: result.rows[0].full_name }
-}
-
-async function insertCatalogTest(client: PoolClient, testName: string): Promise<string> {
-  const code = `CUSTOM_${testName.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 55) || 'TEST'}`
-  const result = await client.query<{ id: string }>(
-    `INSERT INTO test_catalog (code, name, specimen_type)
-     VALUES ($1, $2, 'unspecified')
-     ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
-     RETURNING id`,
-    [code, testName.trim()],
-  )
-  return result.rows[0].id
+  const byId = new Map(result.rows.map((row) => [row.id, row]))
+  if (testIds.some((id) => !byId.has(id))) throw new RepositoryInputError('One or more tests are not in the active catalog.')
+  return testIds.map((id) => byId.get(id) as { id: string; name: string })
 }
 
 async function insertOrder(client: PoolClient, patientId: string, priority: string): Promise<{ id: string; order_number: number; created_at: Date }> {
@@ -352,10 +390,75 @@ async function insertOrder(client: PoolClient, patientId: string, priority: stri
   return result.rows[0]
 }
 
-async function resolveOrderPatient(client: PoolClient, patientId: string | undefined, patientName: string | undefined): Promise<StoredPatient> {
-  if (patientId) return findPatient(client, patientId)
-  if (patientName) return insertPatient(client, patientName)
-  throw new Error('A patientId or patientName is required.')
+async function createOrder(pool: Pool, input: CreateOrderInput): Promise<Order> {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const patient = await findPatient(client, input.patientId)
+    const tests = await findActiveCatalogTests(client, input.testIds)
+    const order = await insertOrder(client, patient.id, input.priority ?? 'normal')
+    await client.query(
+      'INSERT INTO order_items (order_id, test_catalog_id) SELECT $1, unnest($2::uuid[])',
+      [order.id, tests.map((test) => test.id)],
+    )
+    await client.query('COMMIT')
+    return {
+      id: `AY-${order.order_number}`,
+      patient: patient.fullName,
+      tests: tests.map((test) => test.name).join(' · '),
+      time: order.created_at.toISOString(),
+      status: ORDER_STATUS,
+      state: ORDER_STATE_LABELS[ORDER_STATUS],
+      tone: 'warning',
+      priority: input.priority ?? 'normal',
+    }
+  } catch (error) {
+    try { await client.query('ROLLBACK') } catch { /* preserve the original repository error */ }
+    if (isPostgresError(error, '22P02')) throw new RepositoryInputError('patientId and testIds must be valid UUIDs.')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+const CATALOG_COLUMNS = 'id, code, name, specimen_type, price, is_active'
+
+async function createCatalogTest(pool: Pool, input: CatalogTestInput): Promise<TestCatalogItem> {
+  try {
+    const result = await pool.query(
+      `INSERT INTO test_catalog (code, name, specimen_type, price, is_active)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING ${CATALOG_COLUMNS}`,
+      [input.code, input.name, input.specimenType, roundMoney(input.price), input.isActive],
+    )
+    return formatCatalogItem(result.rows[0])
+  } catch (error) {
+    if (isPostgresError(error, '23505')) throw new RepositoryConflictError('A test with this code already exists.')
+    if (isPostgresError(error, '23514')) throw new RepositoryInputError('Catalog test input is invalid.')
+    throw error
+  }
+}
+
+async function updateCatalogTest(pool: Pool, id: string, update: CatalogTestUpdate): Promise<TestCatalogItem> {
+  if (!UUID_PATTERN.test(id)) throw new RepositoryInputError('id must be a valid UUID.')
+  try {
+    const result = await pool.query(
+      `UPDATE test_catalog
+       SET name = COALESCE($2, name),
+           specimen_type = COALESCE($3, specimen_type),
+           price = COALESCE($4, price),
+           is_active = COALESCE($5, is_active),
+           updated_at = now()
+       WHERE id = $1
+       RETURNING ${CATALOG_COLUMNS}`,
+      [id, update.name ?? null, update.specimenType ?? null, update.price === undefined ? null : roundMoney(update.price), update.isActive ?? null],
+    )
+    if (!result.rows[0]) throw new RepositoryNotFoundError('Catalog test was not found.')
+    return formatCatalogItem(result.rows[0])
+  } catch (error) {
+    if (isPostgresError(error, '23514')) throw new RepositoryInputError('Catalog test input is invalid.')
+    throw error
+  }
 }
 
 async function listPatients(pool: Pool, query: string | undefined, limit: number, offset: number): Promise<Patient[]> {
@@ -384,7 +487,7 @@ async function listCatalog(pool: Pool): Promise<TestCatalogItem[]> {
   const result = await pool.query(
     `SELECT id, code, name, specimen_type, price, is_active
      FROM test_catalog
-     ORDER BY is_active DESC, code ASC`,
+     ORDER BY is_active DESC, name ASC`,
   )
   return result.rows.map(formatCatalogItem)
 }
@@ -434,14 +537,15 @@ const HOME_VISIT_COLUMNS = `hv.id, hv.patient_id, hv.order_id, o.order_number, h
 const HOME_VISIT_SELECT = `SELECT ${HOME_VISIT_COLUMNS}
   FROM home_visits hv LEFT JOIN orders o ON o.id = hv.order_id`
 
-async function listInsurancePolicies(pool: Pool, patientId: string | undefined): Promise<InsurancePolicy[]> {
+async function listInsurancePolicies(pool: Pool, patientId: string | undefined, page: PageOptions): Promise<InsurancePolicy[]> {
   if (patientId !== undefined && !isInsuranceUuid(patientId)) throw new RepositoryInputError('patientId must be a valid UUID.')
   const result = await pool.query(
     `SELECT ${INSURANCE_POLICY_COLUMNS}
      FROM insurance_policies
      WHERE ($1::uuid IS NULL OR patient_id = $1)
-     ORDER BY created_at DESC`,
-    [patientId ?? null],
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [patientId ?? null, page.limit, page.offset],
   )
   return result.rows.map(formatInsurancePolicy)
 }
@@ -482,9 +586,9 @@ async function findInsuranceClaim(pool: Pool, claimId: string): Promise<Insuranc
   return formatInsuranceClaim(result.rows[0])
 }
 
-async function listInsuranceClaims(pool: Pool, status: InsuranceClaimStatus | undefined): Promise<InsuranceClaim[]> {
+async function listInsuranceClaims(pool: Pool, status: InsuranceClaimStatus | undefined, page: PageOptions): Promise<InsuranceClaim[]> {
   if (status !== undefined && !isInsuranceClaimStatus(status)) throw new RepositoryInputError('status is invalid.')
-  const result = await pool.query(`${INSURANCE_CLAIM_SELECT} WHERE ($1::text IS NULL OR c.status = $1) ORDER BY c.created_at DESC`, [status ?? null])
+  const result = await pool.query(`${INSURANCE_CLAIM_SELECT} WHERE ($1::text IS NULL OR c.status = $1) ORDER BY c.created_at DESC LIMIT $2 OFFSET $3`, [status ?? null, page.limit, page.offset])
   return result.rows.map(formatInsuranceClaim)
 }
 
@@ -516,14 +620,16 @@ async function transitionInsuranceClaim(pool: Pool, id: string, nextStatus: Insu
   const claim = existing.rows[0]
   if (!claim) throw new RepositoryNotFoundError('Insurance claim was not found.')
   if (!canTransitionInsuranceClaim(claim.status, nextStatus)) throw new RepositoryConflictError('Insurance claim transition is not allowed.')
-  await pool.query(
+  // Compare-and-set on the status we validated, so two concurrent transitions cannot both succeed.
+  const updated = await pool.query(
     `UPDATE insurance_claims
      SET status = $2,
          submitted_at = CASE WHEN $2 = 'submitted' THEN COALESCE(submitted_at, now()) ELSE submitted_at END,
          updated_at = now()
-     WHERE id = $1`,
-    [id, nextStatus],
+     WHERE id = $1 AND status = $3`,
+    [id, nextStatus, claim.status],
   )
+  if (updated.rowCount === 0) throw new RepositoryConflictError('Insurance claim was changed by another user; reload and try again.')
   return findInsuranceClaim(pool, id)
 }
 
@@ -533,15 +639,16 @@ async function findHomeVisit(pool: Pool, id: string): Promise<HomeVisit> {
   return formatHomeVisit(result.rows[0])
 }
 
-async function listHomeVisits(pool: Pool, patientId: string | undefined, status: HomeVisitStatus | undefined): Promise<HomeVisit[]> {
+async function listHomeVisits(pool: Pool, patientId: string | undefined, status: HomeVisitStatus | undefined, page: PageOptions): Promise<HomeVisit[]> {
   if (patientId !== undefined && !isHomeVisitUuid(patientId)) throw new RepositoryInputError('patientId must be a valid UUID.')
   if (status !== undefined && !isHomeVisitStatus(status)) throw new RepositoryInputError('status is invalid.')
   const result = await pool.query(
     `${HOME_VISIT_SELECT}
      WHERE ($1::uuid IS NULL OR hv.patient_id = $1)
        AND ($2::text IS NULL OR hv.status = $2)
-     ORDER BY hv.scheduled_at ASC, hv.created_at DESC`,
-    [patientId ?? null, status ?? null],
+     ORDER BY hv.scheduled_at ASC, hv.created_at DESC
+     LIMIT $3 OFFSET $4`,
+    [patientId ?? null, status ?? null, page.limit, page.offset],
   )
   return result.rows.map(formatHomeVisit)
 }
@@ -584,7 +691,9 @@ async function transitionHomeVisit(pool: Pool, id: string, nextStatus: HomeVisit
   const visit = existing.rows[0]
   if (!visit) throw new RepositoryNotFoundError('Home visit was not found.')
   if (!canTransitionHomeVisit(visit.status, nextStatus)) throw new RepositoryConflictError('Home visit transition is not allowed.')
-  await pool.query('UPDATE home_visits SET status = $2, updated_at = now() WHERE id = $1', [id, nextStatus])
+  // Compare-and-set on the status we validated, so two concurrent transitions cannot both succeed.
+  const updated = await pool.query('UPDATE home_visits SET status = $2, updated_at = now() WHERE id = $1 AND status = $3', [id, nextStatus, visit.status])
+  if (updated.rowCount === 0) throw new RepositoryConflictError('Home visit was changed by another user; reload and try again.')
   return findHomeVisit(pool, id)
 }
 
@@ -598,13 +707,14 @@ function validateRadiologyCreateInput(patientId: string, modality: RadiologyModa
   }
 }
 
-async function listRadiologyStudies(pool: Pool, status: RadiologyStudyStatus | undefined): Promise<RadiologyStudy[]> {
+async function listRadiologyStudies(pool: Pool, status: RadiologyStudyStatus | undefined, page: PageOptions): Promise<RadiologyStudy[]> {
   if (status !== undefined && !isRadiologyStudyStatus(status)) throw new RepositoryInputError('status is invalid.')
   const result = await pool.query(
     `SELECT ${RADIOLOGY_COLUMNS} FROM radiology_studies
      WHERE ($1::text IS NULL OR status = $1)
-     ORDER BY created_at DESC`,
-    [status ?? null],
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [status ?? null, page.limit, page.offset],
   )
   return result.rows.map(formatRadiologyStudy)
 }
@@ -795,13 +905,14 @@ async function findSpecimen(pool: Pool, specimenId: string): Promise<Specimen> {
   return formatSpecimen(result.rows[0])
 }
 
-async function listSpecimens(pool: Pool, status: SpecimenStatus | undefined): Promise<Specimen[]> {
+async function listSpecimens(pool: Pool, status: SpecimenStatus | undefined, page: PageOptions): Promise<Specimen[]> {
   const result = await pool.query(
     `SELECT ${SPECIMEN_COLUMNS}
      FROM specimens s JOIN orders o ON o.id = s.order_id
      WHERE ($1::text IS NULL OR s.status = $1)
-     ORDER BY s.created_at DESC`,
-    [status ?? null],
+     ORDER BY s.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [status ?? null, page.limit, page.offset],
   )
   return result.rows.map(formatSpecimen)
 }
@@ -838,15 +949,16 @@ async function collectSpecimen(pool: Pool, barcode: string): Promise<Specimen> {
   throw new RepositoryConflictError('Specimen can only be collected from pending status.')
 }
 
-async function listResults(pool: Pool, orderId: string | undefined): Promise<LabResult[]> {
+async function listResults(pool: Pool, orderId: string | undefined, page: PageOptions): Promise<LabResult[]> {
   const internalOrderId = orderId ? await resolveOrderId(pool, orderId) : null
   const result = await pool.query(
     `SELECT ${QUALIFIED_RESULT_COLUMNS}
      FROM lab_results lr
      JOIN order_items oi ON oi.id = lr.order_item_id
      WHERE ($1::uuid IS NULL OR oi.order_id = $1::uuid)
-     ORDER BY lr.created_at DESC`,
-    [internalOrderId],
+     ORDER BY lr.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [internalOrderId, page.limit, page.offset],
   )
   return result.rows.map(formatLabResult)
 }
@@ -916,9 +1028,9 @@ async function findInvoice(pool: Pool, invoiceId: string): Promise<Invoice> {
   return formatInvoice(result.rows[0])
 }
 
-async function listInvoices(pool: Pool, status: Invoice['status'] | undefined): Promise<Invoice[]> {
+async function listInvoices(pool: Pool, status: Invoice['status'] | undefined, page: PageOptions): Promise<Invoice[]> {
   if (status !== undefined && !isInvoiceStatus(status)) throw new RepositoryInputError('status is invalid.')
-  const result = await pool.query(`${INVOICE_SELECT} WHERE ($1::text IS NULL OR i.status = $1) ORDER BY i.created_at DESC`, [status ?? null])
+  const result = await pool.query(`${INVOICE_SELECT} WHERE ($1::text IS NULL OR i.status = $1) ORDER BY i.created_at DESC LIMIT $2 OFFSET $3`, [status ?? null, page.limit, page.offset])
   return result.rows.map(formatInvoice)
 }
 
@@ -980,18 +1092,16 @@ async function recordPayment(pool: Pool, invoiceId: string, amount: number, meth
       'SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = $1',
       [invoiceId],
     )
-    const paidBefore = roundMoney(Number(paidResult.rows[0]?.paid ?? 0))
-    const total = roundMoney(Number(invoice.total))
-    if (normalizedAmount > roundMoney(total - paidBefore)) throw new RepositoryConflictError('Payment exceeds the invoice balance.')
+    const balanceMinor = outstandingMinor(Number(invoice.total), [Number(paidResult.rows[0]?.paid ?? 0)])
+    if (toMinorUnits(normalizedAmount) > balanceMinor) throw new RepositoryConflictError('Payment exceeds the invoice balance.')
     await client.query(
       `INSERT INTO payments (invoice_id, amount, method, reference, received_by)
        VALUES ($1, $2, $3, $4, $5)`,
       [invoiceId, normalizedAmount, method, reference?.trim() || null, receiver],
     )
-    const paidAfter = roundMoney(paidBefore + normalizedAmount)
     await client.query(
       'UPDATE invoices SET status = $2, updated_at = now() WHERE id = $1',
-      [invoiceId, paidAfter >= total ? 'paid' : 'partially_paid'],
+      [invoiceId, toMinorUnits(normalizedAmount) >= balanceMinor ? 'paid' : 'partially_paid'],
     )
     await client.query('COMMIT')
     return findInvoice(pool, invoiceId)
@@ -1108,14 +1218,7 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
   return {
     databaseMode: 'configured',
     listRecent: () => findRecentOrders(pool),
-    getDashboard: async () => {
-      const recentOrders = await findRecentOrders(pool)
-      return {
-        metrics: dashboardMetrics(),
-        recentOrders,
-        samples: { total: recentOrders.length, completionRate: 0, inProgress: 0, completed: 0, needsAttention: 0 },
-      }
-    },
+    getDashboard: () => getDashboard(pool),
     getOperationsReport: (from, to) => getOperationsReport(pool, from, to),
     listPatients: (options) => listPatients(pool, options?.query, options?.limit ?? 50, options?.offset ?? 0),
     getPatientById: async (patientId) => {
@@ -1128,45 +1231,19 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
     },
     createPatient: (input) => createPatient(pool, input),
     listCatalog: () => listCatalog(pool),
-    createOrder: async (input) => {
-      const client = await pool.connect()
-      try {
-        await client.query('BEGIN')
-        // patientName remains a compatibility fallback; complete duplicate prevention requires patientId.
-        const patient = await resolveOrderPatient(client, input.patientId, input.patientName)
-        const order = await insertOrder(client, patient.id, input.priority ?? 'normal')
-        for (const testName of input.tests) {
-          const testId = await insertCatalogTest(client, testName)
-          await client.query('INSERT INTO order_items (order_id, test_catalog_id) VALUES ($1, $2)', [order.id, testId])
-        }
-        await client.query('COMMIT')
-        return {
-          id: `AY-${order.order_number}`,
-          patient: patient.fullName,
-          tests: input.tests.join(' · '),
-          time: order.created_at.toISOString(),
-          status: ORDER_STATUS,
-          state: 'بانتظار العينة',
-          tone: 'warning',
-          priority: input.priority ?? 'normal',
-        }
-      } catch (error) {
-        try { await client.query('ROLLBACK') } catch { /* preserve the original repository error */ }
-        throw error
-      } finally {
-        client.release()
-      }
-    },
-    listSpecimens: (status) => listSpecimens(pool, status),
+    createOrder: (input) => createOrder(pool, input),
+    createCatalogTest: (input) => createCatalogTest(pool, input),
+    updateCatalogTest: (id, update) => updateCatalogTest(pool, id, update),
+    listSpecimens: (status, page) => listSpecimens(pool, status, resolvePage(page)),
     createSpecimen: (orderId, specimenType, barcode) => createSpecimen(pool, orderId, specimenType, barcode),
     collectSpecimen: (barcode) => collectSpecimen(pool, barcode),
-    listResults: (orderId) => listResults(pool, orderId),
+    listResults: (orderId, page) => listResults(pool, orderId, resolvePage(page)),
     enterResult: (orderItemId, value, unit, referenceRange, flag, enteredBy) => enterResult(pool, orderItemId, value, unit, referenceRange, flag, enteredBy),
     reviewResult: (id, reviewedBy) => reviewResult(pool, id, reviewedBy),
-    listInvoices: (status) => listInvoices(pool, status),
+    listInvoices: (status, page) => listInvoices(pool, status, resolvePage(page)),
     createInvoice: (orderId, items, discount, tax) => createInvoice(pool, orderId, items, discount, tax),
     recordPayment: (invoiceId, amount, method, reference, receivedBy) => recordPayment(pool, invoiceId, amount, method, reference, receivedBy),
-    listRadiologyStudies: (status) => listRadiologyStudies(pool, status),
+    listRadiologyStudies: (status, page) => listRadiologyStudies(pool, status, resolvePage(page)),
     createRadiologyStudy: (patientId, modality, bodyPart, priority, scheduledAt, referringProvider) => createRadiologyStudy(pool, patientId, modality, bodyPart, priority, scheduledAt, referringProvider),
     startRadiologyStudy: (id) => startRadiologyStudy(pool, id),
     reportRadiologyStudy: (id, reportText, impression) => reportRadiologyStudy(pool, id, reportText, impression),
@@ -1178,20 +1255,20 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
     ),
     recordAuditEvent: (input) => recordAuditEvent(pool, input),
     listAuditEvents: (options) => listAuditEvents(pool, options),
-    listInsurancePolicies: (patientId) => listInsurancePolicies(pool, patientId),
+    listInsurancePolicies: (patientId, page) => listInsurancePolicies(pool, patientId, resolvePage(page)),
     createInsurancePolicy: (patientId, payerName, memberNumber, planName, coveragePercent, validFrom, validTo) => createInsurancePolicy(
       pool, patientId, payerName, memberNumber, planName, coveragePercent, validFrom, validTo,
     ),
-    listInsuranceClaims: (status) => listInsuranceClaims(pool, status),
+    listInsuranceClaims: (status, page) => listInsuranceClaims(pool, status, resolvePage(page)),
     createInsuranceClaim: (policyId, orderId, amount) => createInsuranceClaim(pool, policyId, orderId, amount),
     transitionInsuranceClaim: (id, nextStatus) => transitionInsuranceClaim(pool, id, nextStatus),
-     listHomeVisits: (patientId, status) => listHomeVisits(pool, patientId, status),
-     createHomeVisit: (patientId, orderId, address, contactPhone, scheduledAt, assignedTo, notes) => createHomeVisit(
-       pool, patientId, orderId, address, contactPhone, scheduledAt, assignedTo, notes,
-     ),
-     transitionHomeVisit: (id, nextStatus) => transitionHomeVisit(pool, id, nextStatus),
-      listDevices: (activeOnly) => listDevices(pool, activeOnly),
-      createDevice: (input) => createDevice(pool, input),
-      checkDeviceConnection: (id) => checkDeviceConnection(pool, id),
+    listHomeVisits: (patientId, status, page) => listHomeVisits(pool, patientId, status, resolvePage(page)),
+    createHomeVisit: (patientId, orderId, address, contactPhone, scheduledAt, assignedTo, notes) => createHomeVisit(
+      pool, patientId, orderId, address, contactPhone, scheduledAt, assignedTo, notes,
+    ),
+    transitionHomeVisit: (id, nextStatus) => transitionHomeVisit(pool, id, nextStatus),
+    listDevices: (activeOnly) => listDevices(pool, activeOnly),
+    createDevice: (input) => createDevice(pool, input),
+    checkDeviceConnection: (id) => checkDeviceConnection(pool, id),
   }
 }
