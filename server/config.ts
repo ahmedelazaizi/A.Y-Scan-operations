@@ -46,6 +46,19 @@ function parseTimeZone(value: string | undefined): string {
   return timeZone
 }
 
+/** DATABASE_URL, or one built from DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD (what the installer writes for an existing PostgreSQL). */
+export function resolveDatabaseUrl(environment: NodeJS.ProcessEnv): string | null {
+  const direct = environment.DATABASE_URL?.trim()
+  if (direct) return direct
+  const host = environment.DB_HOST?.trim()
+  if (!host) return null
+  const port = Number.parseInt(environment.DB_PORT?.trim() || '5432', 10)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new ConfigError('DB_PORT must be an integer between 1 and 65535.')
+  const user = environment.DB_USER?.trim() || 'postgres'
+  const name = environment.DB_NAME?.trim() || 'ayscan'
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(environment.DB_PASSWORD ?? '')}@${host}:${port}/${encodeURIComponent(name)}`
+}
+
 function parseEmbeddedPostgres(environment: NodeJS.ProcessEnv): ServerConfig['embeddedPostgres'] {
   if (environment.EMBEDDED_PG?.trim().toLowerCase() !== 'true') return null
   const binDir = environment.PG_BIN_DIR?.trim()
@@ -64,9 +77,10 @@ function parsePort(value: string | undefined): number {
 /** Reads and validates process configuration once at startup; fails fast instead of running half-configured. */
 export function loadServerConfig(environment: NodeJS.ProcessEnv = process.env): ServerConfig {
   const isProduction = environment.NODE_ENV === 'production'
-  const databaseUrl = environment.DATABASE_URL?.trim() || null
+  const databaseUrl = resolveDatabaseUrl(environment)
   const allowInMemoryStore = environment.ALLOW_IN_MEMORY_STORE?.trim().toLowerCase() === 'true'
-  const embeddedPostgres = parseEmbeddedPostgres(environment)
+  // An explicitly configured database server always wins over the bundled one.
+  const embeddedPostgres = databaseUrl ? null : parseEmbeddedPostgres(environment)
   if (!databaseUrl && !embeddedPostgres && (isProduction || !allowInMemoryStore)) {
     throw new ConfigError('DATABASE_URL is required. Set ALLOW_IN_MEMORY_STORE=true only for throwaway development runs.')
   }

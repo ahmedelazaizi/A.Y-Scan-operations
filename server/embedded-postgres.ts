@@ -92,7 +92,7 @@ async function initializeCluster(options: EmbeddedPostgresOptions, credentials: 
   try {
     await runChecked(executable(options.binDir, 'initdb'), [
       '-D', options.dataDir, '-U', credentials.user, '-A', 'scram-sha-256', `--pwfile=${passwordFile}`,
-      '-E', 'UTF8', '--locale=C', '--no-instructions',
+      '-E', 'UTF8', '--locale=C', '--no-instructions', '--no-sync',
     ], 'Creating the database cluster failed')
   } finally {
     await rm(passwordFile, { force: true })

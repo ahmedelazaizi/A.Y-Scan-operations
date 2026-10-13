@@ -131,3 +131,11 @@ test('a missing web app is explained in the browser instead of a bare JSON error
     await rm(full, { recursive: true, force: true })
   }
 })
+
+test('an existing PostgreSQL configured with DB_* settings builds the URL and beats the bundled database', () => {
+  const config = loadServerConfig({ NODE_ENV: 'production', DB_HOST: '127.0.0.1', DB_PORT: '5433', DB_NAME: 'lab db', DB_USER: 'me@x', DB_PASSWORD: 'p@ss/word', EMBEDDED_PG: 'true', PG_BIN_DIR: 'bin' })
+  assert.equal(config.databaseUrl, 'postgresql://me%40x:p%40ss%2Fword@127.0.0.1:5433/lab%20db')
+  assert.equal(config.embeddedPostgres, null)
+  assert.equal(loadServerConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://a:b@h/d', DB_HOST: 'ignored' }).databaseUrl, 'postgresql://a:b@h/d')
+  assert.throws(() => loadServerConfig({ DB_HOST: 'x', DB_PORT: '99999' }))
+})
