@@ -1,4 +1,6 @@
 import { requires, route, ValidationError, type Route } from '../router.js'
+import { AuthCredentialError } from '../auth/service.js'
+import { hasCapability } from '../permissions.js'
 import type { OrderRepository } from '../storage/repository.js'
 import {
   DEFAULT_PAGE_SIZE,
@@ -9,7 +11,7 @@ import {
   parsePageValue,
   validateCatalogTestInput,
   validateCatalogTestUpdate,
-  validateOrderInput,
+  validateReceptionOrderInput,
   validatePatientInput,
   validateResultInput,
   validateSpecimenInput,
@@ -32,16 +34,17 @@ export function labRoutes(repository: OrderRepository): Route[] {
       context.json(200, await repository.listRecent())
     }),
 
+    route('GET', '/api/reception/orders', requires('orders.view'), async (context) => {
+      context.json(200, await repository.listReceptionOrders(parseListPage(context.query)))
+    }),
+
     route('POST', '/api/orders', requires('orders.create'), async (context) => {
-      const input = validateOrderInput(await context.body())
+      const input = validateReceptionOrderInput(await context.body())
       if (!input) throw new ValidationError('patientId, testIds (unique catalog ids), and priority are invalid.')
-      if (!(await repository.getPatientById(input.patientId))) {
-        throw new ValidationError('patientId does not reference an existing patient.')
-      }
-      const order = await repository.createOrder(input)
-      await context.audit({
-        action: 'order.created', entityType: 'order', entityId: isUuid(order.id) ? order.id : null, metadata: { priority: order.priority ?? 'normal' },
-      })
+      if (!(await repository.getPatientById(input.patientId))) throw new ValidationError('patientId does not reference an existing patient.')
+      const discounting = (input.discountPiastres ?? 0) > 0
+      if (discounting && !hasCapability(context.user.role, 'catalog.price')) throw new AuthCredentialError('Discount requires catalog.price permission.')
+      const order = await repository.createReceptionOrder({ ...input, actor: context.user.displayName, actorId: context.user.id })
       context.json(201, order)
     }),
 

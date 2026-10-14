@@ -1,157 +1,86 @@
 import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import {
-  createInvoice,
-  fetchInvoices,
-  recordInvoicePayment,
-  type Invoice,
-  type InvoiceStatus,
-  type NewInvoice,
-  type PaymentMethod,
-} from './api'
+import { fetchReceptionOrders, recordInvoicePayment, type Invoice, type NewPayment, type PaymentMethod, type ReceptionOrder } from './api'
+import { formatDateTime } from './format'
 import { useCan } from './session'
 import { ViewHeader } from './ViewHeader'
 
 type ToastTone = 'success' | 'error'
 type BillingViewProps = { onBack: () => void; onToast: (message: string, tone?: ToastTone) => void }
-type InvoiceFilter = InvoiceStatus | 'all'
-type InvoiceDraft = { orderId: string; description: string; quantity: string; unitPrice: string; discount: string; tax: string }
 type PaymentDraft = { amount: string; method: PaymentMethod; reference: string }
+const CODE39: Record<string, string> = { '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn','A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn','F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn','K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn','P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn','U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn','Z':'nwwnwnnnn','-':'nwnnnnwnw',' ':'nwnnwnwnn','.':'wwnnnnwnn','$':'nwnwnwnnn','/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn','*':'nwnnwnwnn' }
+const STATUS_LABELS: Record<string, string> = { processing: 'قيد التنفيذ', ready_for_review: 'جاهز للمراجعة', awaiting_sample: 'بانتظار العينة', completed: 'مكتمل' }
+const PAYMENT_OPTIONS: Array<{ value: PaymentMethod; label: string }> = [{ value: 'cash', label: 'نقدي' }, { value: 'card', label: 'بطاقة' }, { value: 'bank_transfer', label: 'تحويل بنكي' }]
+const emptyDraft: PaymentDraft = { amount: '', method: 'cash', reference: '' }
 
-type StatusTone = 'info' | 'success' | 'warning' | 'danger'
+function paidAmount(invoice: Invoice) { return invoice.payments.reduce((sum, payment) => sum + payment.amount, 0) }
+function money(amount: number, currency = 'EGP') { return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: currency || 'EGP', maximumFractionDigits: 2 }).format(amount) }
 
-const EMPTY_INVOICE_DRAFT: InvoiceDraft = { orderId: '', description: '', quantity: '1', unitPrice: '', discount: '0', tax: '0' }
-const EMPTY_PAYMENT_DRAFT: PaymentDraft = { amount: '', method: 'cash', reference: '' }
-const STATUS_LABELS: Record<InvoiceStatus, string> = { draft: 'مسودة', issued: 'مُصدرة', partially_paid: 'مدفوعة جزئيًا', paid: 'مدفوعة', void: 'ملغاة' }
-const STATUS_TONES: Record<InvoiceStatus, StatusTone> = { draft: 'warning', issued: 'info', partially_paid: 'warning', paid: 'success', void: 'danger' }
-const STATUS_OPTIONS: Array<{ value: InvoiceFilter; label: string }> = [
-  { value: 'all', label: 'كل الحالات' },
-  { value: 'draft', label: STATUS_LABELS.draft },
-  { value: 'issued', label: STATUS_LABELS.issued },
-  { value: 'partially_paid', label: STATUS_LABELS.partially_paid },
-  { value: 'paid', label: STATUS_LABELS.paid },
-  { value: 'void', label: STATUS_LABELS.void },
-]
-const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentMethod; label: string }> = [
-  { value: 'cash', label: 'نقدي' },
-  { value: 'card', label: 'بطاقة' },
-  { value: 'bank_transfer', label: 'تحويل بنكي' },
-  { value: 'insurance', label: 'تأمين' },
-]
-const dateFormatter = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium' })
-
-function formatInvoiceDate(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? 'غير محدد' : dateFormatter.format(date)
-}
-
-function formatMoney(value: number, currency: string) {
-  return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: currency || 'EGP', maximumFractionDigits: 2 }).format(value)
-}
-
-function getPaidAmount(invoice: Invoice) {
-  return invoice.payments.reduce((sum, payment) => sum + payment.amount, 0)
-}
-
-function StatusBadge({ status }: { status: InvoiceStatus }) {
-  return <span className={`status status-${STATUS_TONES[status]}`}><span className="status-dot" aria-hidden="true" />{STATUS_LABELS[status]}</span>
-}
-
-function CreateInvoicePanel({ onCreated, onToast }: { onCreated: () => Promise<void>; onToast: BillingViewProps['onToast'] }) {
-  const [draft, setDraft] = useState<InvoiceDraft>(EMPTY_INVOICE_DRAFT)
-  const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const preview = useMemo(() => {
-    const quantity = Number(draft.quantity) || 0
-    const unitPrice = Number(draft.unitPrice) || 0
-    const subtotal = Math.round(quantity * unitPrice * 100) / 100
-    const discount = Number(draft.discount) || 0
-    const tax = Number(draft.tax) || 0
-    return { subtotal, total: Math.round((subtotal - discount + tax) * 100) / 100 }
-  }, [draft])
-
-  const updateDraft = (field: keyof InvoiceDraft, value: string) => setDraft((current) => ({ ...current, [field]: value }))
-  const submitInvoice = async (event: FormEvent) => {
-    event.preventDefault()
-    const quantity = Number(draft.quantity)
-    const unitPrice = Number(draft.unitPrice)
-    const discount = Number(draft.discount)
-    const tax = Number(draft.tax)
-    if (!draft.orderId.trim() || !draft.description.trim()) { setError('أكمل رقم الطلب ووصف البند.'); return }
-    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0) { setError('أدخل كمية موجبة وسعرًا صحيحًا.'); return }
-    if (!Number.isFinite(discount) || discount < 0 || !Number.isFinite(tax) || tax < 0) { setError('أدخل خصمًا وضريبة غير سالبين.'); return }
-    const invoice: NewInvoice = { orderId: draft.orderId.trim(), items: [{ description: draft.description.trim(), quantity, unitPrice }], discount, tax }
-    setSaving(true)
-    setError('')
-    try {
-      await createInvoice(invoice)
-      setDraft(EMPTY_INVOICE_DRAFT)
-      await onCreated()
-      onToast('تم إنشاء الفاتورة بنجاح')
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'تعذر إنشاء الفاتورة.')
-    } finally {
-      setSaving(false)
+function OrderBarcode({ orderId }: { orderId: string }) {
+  const text = `*${orderId.toUpperCase()}*`
+  let cursor = 0
+  const bars: Array<{ x: number; width: number }> = []
+  for (const character of text) {
+    const pattern = CODE39[character] ?? CODE39['-']
+    for (let index = 0; index < pattern.length; index += 1) {
+      const width = pattern[index] === 'w' ? 3 : 1
+      if (index % 2 === 0) bars.push({ x: cursor, width })
+      cursor += width + 1
     }
+    cursor += 1
   }
+  return <svg className="receipt-barcode" role="img" aria-label={`باركود الطلب ${orderId}`} viewBox={`0 0 ${cursor} 42`}><title>{orderId}</title>{bars.map((bar, index) => <rect key={index} x={bar.x} y="0" width={bar.width} height="42" fill="#000" />)}</svg>
+}
 
-  return <section className="panel billing-create-panel" aria-labelledby="create-invoice-title"><div className="panel-heading"><div><h2 id="create-invoice-title">إنشاء فاتورة</h2><p>البيانات التجريبية تستخدم رقم الطلب `AY-10482` فقط.</p></div></div><form className="billing-form" onSubmit={submitInvoice} noValidate aria-describedby={error ? 'invoice-form-error' : 'invoice-preview-note'}><div className="billing-form-grid"><div><label className="form-label" htmlFor="invoice-order-id">رقم الطلب <span className="required-mark">*</span></label><input id="invoice-order-id" className="form-input" value={draft.orderId} onChange={(event) => updateDraft('orderId', event.target.value)} placeholder="AY-10482" dir="ltr" required /></div><div><label className="form-label" htmlFor="invoice-description">وصف البند <span className="required-mark">*</span></label><input id="invoice-description" className="form-input" value={draft.description} onChange={(event) => updateDraft('description', event.target.value)} placeholder="CBC — بيانات تجريبية" required /></div><div><label className="form-label" htmlFor="invoice-quantity">الكمية <span className="required-mark">*</span></label><input id="invoice-quantity" className="form-input" type="number" min="0.001" step="0.001" value={draft.quantity} onChange={(event) => updateDraft('quantity', event.target.value)} dir="ltr" required /></div><div><label className="form-label" htmlFor="invoice-unit-price">سعر الوحدة <span className="required-mark">*</span></label><input id="invoice-unit-price" className="form-input" type="number" min="0" step="0.01" value={draft.unitPrice} onChange={(event) => updateDraft('unitPrice', event.target.value)} placeholder="60.00" dir="ltr" required /></div><div><label className="form-label" htmlFor="invoice-discount">الخصم</label><input id="invoice-discount" className="form-input" type="number" min="0" step="0.01" value={draft.discount} onChange={(event) => updateDraft('discount', event.target.value)} dir="ltr" /></div><div><label className="form-label" htmlFor="invoice-tax">الضريبة</label><input id="invoice-tax" className="form-input" type="number" min="0" step="0.01" value={draft.tax} onChange={(event) => updateDraft('tax', event.target.value)} dir="ltr" /></div></div><div id="invoice-preview-note" className="billing-preview" aria-live="polite"><span>معاينة محلية للعرض فقط</span><strong>الإجمالي التقريبي: <b dir="ltr">{formatMoney(preview.total, 'EGP')}</b></strong><small>سيحسب الخادم القيم النهائية ويظل المصدر المعتمد.</small></div>{error && <p id="invoice-form-error" className="form-error" role="alert">{error}</p>}<button className="primary-button billing-submit" type="submit" disabled={saving}>{saving ? 'جارٍ إنشاء الفاتورة…' : 'إنشاء الفاتورة'}</button></form></section>
+function ThermalReceipt({ order }: { order: ReceptionOrder }) {
+  const invoice = order.invoice
+  if (!invoice) return null
+  const paid = paidAmount(invoice)
+  const remaining = Math.max(0, invoice.total - paid)
+  return <article className="thermal-receipt" aria-label={`إيصال الفاتورة ${invoice.invoiceNumber}`}><header><img src="/brand/ay-scan-logo.svg" alt="A.Y Scan" /><strong>A.Y Scan</strong><span>إيصال كاشير</span></header><div className="receipt-rule" /><p>رقم الفاتورة <b dir="ltr">{invoice.invoiceNumber}</b></p><p>رقم الطلب <b dir="ltr">{order.id}</b></p><p>المريض <b>{order.patient}</b></p><p>التاريخ <b>{formatDateTime(invoice.createdAt)}</b></p><div className="receipt-rule" /><div className="receipt-items"><strong>البند</strong><strong>الإجمالي</strong>{invoice.items.map((line) => <div className="receipt-item" key={line.id}><span>{line.description} × {line.quantity}</span><b dir="ltr">{money(line.lineTotal, invoice.currency)}</b></div>)}</div><div className="receipt-rule" /><p>الإجمالي <b dir="ltr">{money(invoice.total, invoice.currency)}</b></p><p>المدفوع <b dir="ltr">{money(paid, invoice.currency)}</b></p><p className="receipt-balance">المتبقي <b dir="ltr">{money(remaining, invoice.currency)}</b></p><OrderBarcode orderId={order.id} /><small className="receipt-barcode-caption" dir="ltr">{order.id}</small><footer>شكرًا لزيارتكم — A.Y Scan</footer></article>
 }
 
 function PaymentForm({ invoice, onCompleted, onToast }: { invoice: Invoice; onCompleted: () => Promise<void>; onToast: BillingViewProps['onToast'] }) {
-  const [draft, setDraft] = useState<PaymentDraft>(EMPTY_PAYMENT_DRAFT)
+  const [draft, setDraft] = useState<PaymentDraft>(emptyDraft)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const paidAmount = getPaidAmount(invoice)
-  const remaining = Math.max(0, invoice.total - paidAmount)
-  const updateDraft = (field: keyof PaymentDraft, value: string) => setDraft((current) => ({ ...current, [field]: value }))
-
-  const submitPayment = async (event: FormEvent) => {
+  const remaining = Math.max(0, invoice.total - paidAmount(invoice))
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     const amount = Number(draft.amount)
-    if (!Number.isFinite(amount) || amount <= 0) { setError('أدخل مبلغًا موجبًا.'); return }
-    if (amount > remaining) { setError('لا يمكن أن يتجاوز المبلغ الرصيد المتبقي.'); return }
-    setSaving(true)
-    setError('')
+    if (!Number.isFinite(amount) || amount <= 0 || amount > remaining) { setError('أدخل مبلغًا موجبًا لا يتجاوز الرصيد المتبقي.'); return }
+    setSaving(true); setError('')
     try {
-      await recordInvoicePayment(invoice.id, { amount, method: draft.method, ...(draft.reference.trim() && { reference: draft.reference.trim() }) })
-      await onCompleted()
-      onToast('تم تسجيل الدفعة وتحديث الفواتير')
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'تعذر تسجيل الدفعة.')
-    } finally {
-      setSaving(false)
-    }
+      const payment: NewPayment = { amount, method: draft.method, ...(draft.reference.trim() && { reference: draft.reference.trim() }) }
+      await recordInvoicePayment(invoice.id, payment); await onCompleted(); setDraft(emptyDraft); onToast('تم تسجيل الدفعة وتحديث الكشف')
+    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'تعذر تسجيل الدفعة.') }
+    finally { setSaving(false) }
   }
-
-  return <form className="payment-form" onSubmit={submitPayment} noValidate aria-label={`تسجيل دفعة للفاتورة ${invoice.invoiceNumber}`}><div><label className="form-label" htmlFor={`payment-amount-${invoice.id}`}>المبلغ <span className="required-mark">*</span></label><input id={`payment-amount-${invoice.id}`} className="form-input" type="number" min="0.01" max={remaining} step="0.01" value={draft.amount} onChange={(event) => updateDraft('amount', event.target.value)} placeholder={remaining.toFixed(2)} dir="ltr" required /></div><div><label className="form-label" htmlFor={`payment-method-${invoice.id}`}>طريقة الدفع</label><select id={`payment-method-${invoice.id}`} className="form-input" value={draft.method} onChange={(event) => updateDraft('method', event.target.value as PaymentMethod)}>{PAYMENT_METHOD_OPTIONS.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div><div><label className="form-label" htmlFor={`payment-reference-${invoice.id}`}>المرجع</label><input id={`payment-reference-${invoice.id}`} className="form-input" value={draft.reference} onChange={(event) => updateDraft('reference', event.target.value)} placeholder="اختياري" dir="ltr" /></div>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button row-action-button" type="submit" disabled={saving}>{saving ? 'جارٍ الحفظ…' : 'تأكيد الدفعة'}</button></form>
+  return <form className="payment-form" onSubmit={submit} noValidate aria-label={`تحصيل الفاتورة ${invoice.invoiceNumber}`}><div><label className="form-label" htmlFor={`payment-amount-${invoice.id}`}>مبلغ التحصيل</label><input id={`payment-amount-${invoice.id}`} className="form-input" type="number" min="0.01" max={remaining} step="0.01" value={draft.amount} onChange={(event) => setDraft({ ...draft, amount: event.target.value })} placeholder={remaining.toFixed(2)} dir="ltr" required /></div><div><label className="form-label" htmlFor={`payment-method-${invoice.id}`}>طريقة الدفع</label><select id={`payment-method-${invoice.id}`} className="form-input" value={draft.method} onChange={(event) => setDraft({ ...draft, method: event.target.value as PaymentMethod })}>{PAYMENT_OPTIONS.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></div><div><label className="form-label" htmlFor={`payment-reference-${invoice.id}`}>المرجع</label><input id={`payment-reference-${invoice.id}`} className="form-input" value={draft.reference} onChange={(event) => setDraft({ ...draft, reference: event.target.value })} dir="ltr" /></div>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button row-action-button" type="submit" disabled={saving || remaining <= 0}>{saving ? 'جارٍ التسجيل…' : 'تأكيد التحصيل'}</button></form>
 }
 
 function BillingView({ onBack, onToast }: BillingViewProps) {
   const canManage = useCan()('billing.manage')
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [filter, setFilter] = useState<InvoiceFilter>('all')
+  const [orders, setOrders] = useState<ReceptionOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null)
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null)
+  const [printOrderId, setPrintOrderId] = useState<string | null>(null)
+  const loadOrders = useCallback(async () => {
+    setLoading(true); setError('')
+    try { setOrders(await fetchReceptionOrders()) }
+    catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'تعذر تحميل طلبات الاستقبال.') }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { const timer = window.setTimeout(() => void loadOrders(), 0); return () => window.clearTimeout(timer) }, [loadOrders])
+  const sortedOrders = useMemo(() => [...orders].sort((left, right) => new Date(right.time).getTime() - new Date(left.time).getTime()), [orders])
+  const handlePrint = (orderId: string) => { setPaymentOrderId(null); setPrintOrderId(orderId); window.setTimeout(() => window.print(), 50) }
+  useEffect(() => { const cleanup = () => setPrintOrderId(null); window.addEventListener('afterprint', cleanup); return () => window.removeEventListener('afterprint', cleanup) }, [])
 
-  const loadInvoices = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      setInvoices(await fetchInvoices(filter === 'all' ? undefined : filter))
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'تعذر تحميل الفواتير.')
-    } finally {
-      setLoading(false)
-    }
-  }, [filter])
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => void loadInvoices(), 0)
-    return () => window.clearTimeout(timer)
-  }, [loadInvoices])
-
-  return <><ViewHeader title="الفوترة" description={canManage ? 'أنشئ الفواتير وتابع المدفوع والمتبقي. البيانات المعروضة تجريبية فقط.' : 'تابع المدفوع والمتبقي. البيانات المعروضة تجريبية فقط.'} onBack={onBack} /><div className="billing-layout">{canManage && <CreateInvoicePanel onCreated={loadInvoices} onToast={onToast} />}<section className="panel billing-list-panel" aria-labelledby="invoice-list-title"><div className="panel-heading billing-list-heading"><div><h2 id="invoice-list-title">الفواتير</h2><p>رقم الطلب العام يظهر بصيغة `AY-...`.</p></div><label className="filter-field" htmlFor="invoice-status-filter"><span>تصفية الحالة</span><select id="invoice-status-filter" className="form-input" value={filter} onChange={(event) => setFilter(event.target.value as InvoiceFilter)}>{STATUS_OPTIONS.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label></div>{loading && <div className="state-card" role="status">جارٍ تحميل الفواتير…</div>}{!loading && error && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل الفواتير</strong><span>{error}</span><button className="secondary-button" type="button" onClick={() => void loadInvoices()}>إعادة المحاولة</button></div>}{!loading && !error && invoices.length === 0 && <div className="state-card" role="status">لا توجد فواتير بهذه الحالة.{canManage ? ' أنشئ فاتورة تجريبية باستخدام `AY-10482`.' : ''}</div>}{!loading && !error && invoices.length > 0 && <div className="billing-table-wrap"><table className="billing-table"><caption className="sr-only">قائمة الفواتير</caption><thead><tr><th scope="col">الفاتورة</th><th scope="col">رقم الطلب</th><th scope="col">الإجمالي</th><th scope="col">المدفوع / المتبقي</th><th scope="col">التاريخ</th><th scope="col">الحالة</th>{canManage && <th scope="col"><span className="sr-only">إجراء</span></th>}</tr></thead><tbody>{invoices.map((invoice) => { const paidAmount = getPaidAmount(invoice); const remaining = Math.max(0, invoice.total - paidAmount); const canPay = invoice.status !== 'paid' && invoice.status !== 'void'; return <Fragment key={invoice.id}><tr><td><strong className="operation-code" dir="ltr">{invoice.invoiceNumber}</strong></td><td><span className="order-id" dir="ltr">{invoice.orderId}</span></td><td><strong dir="ltr">{formatMoney(invoice.total, invoice.currency)}</strong></td><td><span className="billing-paid" dir="ltr">{formatMoney(paidAmount, invoice.currency)}</span><small className="billing-remaining" dir="ltr">متبقي {formatMoney(remaining, invoice.currency)}</small></td><td dir="ltr">{formatInvoiceDate(invoice.createdAt)}</td><td><StatusBadge status={invoice.status} /></td>{canManage && <td>{canPay && <button className="secondary-button row-action-button" type="button" onClick={() => setPaymentInvoiceId((current) => current === invoice.id ? null : invoice.id)} aria-expanded={paymentInvoiceId === invoice.id} aria-controls={`payment-form-${invoice.id}`}>{paymentInvoiceId === invoice.id ? 'إلغاء' : 'تسجيل دفعة'}</button>}</td>}</tr>{canManage && paymentInvoiceId === invoice.id && canPay && <tr className="payment-row"><td colSpan={7}><div id={`payment-form-${invoice.id}`}><PaymentForm invoice={invoice} onCompleted={async () => { setPaymentInvoiceId(null); await loadInvoices() }} onToast={onToast} /></div></td></tr>}</Fragment>})}</tbody></table></div>}</section></div></>
+  return <><ViewHeader title="الطلبات والفواتير" description="كشف الاستقبال والتحصيل المرتبط بالفاتورة والطلب." onBack={onBack} /><section className="panel billing-list-panel reception-billing" aria-labelledby="reception-orders-title"><div className="panel-heading billing-list-heading"><div><h2 id="reception-orders-title">كشف الطلبات والفواتير</h2><p>تفاصيل كل طلب وفاتورته وعمليات التحصيل.</p></div><button className="secondary-button" type="button" onClick={() => void loadOrders()} disabled={loading}>تحديث الكشف</button></div>
+    {loading && <div className="state-card" role="status">جارٍ تحميل الطلبات والفواتير…</div>}{!loading && error && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل الكشف</strong><span>{error}</span><button className="secondary-button" type="button" onClick={() => void loadOrders()}>إعادة المحاولة</button></div>}{!loading && !error && !sortedOrders.length && <div className="state-card" role="status">لا توجد طلبات استقبال مسجلة بعد.</div>}
+    {!loading && !error && !!sortedOrders.length && <div className="billing-table-wrap"><table className="billing-table reception-table"><caption className="sr-only">الطلبات والفواتير والتحصيلات</caption><thead><tr><th>المريض / الطلب</th><th>الطبيب</th><th>الحالة</th><th>الإجمالي</th><th>المدفوع / المتبقي</th><th>الفاتورة والإجراءات</th></tr></thead><tbody>{sortedOrders.map((order) => { const invoice = order.invoice; const paid = invoice ? paidAmount(invoice) : 0; const remaining = invoice ? Math.max(0, invoice.total - paid) : null; return <Fragment key={order.id}><tr><td data-label="المريض / الطلب"><strong>{order.patient}</strong><span className="billing-order-id" dir="ltr">{order.id}</span></td><td data-label="الطبيب">{order.practitioner || '—'}</td><td data-label="الحالة"><span className={`status ${invoice?.status === 'paid' ? 'status-success' : invoice ? 'status-info' : 'status-warning'}`}><span className="status-dot" />{invoice ? invoice.status === 'paid' ? 'مدفوعة' : invoice.status === 'partially_paid' ? 'مدفوعة جزئيًا' : invoice.status === 'void' ? 'ملغاة' : 'مستحقة' : 'طلب قديم بلا فاتورة'}</span><small className="order-state">{STATUS_LABELS[order.status] || order.state}</small></td><td data-label="الإجمالي"><strong>{invoice ? money(invoice.total, invoice.currency) : order.subtotalPiastres ? money(order.subtotalPiastres / 100) : 'غير متاح'}</strong></td><td data-label="المدفوع / المتبقي">{invoice ? <><span className="billing-paid">مدفوع: {money(paid, invoice.currency)}</span><span className="billing-remaining">متبقي: {money(remaining || 0, invoice.currency)}</span></> : <span className="muted-note">لا توجد بيانات فاتورة لهذا الطلب</span>}</td><td data-label="الفاتورة والإجراءات">{invoice ? <div className="row-actions"><span className="billing-invoice-number" dir="ltr">{invoice.invoiceNumber}</span><button className="secondary-button billing-action" type="button" onClick={() => handlePrint(order.id)}>طباعة إيصال</button>{canManage && remaining !== null && remaining > 0 && <button className="text-button" type="button" aria-expanded={paymentOrderId === order.id} onClick={() => setPaymentOrderId(paymentOrderId === order.id ? null : order.id)}>تحصيل</button>}</div> : <span className="muted-note">لا يمكن التحصيل دون فاتورة</span>}</td></tr>{paymentOrderId === order.id && invoice && <tr key={`${order.id}-payment`} className="payment-row"><td colSpan={6}><PaymentForm invoice={invoice} onCompleted={loadOrders} onToast={onToast} /></td></tr>}<tr key={`${order.id}-items`} className="order-items-row"><td colSpan={6}><details><summary>كشف العناصر — {order.tests}</summary>{invoice?.items.length ? <ul>{invoice.items.map((line) => <li key={line.id}>{line.description} × {line.quantity} — {money(line.lineTotal, invoice.currency)}</li>)}</ul> : <p>تفاصيل عناصر الفاتورة غير متاحة لهذا الطلب.</p>}</details></td></tr></Fragment> })}</tbody></table></div>}
+    <div className="receipt-print-list">{sortedOrders.filter((order) => order.id === printOrderId && order.invoice).map((order) => <ThermalReceipt key={order.id} order={order} />)}</div>
+  </section></>
 }
 
 export default BillingView

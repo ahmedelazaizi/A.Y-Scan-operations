@@ -233,7 +233,37 @@ export type Dashboard = {
   samples: { total: number; completionRate: number; inProgress: number; completed: number; needsAttention: number }
 }
 
-export type NewOrder = { patientId: string; testIds: string[]; priority: OrderPriority }
+export type NewReceptionOrder = {
+  patientId: string
+  testIds: string[]
+  bundleIds?: string[]
+  priority: OrderPriority
+  practitionerId?: string
+  fasting?: boolean
+  diagnosis?: string
+  discountPiastres?: number
+  insuranceCoveragePiastres?: number
+  insuranceCompany?: string
+  initialPaymentPiastres?: number
+  paymentMethod?: 'cash' | 'card' | 'bank_transfer'
+  paymentReference?: string
+}
+
+export type ReceptionOrder = Order & {
+  patientId: string
+  practitionerId: string | null
+  practitioner: string | null
+  fasting: boolean
+  diagnosis: string | null
+  subtotalPiastres: number
+  discountPiastres: number
+  insuranceCoveragePiastres: number
+  invoice: Invoice | null
+  specimens: Specimen[]
+  commission: { amountPiastres: number; status: 'pending' } | null
+}
+
+export type NewOrder = NewReceptionOrder
 export type PatientSex = 'female' | 'male' | 'other' | 'unknown'
 
 export type Patient = {
@@ -691,8 +721,12 @@ export function fetchOperationsReport(range: ReportDateRange = {}): Promise<Oper
   return requestJson<OperationsReport>(`/api/reports/operations${query ? `?${query}` : ''}`)
 }
 
-export function createOrder(order: NewOrder): Promise<Order> {
-  return requestJson<Order>('/api/orders', { method: 'POST', body: JSON.stringify(order) })
+export function createOrder(order: NewReceptionOrder): Promise<ReceptionOrder> {
+  return requestJson<ReceptionOrder>('/api/orders', { method: 'POST', body: JSON.stringify(order) })
+}
+
+export function fetchReceptionOrders(): Promise<ReceptionOrder[]> {
+  return requestJson<ReceptionOrder[]>('/api/reception/orders')
 }
 
 export function fetchPatients(query = '', limit?: number): Promise<Patient[]> {

@@ -2,6 +2,8 @@ import type {
   CatalogTestInput,
   CatalogTestUpdate,
   CreateOrderInput,
+  CreateReceptionOrderInput,
+  ReceptionOrder,
   CreatePatientInput,
   DashboardSummary,
   LabResult,
@@ -62,6 +64,8 @@ export type OrderRepository = {
   getDashboard(): RepositoryValue<DashboardSummary>
   getOperationsReport(from?: string, to?: string): RepositoryValue<OperationsReport>
   createOrder(input: CreateOrderInput): RepositoryValue<Order>
+  createReceptionOrder(input: CreateReceptionOrderInput): RepositoryValue<ReceptionOrder>
+  listReceptionOrders(page?: PageOptions): RepositoryValue<ReceptionOrder[]>
   listPatients(options?: PatientListOptions): RepositoryValue<Patient[]>
   getPatientById(patientId: string): RepositoryValue<Patient | null>
   createPatient(input: CreatePatientInput): RepositoryValue<Patient>

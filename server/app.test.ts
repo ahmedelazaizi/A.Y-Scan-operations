@@ -9,6 +9,8 @@ import { startTestServer, TEST_ADMIN_TOKEN, TEST_TOKENS, testHeaders, type TestR
 const MOCK_PATIENT_ID = '00000000-0000-4000-8000-000000000001'
 const MOCK_CBC_ID = '00000000-0000-4000-8000-000000000101'
 const MOCK_URINALYSIS_ID = '00000000-0000-4000-8000-000000000103'
+const MOCK_BUNDLE_ID = '00000000-0000-4000-8000-000000000201'
+const MOCK_PRACTITIONER_ID = '00000000-0000-4000-8000-000000000301'
 
 async function request(server: Server, baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
   try {
@@ -87,6 +89,57 @@ test('creating an order returns a sequenced awaiting-sample order', async () => 
   assert.equal(order.status, 'awaiting_sample')
   assert.equal(order.tone, 'warning')
   assert.equal(order.priority, 'urgent')
+})
+
+test('reception accepts a bundle-only order, snapshots payments, samples, and returns it in the reception list', async () => {
+  const repository = createMemoryRepository()
+  const createdServer = await startTestServer(repository)
+  const response = await request(createdServer.server, createdServer.baseUrl, '/api/orders', {
+    method: 'POST',
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [], bundleIds: [MOCK_BUNDLE_ID], practitionerId: MOCK_PRACTITIONER_ID, fasting: true, diagnosis: 'متابعة', insuranceCoveragePiastres: 2500, initialPaymentPiastres: 3000, paymentMethod: 'cash' }),
+  })
+  const order = await response.json() as { id: string; fasting: boolean; subtotalPiastres: number; invoice: { id: string; status: string; payments: Array<{ method: string }> }; specimens: Array<{ barcode: string }>; commission: { amountPiastres: number; status: string } }
+  assert.equal(response.status, 201)
+  assert.equal(order.fasting, true)
+  assert.equal(order.subtotalPiastres, 14500)
+  assert.equal(order.invoice.status, 'partially_paid')
+  assert.deepEqual(order.invoice.payments.map((payment) => payment.method), ['insurance', 'cash'])
+  assert.equal(order.specimens.length, 1)
+  assert.match(order.specimens[0].barcode, /^AY[A-F0-9]{32}$/)
+  assert.deepEqual(order.commission, { amountPiastres: 1200, status: 'pending' })
+  assert.equal((await repository.listAuditEvents({ action: 'order.created', entityType: 'order' })).length, 1)
+
+  await repository.recordPayment(String(order.invoice.id), 90, 'cash', undefined, 'Test admin')
+  const listServer = await startTestServer(repository)
+  const listResponse = await request(listServer.server, listServer.baseUrl, '/api/reception/orders')
+  const list = await listResponse.json() as Array<{ id: string; invoice: { id: string; status: string } }>
+  assert.equal(listResponse.status, 200)
+  assert.equal(list[0].id, order.id)
+  assert.equal(list[0].invoice.id, order.invoice.id)
+  assert.equal(list[0].invoice.status, 'paid')
+  assert.equal(list.find((item) => item.id === 'AY-10482')?.invoice, null)
+})
+
+test('reception failure and unauthorized discount leave the order list unchanged', async () => {
+  const repository = createMemoryRepository()
+  const failedServer = await startTestServer(repository)
+  const failed = await request(failedServer.server, failedServer.baseUrl, '/api/orders', {
+    method: 'POST', body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID], insuranceCoveragePiastres: 15001 }),
+  })
+  assert.equal(failed.status, 400)
+  const unchangedServer = await startTestServer(repository)
+  const unchangedResponse = await request(unchangedServer.server, unchangedServer.baseUrl, '/api/reception/orders')
+  const unchanged = await unchangedResponse.json() as Array<Record<string, unknown>>
+  assert.equal(unchanged.some((item) => item.id === 'AY-10483'), false)
+  assert.equal((await repository.listInvoices()).some((invoice) => invoice.orderId === 'AY-10483'), false)
+  assert.equal((await repository.listSpecimens()).length, 0)
+
+  const forbiddenServer = await startTestServer(repository)
+  const forbidden = await request(forbiddenServer.server, forbiddenServer.baseUrl, '/api/orders', {
+    method: 'POST', token: TEST_TOKENS.receptionist,
+    body: JSON.stringify({ patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID], discountPiastres: 1 }),
+  })
+  assert.equal(forbidden.status, 403)
 })
 
 test('creating an order without priority defaults to normal', async () => {

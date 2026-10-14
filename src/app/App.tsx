@@ -48,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'عمليات المختبر', icon: 'scan', view: 'operations', anyOf: ['specimens.view', 'results.view'] },
   { label: 'الأشعة', icon: 'scan', view: 'radiology', anyOf: ['radiology.view'] },
   { label: 'الزيارات المنزلية', icon: 'home', view: 'home-visits', anyOf: ['homeVisits.view'] },
-  { label: 'الفوترة', icon: 'receipt', view: 'billing', anyOf: ['billing.view'] },
+  { label: 'الطلبات والفواتير', icon: 'receipt', view: 'billing', anyOf: ['billing.view'] },
   { label: 'التأمين', icon: 'receipt', view: 'insurance', anyOf: ['insurance.view'] },
   { label: 'المخزون', icon: 'box', view: 'inventory', anyOf: ['inventory.view'] },
   { label: 'الأجهزة', icon: 'settings', view: 'devices', anyOf: ['devices.view'] },

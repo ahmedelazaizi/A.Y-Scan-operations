@@ -1,4 +1,4 @@
-import type { CatalogTestInput, CatalogTestUpdate, CreateOrderInput, CreatePatientInput, OrderPriority, PatientSex, ResultFlag, SpecimenStatus } from './domain.js'
+import type { CatalogTestInput, CatalogTestUpdate, CreateOrderInput, CreatePatientInput, CreateReceptionOrderInput, OrderPriority, PatientSex, ResultFlag, SpecimenStatus } from './domain.js'
 import { isPaymentMethod, type InvoiceItemInput, type PaymentMethod } from './billing.js'
 import { isRadiologyModality, isRadiologyPriority, type RadiologyModality, type RadiologyPriority } from './radiology.js'
 import {
@@ -107,6 +107,28 @@ export function validateOrderInput(value: unknown): CreateOrderInput | null {
   const priority = value.priority === undefined ? 'normal' : value.priority
   if (!isPriority(priority)) return null
   return { patientId: value.patientId.trim(), testIds: value.testIds, priority }
+}
+
+export function validateReceptionOrderInput(value: unknown): Omit<CreateReceptionOrderInput, 'actor'> | null {
+  if (!isRecord(value) || !Array.isArray(value.testIds) || typeof value.patientId !== 'string' || !isUuid(value.patientId.trim())) return null
+  const priority = value.priority === undefined ? 'normal' : value.priority
+  if (!isPriority(priority)) return null
+  const tests = value.testIds
+  if (tests.length > MAX_TESTS_PER_ORDER || !tests.every((id) => typeof id === 'string' && isUuid(id)) || new Set(tests).size !== tests.length) return null
+  const legacy: CreateOrderInput = { patientId: value.patientId.trim(), testIds: tests as string[], priority }
+  const ids = (field: unknown): field is string[] => field === undefined || (Array.isArray(field) && field.length <= MAX_TESTS_PER_ORDER && field.every((id) => typeof id === 'string' && isUuid(id)) && new Set(field).size === field.length)
+  if (!ids(value.bundleIds) || (value.practitionerId !== undefined && (typeof value.practitionerId !== 'string' || !isUuid(value.practitionerId)))) return null
+  const bundleIds = (value.bundleIds as string[] | undefined) ?? []
+  if (legacy.testIds.length + bundleIds.length === 0 || legacy.testIds.length + bundleIds.length > MAX_TESTS_PER_ORDER) return null
+  if (value.fasting !== undefined && typeof value.fasting !== 'boolean') return null
+  const text = validateOptionalText(value.diagnosis, 2000)
+  const company = validateOptionalText(value.insuranceCompany, 200)
+  const reference = validateOptionalText(value.paymentReference, 200)
+  if (text === null || company === null || reference === null) return null
+  const integer = (n: unknown) => n === undefined || (typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && n <= 999_999_999_999)
+  if (!integer(value.discountPiastres) || !integer(value.insuranceCoveragePiastres) || !integer(value.initialPaymentPiastres)) return null
+  if (value.paymentMethod !== undefined && !['cash', 'card', 'bank_transfer'].includes(String(value.paymentMethod))) return null
+  return { ...legacy, bundleIds, practitionerId: value.practitionerId as string | undefined, fasting: value.fasting as boolean | undefined, diagnosis: text ?? undefined, discountPiastres: value.discountPiastres as number | undefined, insuranceCoveragePiastres: value.insuranceCoveragePiastres as number | undefined, insuranceCompany: company ?? undefined, initialPaymentPiastres: value.initialPaymentPiastres as number | undefined, paymentMethod: value.paymentMethod as CreateReceptionOrderInput['paymentMethod'], paymentReference: reference ?? undefined }
 }
 
 const CATALOG_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,63}$/

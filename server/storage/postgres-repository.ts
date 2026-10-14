@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Pool, type PoolClient } from 'pg'
 import {
   ORDER_STATE_LABELS,
@@ -5,6 +6,8 @@ import {
   type CatalogTestInput,
   type CatalogTestUpdate,
   type CreateOrderInput,
+  type CreateReceptionOrderInput,
+  type ReceptionOrder,
   type CreatePatientInput,
   type DashboardSummary,
   type LabResult,
@@ -16,7 +19,7 @@ import {
   type TestCatalogItem,
 } from '../domain.js'
 import { emptyOperationsReport, validateReportQuery, type OperationsReport } from '../reports.js'
-import { calculateInvoiceTotals, isInvoiceStatus, isPaymentMethod, normalizePaymentAmount, outstandingMinor, roundMoney, toMinorUnits, type Invoice, type InvoiceItem, type InvoiceItemInput, type Payment, type PaymentMethod } from '../billing.js'
+import { calculateInvoiceTotals, fromMinorUnits, isInvoiceStatus, isPaymentMethod, normalizePaymentAmount, outstandingMinor, roundMoney, toMinorUnits, type Invoice, type InvoiceItem, type InvoiceItemInput, type Payment, type PaymentMethod } from '../billing.js'
 import { isRadiologyModality, isRadiologyPriority, isRadiologyStudyStatus, type RadiologyModality, type RadiologyPriority, type RadiologyStudy, type RadiologyStudyStatus } from '../radiology.js'
 import {
   movementDelta,
@@ -1066,6 +1069,195 @@ async function createInvoice(pool: Pool, orderId: string, items: InvoiceItemInpu
   }
 }
 
+async function findReceptionOrder(pool: QueryExecutor, internalOrderId: string): Promise<ReceptionOrder> {
+  const orderResult = await pool.query<Record<string, unknown>>(`
+    SELECT o.id, o.order_number, o.patient_id, o.status, o.priority, o.created_at, o.fasting, o.diagnosis,
+           o.practitioner_id, o.insurance_coverage_piastres, p.full_name AS patient_name,
+           pr.name_ar AS practitioner_name,
+           COALESCE(string_agg(DISTINCT tc.name, ' · ' ORDER BY tc.name), '') AS tests
+    FROM orders o JOIN patients p ON p.id = o.patient_id
+    LEFT JOIN practitioners pr ON pr.id = o.practitioner_id
+    LEFT JOIN order_items oi ON oi.order_id = o.id
+    LEFT JOIN test_catalog tc ON tc.id = oi.test_catalog_id
+    WHERE o.id = $1
+    GROUP BY o.id, p.full_name, pr.name_ar`, [internalOrderId])
+  const row = orderResult.rows[0]
+  if (!row) throw new RepositoryNotFoundError('Order was not found.')
+  const invoiceResult = await pool.query(`${INVOICE_SELECT} WHERE i.order_id = $1 ORDER BY i.created_at DESC LIMIT 1`, [internalOrderId])
+  const specimenResult = await pool.query(`SELECT ${SPECIMEN_COLUMNS} FROM specimens s JOIN orders o ON o.id = s.order_id WHERE s.order_id = $1 ORDER BY s.created_at, s.id`, [internalOrderId])
+  const commissionResult = await pool.query<{ amount_piastres: string | number; status: string }>('SELECT amount_piastres, status FROM practitioner_commissions WHERE order_id = $1', [internalOrderId])
+  const invoice = invoiceResult.rows[0] ? formatInvoice(invoiceResult.rows[0]) : null
+  return {
+    ...formatOrder({ ...row, patient_name: row.patient_name, tests: row.tests }),
+    patientId: String(row.patient_id),
+    practitionerId: row.practitioner_id == null ? null : String(row.practitioner_id),
+    practitioner: row.practitioner_name == null ? null : String(row.practitioner_name),
+    fasting: Boolean(row.fasting), diagnosis: row.diagnosis == null ? null : String(row.diagnosis),
+    subtotalPiastres: invoice ? toMinorUnits(invoice.subtotal) : 0,
+    discountPiastres: invoice ? toMinorUnits(invoice.discount) : 0,
+    insuranceCoveragePiastres: Number(row.insurance_coverage_piastres ?? 0), invoice,
+    specimens: specimenResult.rows.map(formatSpecimen),
+    commission: commissionResult.rows[0] ? { amountPiastres: Number(commissionResult.rows[0].amount_piastres), status: 'pending' } : null,
+  }
+}
+
+async function listReceptionOrders(pool: Pool, page: PageOptions): Promise<ReceptionOrder[]> {
+  const orders = await pool.query<{ id: string }>('SELECT id FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2', [page.limit, page.offset])
+  return Promise.all(orders.rows.map((row) => findReceptionOrder(pool, row.id)))
+}
+
+type ReceptionServiceSnapshot = { id: string; name: string; price: number; specimenType: string; tube: string | null; bundleId: string | null; quantity: number }
+type ReceptionBundleSnapshot = { id: string; name: string; price: number }
+type ReceptionPractitionerSnapshot = { id: string; name_ar: string; commission_type: string; commission_percent: number | string | null; commission_amount_piastres: number | string | null }
+type ReceptionSelection = { services: Map<string, ReceptionServiceSnapshot>; bundles: ReceptionBundleSnapshot[]; practitioner: ReceptionPractitionerSnapshot | null }
+type ReceptionAmounts = { subtotal: number; discount: number; coverage: number; upfront: number; total: number }
+
+function assertReceptionInput(input: CreateReceptionOrderInput): { actor: string; serviceIds: string[]; bundleIds: string[]; discount: number; coverage: number; upfront: number } {
+  const actor = normalizeActor(input.actor)
+  const serviceIds = input.testIds ?? []
+  const bundleIds = input.bundleIds ?? []
+  const ids = [...serviceIds, ...bundleIds, ...(input.practitionerId ? [input.practitionerId] : [])]
+  if (!UUID_PATTERN.test(input.patientId) || !['normal', 'urgent'].includes(input.priority ?? 'normal') || serviceIds.length + bundleIds.length === 0 || serviceIds.length + bundleIds.length > 50) throw new RepositoryInputError('Reception order input is invalid.')
+  if (new Set(serviceIds).size !== serviceIds.length || new Set(bundleIds).size !== bundleIds.length || ids.some((id) => !UUID_PATTERN.test(id))) throw new RepositoryInputError('Reception identifiers must be valid and unique UUIDs.')
+  if (input.paymentReference !== undefined && (!input.paymentReference.trim() || input.paymentReference.trim().length > 200)) throw new RepositoryInputError('paymentReference is invalid.')
+  const amounts = [input.discountPiastres ?? 0, input.insuranceCoveragePiastres ?? 0, input.initialPaymentPiastres ?? 0]
+  if (amounts.some((amount) => !Number.isSafeInteger(amount) || amount < 0 || amount > 999_999_999_999)) throw new RepositoryInputError('Reception amounts must be non-negative integer piastres within the supported limit.')
+  return { actor, serviceIds, bundleIds, discount: amounts[0], coverage: amounts[1], upfront: amounts[2] }
+}
+
+async function loadDirectReceptionServices(client: PoolClient, serviceIds: string[], selected: Map<string, ReceptionServiceSnapshot>): Promise<void> {
+  if (!serviceIds.length) return
+  const result = await client.query<Record<string, unknown>>(`SELECT id, name, specimen_type, tube, COALESCE(price_piastres, ROUND(price * 100)::BIGINT) AS price FROM test_catalog WHERE id = ANY($1::uuid[]) AND is_active FOR SHARE`, [serviceIds])
+  if (result.rows.length !== serviceIds.length) throw new RepositoryInputError('One or more tests are not in the active catalog.')
+  for (const test of result.rows) selected.set(String(test.id), { id: String(test.id), name: String(test.name), price: Number(test.price), specimenType: String(test.specimen_type), tube: test.tube == null ? null : String(test.tube), bundleId: null, quantity: 1 })
+}
+
+async function loadReceptionBundles(client: PoolClient, bundleIds: string[], selected: Map<string, ReceptionServiceSnapshot>): Promise<ReceptionBundleSnapshot[]> {
+  if (!bundleIds.length) return []
+  const result = await client.query<Record<string, unknown>>('SELECT id, name_ar, price_piastres FROM bundles WHERE id = ANY($1::uuid[]) AND is_active FOR SHARE', [bundleIds])
+  if (result.rows.length !== bundleIds.length) throw new RepositoryInputError('One or more bundles are not active.')
+  const bundles: ReceptionBundleSnapshot[] = []
+  for (const bundle of result.rows) {
+    const members = await client.query<Record<string, unknown>>(`SELECT tc.id, tc.name, tc.specimen_type, tc.tube, tc.is_active, bi.quantity,
+      COALESCE(tc.price_piastres, ROUND(tc.price * 100)::BIGINT) AS price
+      FROM bundle_items bi JOIN test_catalog tc ON tc.id = bi.test_catalog_id WHERE bi.bundle_id = $1 ORDER BY tc.id FOR SHARE OF tc`, [bundle.id])
+    if (!members.rows.length || members.rows.some((member) => !member.is_active)) throw new RepositoryInputError('Bundle has no active services.')
+    bundles.push({ id: String(bundle.id), name: String(bundle.name_ar), price: Number(bundle.price_piastres) })
+    for (const member of members.rows) {
+      const serviceId = String(member.id)
+      if (selected.has(serviceId)) throw new RepositoryInputError('A service cannot be selected directly or through multiple bundles.')
+      selected.set(serviceId, { id: serviceId, name: String(member.name), price: Number(member.price), specimenType: String(member.specimen_type), tube: member.tube == null ? null : String(member.tube), bundleId: String(bundle.id), quantity: Number(member.quantity) })
+    }
+  }
+  return bundles
+}
+
+async function loadReceptionPractitioner(client: PoolClient, practitionerId: string | undefined): Promise<ReceptionPractitionerSnapshot | null> {
+  if (!practitionerId) return null
+  const result = await client.query<ReceptionPractitionerSnapshot>('SELECT id, name_ar, commission_type, commission_percent, commission_amount_piastres FROM practitioners WHERE id = $1 AND is_active FOR SHARE', [practitionerId])
+  if (!result.rows[0]) throw new RepositoryInputError('Practitioner is not active.')
+  return result.rows[0]
+}
+
+async function loadReceptionSelection(client: PoolClient, input: CreateReceptionOrderInput, serviceIds: string[], bundleIds: string[]): Promise<ReceptionSelection> {
+  const services = new Map<string, ReceptionServiceSnapshot>()
+  await loadDirectReceptionServices(client, serviceIds, services)
+  const bundles = await loadReceptionBundles(client, bundleIds, services)
+  const practitioner = await loadReceptionPractitioner(client, input.practitionerId)
+  if (!services.size) throw new RepositoryInputError('At least one active service is required.')
+  return { services, bundles, practitioner }
+}
+
+function calculatePostgresReceptionAmounts(selection: ReceptionSelection, discount: number, coverage: number, upfront: number): ReceptionAmounts {
+  const maxMoney = 999_999_999_999
+  const isSafeMoney = (amount: number) => Number.isSafeInteger(amount) && amount >= 0 && amount <= maxMoney
+  if ([...selection.services.values()].some((service) => !isSafeMoney(service.price) || !Number.isSafeInteger(service.quantity) || service.quantity <= 0) || selection.bundles.some((bundle) => !isSafeMoney(bundle.price))) throw new RepositoryInputError('Catalog prices or quantities exceed the supported limits.')
+  const subtotal = [...selection.services.values()].reduce((sum, service) => sum + (service.bundleId ? 0 : service.price * service.quantity), 0) + selection.bundles.reduce((sum, bundle) => sum + bundle.price, 0)
+  if (!isSafeMoney(subtotal) || discount > subtotal) throw new RepositoryInputError('Discount or subtotal exceeds the allowed amount.')
+  const total = subtotal - discount
+  if (coverage > total) throw new RepositoryInputError('Insurance coverage cannot exceed invoice total.')
+  if (upfront > total - coverage) throw new RepositoryInputError('Initial payment exceeds the patient balance.')
+  return { subtotal, discount, coverage, upfront, total }
+}
+
+async function insertReceptionOrder(client: PoolClient, input: CreateReceptionOrderInput, patientId: string, selection: ReceptionSelection, amounts: ReceptionAmounts): Promise<{ id: string; order_number: number }> {
+  const result = await client.query<{ id: string; order_number: number }>(`INSERT INTO orders (patient_id, priority, practitioner_id, fasting, diagnosis, insurance_company, insurance_coverage_piastres)
+    VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, order_number`, [patientId, input.priority ?? 'normal', selection.practitioner?.id ?? null, input.fasting ?? false, input.diagnosis ?? null, input.insuranceCompany ?? null, amounts.coverage])
+  const order = result.rows[0]
+  for (const service of selection.services.values()) await client.query('INSERT INTO order_items (order_id, test_catalog_id, bundle_id, quantity, unit_price_piastres) VALUES ($1, $2, $3, $4, $5)', [order.id, service.id, service.bundleId, service.quantity, service.price])
+  return order
+}
+
+async function insertReceptionInvoice(client: PoolClient, orderId: string, actor: string, actorId: string | undefined, input: CreateReceptionOrderInput, selection: ReceptionSelection, amounts: ReceptionAmounts): Promise<string> {
+  const invoice = await client.query<{ id: string }>(`INSERT INTO invoices (order_id, subtotal, discount, tax, total, status) VALUES ($1, $2, $3, 0, $4, 'issued') RETURNING id`, [orderId, fromMinorUnits(amounts.subtotal), fromMinorUnits(amounts.discount), fromMinorUnits(amounts.total)])
+  const invoiceId = invoice.rows[0].id
+  const lines = [...[...selection.services.values()].filter((service) => !service.bundleId).map((service) => ({ description: service.name, price: service.price * service.quantity })), ...selection.bundles.map((bundle) => ({ description: bundle.name, price: bundle.price }))]
+  for (const [index, line] of lines.entries()) await client.query('INSERT INTO invoice_items (invoice_id, item_index, description, quantity, unit_price) VALUES ($1, $2, $3, 1, $4)', [invoiceId, index, line.description, fromMinorUnits(line.price)])
+  await insertReceptionPayments(client, invoiceId, actor, actorId, input, amounts)
+  return invoiceId
+}
+
+async function insertReceptionPayments(client: PoolClient, invoiceId: string, actor: string, actorId: string | undefined, input: CreateReceptionOrderInput, amounts: ReceptionAmounts): Promise<void> {
+  if (amounts.coverage > 0) {
+    await client.query('INSERT INTO payments (invoice_id, amount, method, reference, received_by) VALUES ($1, $2, \'insurance\', $3, $4)', [invoiceId, fromMinorUnits(amounts.coverage), input.insuranceCompany?.trim() || 'Manual insurance coverage', actor])
+    await client.query(`INSERT INTO audit_events (actor_id, action, entity_type, entity_id, metadata) VALUES ($1, 'invoice.insurance_coverage_recorded', 'invoice', $2, $3::jsonb)`, [actorId ?? actor, invoiceId, JSON.stringify({ amountPiastres: amounts.coverage })])
+  }
+  if (amounts.upfront > 0) {
+    await client.query('INSERT INTO payments (invoice_id, amount, method, reference, received_by) VALUES ($1, $2, $3, $4, $5)', [invoiceId, fromMinorUnits(amounts.upfront), input.paymentMethod ?? 'cash', input.paymentReference?.trim() || null, actor])
+    await client.query(`INSERT INTO audit_events (actor_id, action, entity_type, entity_id, metadata) VALUES ($1, 'invoice.initial_payment_recorded', 'invoice', $2, $3::jsonb)`, [actorId ?? actor, invoiceId, JSON.stringify({ amountPiastres: amounts.upfront, method: input.paymentMethod ?? 'cash' })])
+  }
+  const paid = amounts.coverage + amounts.upfront
+  if (paid > 0) await client.query('UPDATE invoices SET status = $2, updated_at = now() WHERE id = $1', [invoiceId, paid >= amounts.total ? 'paid' : 'partially_paid'])
+}
+
+async function insertReceptionSpecimens(client: PoolClient, orderId: string, services: Map<string, ReceptionServiceSnapshot>): Promise<void> {
+  const groups = new Map<string, string>()
+  for (const service of services.values()) groups.set(`${service.specimenType}\u0000${service.tube ?? ''}`, service.specimenType)
+  for (const specimenType of groups.values()) await client.query('INSERT INTO specimens (order_id, specimen_type, barcode) VALUES ($1, $2, $3)', [orderId, specimenType, `AY${randomUUID().replaceAll('-', '').toUpperCase()}`])
+}
+
+function calculatePractitionerCommission(practitioner: ReceptionPractitionerSnapshot | null, amounts: ReceptionAmounts): number {
+  if (!practitioner) return 0
+  const commission = practitioner.commission_type === 'fixed'
+    ? Number(practitioner.commission_amount_piastres)
+    : Math.round(amounts.total * Number(practitioner.commission_percent) / 100)
+  if (!Number.isSafeInteger(commission) || commission < 0 || commission > 999_999_999_999) throw new RepositoryInputError('Practitioner commission is invalid.')
+  return commission
+}
+
+async function insertReceptionCommission(client: PoolClient, orderId: string, practitioner: ReceptionPractitionerSnapshot | null, amount: number): Promise<void> {
+  if (practitioner) await client.query('INSERT INTO practitioner_commissions (order_id, practitioner_id, amount_piastres) VALUES ($1, $2, $3)', [orderId, practitioner.id, amount])
+}
+
+async function createReceptionOrder(pool: Pool, input: CreateReceptionOrderInput): Promise<ReceptionOrder> {
+  const request = assertReceptionInput(input)
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const patient = await findPatient(client, input.patientId)
+    const selection = await loadReceptionSelection(client, input, request.serviceIds, request.bundleIds)
+    const amounts = calculatePostgresReceptionAmounts(selection, request.discount, request.coverage, request.upfront)
+    const commission = calculatePractitionerCommission(selection.practitioner, amounts)
+    const order = await insertReceptionOrder(client, input, patient.id, selection, amounts)
+    const invoiceId = await insertReceptionInvoice(client, order.id, request.actor, input.actorId, input, selection, amounts)
+    await insertReceptionSpecimens(client, order.id, selection.services)
+    await insertReceptionCommission(client, order.id, selection.practitioner, commission)
+    await client.query(`INSERT INTO audit_events (actor_id, action, entity_type, entity_id, metadata) VALUES ($1, 'order.created', 'order', $2, $3::jsonb)`, [input.actorId ?? request.actor, order.id, JSON.stringify({ invoiceId, subtotalPiastres: amounts.subtotal, discountPiastres: amounts.discount, insuranceCoveragePiastres: amounts.coverage, initialPaymentPiastres: amounts.upfront, commissionPiastres: commission })])
+    await client.query('COMMIT')
+    return findReceptionOrder(pool, order.id)
+  } catch (error) {
+    try { await client.query('ROLLBACK') } catch { /* preserve the original repository error */ }
+    if (error instanceof RepositoryNotFoundError || error instanceof RepositoryInputError || error instanceof RepositoryConflictError) throw error
+    if (isPostgresError(error, '22P02')) throw new RepositoryInputError('Reception identifiers must be valid UUIDs.')
+    if (isPostgresError(error, '23505')) throw new RepositoryConflictError('Duplicate service, order item, or barcode.')
+    if (isPostgresError(error, '23503')) throw new RepositoryNotFoundError('Patient, practitioner, catalog test, or bundle was not found.')
+    if (isPostgresError(error, '23514')) throw new RepositoryInputError('Reception data violates a database constraint.')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
 async function recordPayment(pool: Pool, invoiceId: string, amount: number, method: PaymentMethod, reference: string | undefined, receivedBy: string): Promise<Invoice> {
   if (typeof invoiceId !== 'string' || !UUID_PATTERN.test(invoiceId)) throw new RepositoryInputError('id must be a valid UUID.')
   if (!isPaymentMethod(method)) throw new RepositoryInputError('method is invalid.')
@@ -1232,6 +1424,8 @@ export function createPostgresRepository(databaseUrl: string, poolOverride?: Poo
     createPatient: (input) => createPatient(pool, input),
     listCatalog: () => listCatalog(pool),
     createOrder: (input) => createOrder(pool, input),
+    createReceptionOrder: (input) => createReceptionOrder(pool, input),
+    listReceptionOrders: (page) => listReceptionOrders(pool, resolvePage(page)),
     createCatalogTest: (input) => createCatalogTest(pool, input),
     updateCatalogTest: (id, update) => updateCatalogTest(pool, id, update),
     listSpecimens: (status, page) => listSpecimens(pool, status, resolvePage(page)),

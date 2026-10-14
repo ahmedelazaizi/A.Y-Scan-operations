@@ -123,6 +123,35 @@ export type CreateOrderInput = {
   priority?: OrderPriority
 }
 
+export type CreateReceptionOrderInput = CreateOrderInput & {
+  bundleIds?: string[]
+  practitionerId?: string
+  fasting?: boolean
+  diagnosis?: string
+  discountPiastres?: number
+  insuranceCoveragePiastres?: number
+  insuranceCompany?: string
+  initialPaymentPiastres?: number
+  paymentMethod?: 'cash' | 'card' | 'bank_transfer'
+  paymentReference?: string
+  actor: string
+  actorId?: string
+}
+
+export type ReceptionOrder = Order & {
+  patientId: string
+  practitionerId: string | null
+  practitioner: string | null
+  fasting: boolean
+  diagnosis: string | null
+  subtotalPiastres: number
+  discountPiastres: number
+  insuranceCoveragePiastres: number
+  invoice: Invoice | null
+  specimens: Specimen[]
+  commission: { amountPiastres: number; status: 'pending' } | null
+}
+
 export type CatalogTestInput = {
   code: string
   name: string
@@ -187,6 +216,9 @@ const MOCK_CATALOG: TestCatalogItem[] = [
   { id: '00000000-0000-4000-8000-000000000102', code: 'HBA1C', name: 'HbA1c / سكر تراكمي', specimenType: 'blood / دم', price: 180, isActive: true },
   { id: '00000000-0000-4000-8000-000000000103', code: 'URINALYSIS', name: 'Urinalysis / تحليل بول كامل', specimenType: 'urine / بول', price: 100, isActive: true },
 ]
+
+const MOCK_RECEPTION_BUNDLE = { id: '00000000-0000-4000-8000-000000000201', name: 'باقة صورة الدم', pricePiastres: 14500, testIds: [MOCK_CATALOG[0].id], isActive: true }
+const MOCK_RECEPTION_PRACTITIONER = { id: '00000000-0000-4000-8000-000000000301', name: 'طبيب تجريبي', commissionType: 'fixed' as const, commissionAmountPiastres: 1200, commissionPercent: null, isActive: true }
 
 const MOCK_METRICS: DashboardMetric[] = [
   { label: 'طلبات اليوم', value: '128', note: '+12% عن أمس', icon: 'receipt', tone: 'cyan' },
@@ -325,6 +357,62 @@ function paginatePatients(patients: Patient[], options: PatientListOptions | und
   return patients.slice(offset, offset + limit).map(clonePatient)
 }
 
+type MemoryReceptionSelection = {
+  directTests: TestCatalogItem[]
+  bundleTests: TestCatalogItem[]
+  bundleLines: Array<{ description: string; amountPiastres: number }>
+  practitioner: typeof MOCK_RECEPTION_PRACTITIONER | null
+}
+
+function selectMemoryReceptionItems(input: CreateReceptionOrderInput, catalog: TestCatalogItem[]): MemoryReceptionSelection {
+  const directTests = input.testIds.map((id) => catalog.find((test) => test.id === id && test.isActive))
+  if (directTests.some((test) => !test)) throw new RepositoryInputError('One or more tests are not in the active catalog.')
+  const selectedBundles = (input.bundleIds ?? []).map((id) => id === MOCK_RECEPTION_BUNDLE.id && MOCK_RECEPTION_BUNDLE.isActive ? MOCK_RECEPTION_BUNDLE : undefined)
+  if (selectedBundles.some((bundle) => !bundle)) throw new RepositoryInputError('One or more bundles are not active.')
+  const bundleTests = selectedBundles.flatMap(() => MOCK_RECEPTION_BUNDLE.testIds.map((id) => catalog.find((test) => test.id === id && test.isActive)))
+  if (bundleTests.some((test) => !test)) throw new RepositoryInputError('Bundle contains an inactive service.')
+  const allTests = [...directTests, ...bundleTests] as TestCatalogItem[]
+  if (!allTests.length || new Set(allTests.map((test) => test.id)).size !== allTests.length) throw new RepositoryInputError('A service cannot be repeated directly or through bundles.')
+  const practitioner = input.practitionerId === undefined ? null : input.practitionerId === MOCK_RECEPTION_PRACTITIONER.id && MOCK_RECEPTION_PRACTITIONER.isActive ? MOCK_RECEPTION_PRACTITIONER : null
+  if (input.practitionerId && !practitioner) throw new RepositoryInputError('Practitioner is not active.')
+  return { directTests: directTests as TestCatalogItem[], bundleTests: bundleTests as TestCatalogItem[], bundleLines: selectedBundles.map(() => ({ description: MOCK_RECEPTION_BUNDLE.name, amountPiastres: MOCK_RECEPTION_BUNDLE.pricePiastres })), practitioner }
+}
+
+function validateMemoryReceptionTotals(selection: MemoryReceptionSelection, input: CreateReceptionOrderInput): { subtotalPiastres: number; discountPiastres: number; coveragePiastres: number; upfrontPiastres: number; totalPiastres: number } {
+  const subtotalPiastres = selection.directTests.reduce((sum, test) => sum + toMinorUnits(test.price), 0) + selection.bundleLines.reduce((sum, bundle) => sum + bundle.amountPiastres, 0)
+  const discountPiastres = input.discountPiastres ?? 0
+  const coveragePiastres = input.insuranceCoveragePiastres ?? 0
+  const upfrontPiastres = input.initialPaymentPiastres ?? 0
+  const amounts = [subtotalPiastres, discountPiastres, coveragePiastres, upfrontPiastres]
+  if (amounts.some((amount) => !Number.isSafeInteger(amount) || amount < 0 || amount > 999_999_999_999)) throw new RepositoryInputError('Reception amounts exceed the supported limits.')
+  if (discountPiastres > subtotalPiastres) throw new RepositoryInputError('discountPiastres cannot exceed subtotal.')
+  const totalPiastres = subtotalPiastres - discountPiastres
+  if (coveragePiastres > totalPiastres) throw new RepositoryInputError('Insurance coverage cannot exceed invoice total.')
+  if (upfrontPiastres > totalPiastres - coveragePiastres) throw new RepositoryInputError('Initial payment exceeds the patient balance.')
+  return { subtotalPiastres, discountPiastres, coveragePiastres, upfrontPiastres, totalPiastres }
+}
+
+function createMemoryReceptionInvoice(orderId: string, invoiceNumber: number, lines: Array<{ description: string; amountPiastres: number }>, totals: ReturnType<typeof validateMemoryReceptionTotals>, input: CreateReceptionOrderInput, actor: string, timestamp: string): Invoice {
+  const invoiceTotals = calculateInvoiceTotals(lines.map((line) => ({ description: line.description, quantity: 1, unitPrice: fromMinorUnits(line.amountPiastres) })), fromMinorUnits(totals.discountPiastres), 0)
+  const payments: Payment[] = []
+  if (totals.coveragePiastres > 0) payments.push({ id: randomUUID(), amount: fromMinorUnits(totals.coveragePiastres), method: 'insurance', reference: input.insuranceCompany?.trim() || 'Manual insurance coverage', paidAt: timestamp, receivedBy: actor })
+  if (totals.upfrontPiastres > 0) payments.push({ id: randomUUID(), amount: fromMinorUnits(totals.upfrontPiastres), method: input.paymentMethod ?? 'cash', reference: input.paymentReference?.trim() || null, paidAt: timestamp, receivedBy: actor })
+  const paid = totals.coveragePiastres + totals.upfrontPiastres
+  return { id: randomUUID(), orderId, invoiceNumber: `INV-${invoiceNumber}`, currency: 'EGP', subtotal: invoiceTotals.subtotal, discount: invoiceTotals.discount, tax: 0, total: invoiceTotals.total, status: paid === 0 ? 'issued' : paid >= totals.totalPiastres ? 'paid' : 'partially_paid', items: invoiceTotals.items.map((line) => ({ ...line, id: randomUUID(), lineTotal: fromMinorUnits(lineTotalMinor(line.quantity, line.unitPrice)) })), payments, createdAt: timestamp, updatedAt: timestamp }
+}
+
+function createMemoryReceptionSpecimens(orderId: string, tests: TestCatalogItem[], timestamp: string): Specimen[] {
+  return [...new Set(tests.map((test) => test.specimenType))].map((specimenType) => ({ id: randomUUID(), orderId, barcode: `AY${randomUUID().replaceAll('-', '').toUpperCase()}`, specimenType, status: 'pending', createdAt: timestamp, updatedAt: timestamp, collectedAt: null, rejectedReason: null }))
+}
+
+function calculateMemoryCommission(selection: MemoryReceptionSelection, basePiastres: number): ReceptionOrder['commission'] {
+  if (!selection.practitioner) return null
+  const amountPiastres = selection.practitioner.commissionType === 'fixed'
+    ? selection.practitioner.commissionAmountPiastres
+    : Math.round(basePiastres * Number(selection.practitioner.commissionPercent) / 100)
+  return { amountPiastres, status: 'pending' }
+}
+
 export function createMemoryRepository(): OrderRepository {
   let nextOrderNumber = 10483
   let orders = MOCK_ORDERS.map(cloneOrder)
@@ -336,6 +424,7 @@ export function createMemoryRepository(): OrderRepository {
   let labResults: LabResult[] = []
   let nextInvoiceNumber = 1
   let invoices: Invoice[] = []
+  let receptionOrders: ReceptionOrder[] = []
   let radiologyStudies: RadiologyStudy[] = []
   let nextAccessionNumber = 1
   let inventoryItems: InventoryItem[] = []
@@ -376,6 +465,34 @@ export function createMemoryRepository(): OrderRepository {
       if (!item) throw new RepositoryNotFoundError('Catalog test was not found.')
       Object.assign(item, update, update.price === undefined ? {} : { price: roundMoney(update.price) })
       return cloneCatalogItem(item)
+    },
+    createReceptionOrder: (input) => {
+      const actor = normalizeActor(input.actor)
+      const patient = patients.find((candidate) => candidate.id === input.patientId)
+      if (!patient) throw new RepositoryNotFoundError('Patient was not found.')
+      const selection = selectMemoryReceptionItems(input, catalog)
+      const totals = validateMemoryReceptionTotals(selection, input)
+      const timestamp = new Date().toISOString()
+      const order: Order = { id: `AY-${nextOrderNumber}`, patient: patient.fullName, tests: [...selection.directTests, ...selection.bundleTests].map((test) => test.name).join(' · '), time: timestamp, status: 'awaiting_sample', state: ORDER_STATE_LABELS.awaiting_sample, tone: ORDER_STATE_TONES.awaiting_sample, priority: input.priority ?? 'normal' }
+      const invoiceLines = [...selection.directTests.map((test) => ({ description: test.name, amountPiastres: toMinorUnits(test.price) })), ...selection.bundleLines]
+      const invoice = createMemoryReceptionInvoice(order.id, nextInvoiceNumber, invoiceLines, totals, input, actor, timestamp)
+      const selectedTests = [...selection.directTests, ...selection.bundleTests]
+      const createdSpecimens = createMemoryReceptionSpecimens(order.id, selectedTests, timestamp)
+      const receptionOrder: ReceptionOrder = { ...order, patientId: patient.id, practitionerId: selection.practitioner?.id ?? null, practitioner: selection.practitioner?.name ?? null, fasting: input.fasting ?? false, diagnosis: input.diagnosis ?? null, subtotalPiastres: totals.subtotalPiastres, discountPiastres: totals.discountPiastres, insuranceCoveragePiastres: totals.coveragePiastres, invoice, specimens: createdSpecimens, commission: calculateMemoryCommission(selection, totals.totalPiastres) }
+      recordAuditEvent(auditEvents, { actorId: input.actorId ?? actor, action: 'order.created', entityType: 'order', metadata: { priority: order.priority, amount: totals.totalPiastres } })
+      nextOrderNumber += 1
+      nextInvoiceNumber += 1
+      orders = [order, ...orders]
+      invoices = [invoice, ...invoices]
+      receptionOrders = [receptionOrder, ...receptionOrders]
+      orderCreatedAt.set(order.id, timestamp)
+      specimens = [...createdSpecimens, ...specimens]
+      return { ...receptionOrder, invoice: cloneInvoice(invoice), specimens: createdSpecimens.map(cloneSpecimen) }
+    },
+    listReceptionOrders: (page) => {
+      const createdIds = new Set(receptionOrders.map((item) => item.id))
+      const legacy = orders.filter((order) => !createdIds.has(order.id)).map((order): ReceptionOrder => ({ ...order, patientId: patients.find((patient) => patient.fullName === order.patient)?.id ?? '', practitionerId: null, practitioner: null, fasting: false, diagnosis: null, subtotalPiastres: 0, discountPiastres: 0, insuranceCoveragePiastres: 0, invoice: null, specimens: specimens.filter((specimen) => specimen.orderId === order.id).map(cloneSpecimen), commission: null }))
+      return paginate([...receptionOrders.map((item) => ({ ...item, invoice: item.invoice ? cloneInvoice(item.invoice) : null, specimens: item.specimens.map(cloneSpecimen) })), ...legacy], page)
     },
     createOrder: (input) => {
       const patient = patients.find((candidate) => candidate.id === input.patientId)
