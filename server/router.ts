@@ -122,7 +122,7 @@ export function sendUnauthorized(response: ServerResponse): void {
 }
 
 export function createRouter(routes: Route[], dependencies: { auth: AuthService; repository: OrderRepository; trialLicense?: { withRecordEntry<T>(operation: () => Promise<T>): Promise<T> } }) {
-  const recordCreationPath = (entry: Route) => (entry.method === 'POST' && /^\/api\/(orders|patients|catalog|specimens|results|billing\/invoices|billing\/invoices\/:id\/payments|radiology\/studies|inventory\/items|inventory\/items\/:id\/movements|insurance\/policies|insurance\/claims|home-visits|devices|users|phase1\/(practitioners|bundles|parameters|ranges))$/.test(entry.path)) || (entry.method === 'POST' && /^\/api\/results\/:id\/amend$/.test(entry.path)) || (entry.method === 'PATCH' && entry.path === '/api/phase1/ranges/:id')
+  const recordCreationPath = (entry: Route) => (entry.method === 'POST' && /^\/api\/(orders|patients|catalog|specimens|results|billing\/invoices|billing\/invoices\/:id\/payments|radiology\/studies|inventory\/items|inventory\/items\/:id\/movements|insurance\/policies|insurance\/claims|home-visits|devices|users|phase1\/(practitioners|bundles|parameters|ranges))$/.test(entry.path)) || (entry.method === 'POST' && /^\/api\/results\/:id\/amend$/.test(entry.path))
   const compiled: CompiledRoute[] = routes.map((entry) => {
     if (!recordCreationPath(entry) || !dependencies.trialLicense) return { ...entry, segments: splitPath(entry.path) }
     return { ...entry, handler: (context) => dependencies.trialLicense!.withRecordEntry(() => Promise.resolve(entry.handler(context))), segments: splitPath(entry.path) }

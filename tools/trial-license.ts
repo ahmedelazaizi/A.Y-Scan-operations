@@ -2,6 +2,7 @@ import { generateKeyPairSync, sign } from 'node:crypto'
 import { mkdir, open, readFile, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { DEVICE_ID_PATTERN } from '../server/device-identity.js'
 
 const root = process.cwd()
 const args = process.argv.slice(2)
@@ -31,10 +32,10 @@ if (command === 'keygen') {
 } else if (command === 'issue') {
   const idFlag = args.indexOf('--installation-id')
   const id = idFlag >= 0 ? args[idFlag + 1] : undefined
-  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error('Usage: pnpm trial:issue -- --installation-id <uuid>')
+  if (!id || !DEVICE_ID_PATTERN.test(id)) throw new Error('Usage: pnpm trial:issue -- --installation-id <AYSCAN-HW2-deviceId>')
   const privateKey = await readFile(privatePath, 'utf8')
-  const body = JSON.stringify({ version: 1, installationId: id, edition: 'trial', recordLimit: 50, issuedAt: new Date().toISOString() })
+  const body = JSON.stringify({ version: 2, installationId: id, edition: 'full', issuedAt: new Date().toISOString() })
   const payload = Buffer.from(body).toString('base64url')
   const signature = sign(null, Buffer.from(body), privateKey).toString('base64url')
   console.log(`${payload}.${signature}`)
-} else throw new Error('Usage: pnpm trial:keygen | pnpm trial:issue -- --installation-id <uuid>')
+} else throw new Error('Usage: pnpm trial:keygen | pnpm trial:issue -- --installation-id <AYSCAN-HW2-deviceId>')

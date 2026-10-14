@@ -6,6 +6,7 @@ import type { Pool } from 'pg'
 import { createMemoryRepository, mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
 import { createMemoryTrialLicenseStore, createTrialLicenseService } from './trial-license.js'
+import { hardwareDeviceId } from './device-identity.js'
 import { startTestServer, TEST_ADMIN_TOKEN, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
 const MOCK_PATIENT_ID = '00000000-0000-4000-8000-000000000001'
@@ -220,22 +221,55 @@ test('catalog tests can be created and repriced by managers only', async () => {
   }
 })
 
-test('trial quota counts primary creates but not catalog updates', async () => {
+test('trial immediately counts global primary creates, preserves updates at quota and allows admin full activation', async () => {
   const pair = generateKeyPairSync('ed25519')
   const store = createMemoryTrialLicenseStore()
-  const license = createTrialLicenseService({ store, trial: true, publicKey: pair.publicKey.export({ type: 'spki', format: 'pem' }).toString() })
-  const installationId = (await license.getStatus()).installationId
-  const payload = JSON.stringify({ version: 1, installationId, edition: 'trial', recordLimit: 50, issuedAt: new Date().toISOString() })
-  await license.activate(`${Buffer.from(payload).toString('base64url')}.${sign(null, Buffer.from(payload), pair.privateKey).toString('base64url')}`)
-  const testServer = await startTestServer(createMemoryRepository(), license)
-  const call = (url: string, method: string, body?: unknown) => fetch(`${testServer.baseUrl}${url}`, { method, headers: testHeaders({ token: TEST_ADMIN_TOKEN, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), body: body === undefined ? undefined : JSON.stringify(body) })
+  const deviceId = hardwareDeviceId({ uuid: 'A1B2C3D4-1234-5678-90AB-123456789ABC', biosSerial: 'API-TEST-42' })
+  const license = createTrialLicenseService({ store, trial: true, deviceId, publicKey: pair.publicKey.export({ type: 'spki', format: 'pem' }).toString() })
+  const repository = createMemoryRepository()
+  const testServer = await startTestServer(repository, license)
+  const call = (url: string, method: string, body?: unknown, token: string | null = TEST_ADMIN_TOKEN) => fetch(`${testServer.baseUrl}${url}`, { method, headers: testHeaders({ token, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), body: body === undefined ? undefined : JSON.stringify(body) })
+  const status = async () => (await call('/api/license/status', 'GET')).json() as Promise<{ edition: string; recordsUsed: number; canEnterData: boolean }>
+  const order = { patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID] }
   try {
+    assert.equal((await status()).recordsUsed, 0)
     const created = await call('/api/catalog', 'POST', { code: 'TRIAL', name: 'Trial item', specimenType: 'serum', price: 100, isActive: false })
     assert.equal(created.status, 201)
     const item = await created.json() as { id: string }
-    assert.equal((await (await call('/api/license/status', 'GET')).json() as { recordsUsed: number }).recordsUsed, 1)
+    assert.equal((await status()).recordsUsed, 1)
+    assert.equal((await call('/api/orders', 'POST', { ...order, insuranceCoveragePiastres: 15001 })).status, 400)
+    assert.equal((await status()).recordsUsed, 1)
+    const parameterResponse = await call('/api/phase1/parameters', 'POST', { catalogId: item.id, code: 'TRIAL', nameAr: 'Trial', resultType: 'numeric', sortOrder: 0 })
+    assert.equal(parameterResponse.status, 201)
+    const parameter = await parameterResponse.json() as { id: string }
+    const rangeResponse = await call('/api/phase1/ranges', 'POST', { parameterId: parameter.id, resultType: 'numeric', sex: 'all', ageFromYears: 0, ageToYears: null, low: 1, high: 10, criticalLow: null, criticalHigh: null })
+    assert.equal(rangeResponse.status, 201)
+    const range = await rangeResponse.json() as { id: string }
+    for (let count = 0; count < 46; count++) assert.equal((await call('/api/orders', 'POST', order)).status, 201)
+    assert.equal((await status()).recordsUsed, 49)
+    assert.equal((await call('/api/orders', 'POST', order)).status, 201)
+    assert.equal((await status()).recordsUsed, 50)
+    const blocked = await call('/api/orders', 'POST', order)
+    assert.equal(blocked.status, 429)
+    assert.equal((await blocked.json() as { code: string }).code, 'QUOTA_EXHAUSTED')
+    assert.equal((await call('/api/orders', 'GET')).status, 200)
     assert.equal((await call(`/api/catalog/${item.id}`, 'PATCH', { price: 125, isActive: true })).status, 200)
-    assert.equal((await (await call('/api/license/status', 'GET')).json() as { recordsUsed: number }).recordsUsed, 1)
+    assert.equal((await call(`/api/phase1/ranges/${range.id}`, 'PATCH', { low: 2 })).status, 201)
+    assert.equal((await status()).recordsUsed, 50)
+    assert.equal((await call('/api/orders', 'POST', order, null)).status, 401)
+    assert.equal((await call('/api/orders', 'POST', order, TEST_TOKENS.accountant)).status, 403)
+    const payload = JSON.stringify({ version: 2, installationId: deviceId, edition: 'full', issuedAt: new Date().toISOString() })
+    const activationCode = `${Buffer.from(payload).toString('base64url')}.${sign(null, Buffer.from(payload), pair.privateKey).toString('base64url')}`
+    assert.equal((await call('/api/license/activate', 'POST', { activationCode }, TEST_TOKENS.receptionist)).status, 403)
+    assert.equal((await status()).edition, 'trial')
+    assert.equal((await call('/api/license/activate', 'POST', { activationCode })).status, 200)
+    assert.equal((await status()).edition, 'full')
+    assert.equal((await call('/api/orders', 'POST', order)).status, 201)
+    assert.equal((await call('/api/orders', 'POST', order, TEST_TOKENS.accountant)).status, 403)
+    assert.equal((await call('/api/orders', 'POST', { ...order, insuranceCoveragePiastres: 15001 })).status, 400)
+    assert.equal((await status()).recordsUsed, 50)
+    assert.equal((await repository.listAuditEvents({ action: 'order.created', entityType: 'order' })).length, 48)
+    assert.equal((await repository.listAuditEvents({ action: 'license.activated', entityType: 'license' })).length, 1)
   } finally { testServer.server.close() }
 })
 

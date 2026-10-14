@@ -1,10 +1,11 @@
 import { createPublicKey, randomUUID, verify } from 'node:crypto'
 import type { Pool } from 'pg'
 import { readFile } from 'node:fs/promises'
+import { DEVICE_ID_PATTERN, resolveDeviceIdentity } from './device-identity.js'
 
 export const TRIAL_LIMIT = 50
 export type LicenseStatus = {
-  edition: 'legacy' | 'trial'
+  edition: 'legacy' | 'trial' | 'full'
   status: 'not_required' | 'activation_required' | 'active' | 'limit_reached'
   installationId: string
   recordLimit: number | null
@@ -15,7 +16,7 @@ export type LicenseStatus = {
 type TrialState = { installationId: string; activationCode: string | null; recordsUsed: number }
 export type TrialLicenseStore = {
   read(): Promise<TrialState>
-  activate(installationId: string, activationCode: string): Promise<boolean>
+  activate(activationCode: string): Promise<void>
   reserve(): Promise<boolean>
   release(): Promise<void>
 }
@@ -30,12 +31,12 @@ export function createPostgresTrialLicenseStore(pool: Pool): TrialLicenseStore {
       if (!row) throw new Error('Trial license state has not been initialized; apply migrations first.')
       return { installationId: row.installation_id, activationCode: row.activation_code, recordsUsed: row.records_used }
     },
-    async activate(id, code) {
-      const result = await pool.query('UPDATE trial_license_state SET activation_code = $2 WHERE singleton = TRUE AND installation_id = $1 AND activation_code IS NULL', [id, code])
-      return result.rowCount === 1
+    async activate(code) {
+      const result = await pool.query('UPDATE trial_license_state SET activation_code = $1 WHERE singleton = TRUE', [code])
+      if (result.rowCount !== 1) throw new Error('Trial license state has not been initialized; apply migrations first.')
     },
     async reserve() {
-      const result = await pool.query('UPDATE trial_license_state SET records_used = records_used + 1 WHERE singleton = TRUE AND activation_code IS NOT NULL AND records_used < $1', [TRIAL_LIMIT])
+      const result = await pool.query('UPDATE trial_license_state SET records_used = records_used + 1 WHERE singleton = TRUE AND records_used < $1', [TRIAL_LIMIT])
       return result.rowCount === 1
     },
     async release() { await pool.query('UPDATE trial_license_state SET records_used = GREATEST(0, records_used - 1) WHERE singleton = TRUE') },
@@ -45,59 +46,63 @@ export function createMemoryTrialLicenseStore(): TrialLicenseStore {
   const state: TrialState = { installationId: randomUUID(), activationCode: null, recordsUsed: 0 }
   return {
     read: async () => ({ ...state }),
-    activate: async (id, code) => { if (state.activationCode !== null || state.installationId !== id) return false; state.activationCode = code; return true },
-    reserve: async () => { if (state.activationCode === null || state.recordsUsed >= TRIAL_LIMIT) return false; state.recordsUsed++; return true },
+    activate: async (code) => { state.activationCode = code },
+    reserve: async () => { if (state.recordsUsed >= TRIAL_LIMIT) return false; state.recordsUsed++; return true },
     release: async () => { state.recordsUsed = Math.max(0, state.recordsUsed - 1) },
   }
 }
-export function createTrialLicenseService(options: { store: TrialLicenseStore; trial: boolean; publicKey?: string }) {
+export function createTrialLicenseService(options: { store: TrialLicenseStore; trial: boolean; publicKey?: string; deviceId?: string }) {
   const key = options.publicKey ? createPublicKey(options.publicKey) : null
-  function activationMatches(code: string | null, installationId: string): boolean {
-    if (!code || !key) return false
+  if (options.trial && (!options.deviceId || !DEVICE_ID_PATTERN.test(options.deviceId))) throw new Error('A hardware-derived device identity is required for trial licensing.')
+  if (options.trial && key?.asymmetricKeyType !== 'ed25519') throw new Error('Trial licensing requires an Ed25519 public key.')
+  function activationMatches(code: string | null): boolean {
+    if (!code || !key || !options.trial) return false
+    // Untrusted stored/entered tokens confer no entitlement on parse or verification failure.
     try {
       const [payload, signature, extra] = code.split('.')
-      if (!payload || !signature || extra) return false
+      if (!payload || !signature || extra !== undefined) return false
       const bytes = Buffer.from(payload, 'base64url')
       if (bytes.toString('base64url') !== payload) return false
-      const body = bytes.toString('utf8')
       const signatureBytes = Buffer.from(signature, 'base64url')
-      if (!signatureBytes.length || signatureBytes.toString('base64url') !== signature || !verify(null, Buffer.from(body), key, signatureBytes)) return false
-      const parsed = JSON.parse(body) as { version?: unknown; installationId?: unknown; edition?: unknown; recordLimit?: unknown; issuedAt?: unknown }
-      return parsed.version === 1 && parsed.installationId === installationId && parsed.edition === 'trial' && parsed.recordLimit === TRIAL_LIMIT && typeof parsed.issuedAt === 'string' && Number.isFinite(Date.parse(parsed.issuedAt))
+      if (!signatureBytes.length || signatureBytes.toString('base64url') !== signature || !verify(null, bytes, key, signatureBytes)) return false
+      const parsed = JSON.parse(bytes.toString('utf8')) as { version?: unknown; installationId?: unknown; edition?: unknown; recordLimit?: unknown; issuedAt?: unknown } | null
+      return parsed !== null && parsed.version === 2 && parsed.installationId === options.deviceId && parsed.edition === 'full' && !Object.hasOwn(parsed, 'recordLimit') && typeof parsed.issuedAt === 'string' && Number.isFinite(Date.parse(parsed.issuedAt))
     } catch { return false }
   }
   async function getStatus(): Promise<LicenseStatus> {
     const state = await options.store.read()
     if (!options.trial) return { edition: 'legacy', status: 'not_required', installationId: state.installationId, recordLimit: null, recordsUsed: 0, recordsRemaining: null, canEnterData: true }
-    const activated = activationMatches(state.activationCode, state.installationId)
+    // The database UUID remains for legacy compatibility, never as a full-license binding.
+    const installationId = options.deviceId!
+    if (activationMatches(state.activationCode)) return { edition: 'full', status: 'active', installationId, recordLimit: null, recordsUsed: state.recordsUsed, recordsRemaining: null, canEnterData: true }
     const reached = state.recordsUsed >= TRIAL_LIMIT
-    return { edition: 'trial', status: !activated ? 'activation_required' : reached ? 'limit_reached' : 'active', installationId: state.installationId, recordLimit: TRIAL_LIMIT, recordsUsed: state.recordsUsed, recordsRemaining: Math.max(0, TRIAL_LIMIT - state.recordsUsed), canEnterData: activated && !reached }
+    return { edition: 'trial', status: reached ? 'limit_reached' : 'active', installationId, recordLimit: TRIAL_LIMIT, recordsUsed: state.recordsUsed, recordsRemaining: Math.max(0, TRIAL_LIMIT - state.recordsUsed), canEnterData: !reached }
   }
   return {
     getStatus,
     async activate(code: string) {
-      const state = await options.store.read()
-      if (!activationMatches(code, state.installationId)) throw new LicenseError('INVALID_ACTIVATION', 'Activation code is invalid.')
-      if (!(await options.store.activate(state.installationId, code))) throw new LicenseError('ALREADY_ACTIVATED', 'This installation already has an activation.')
+      if (!activationMatches(code)) throw new LicenseError('INVALID_ACTIVATION', 'Activation code is invalid.')
+      // Valid full codes replace old/invalid activation and can be reapplied idempotently.
+      await options.store.activate(code)
       return getStatus()
     },
     async withRecordEntry<T>(operation: () => Promise<T>): Promise<T> {
       const status = await getStatus()
-      if (status.edition === 'legacy') return operation()
-      if (!status.canEnterData) {
-        const activationRequired = status.status === 'activation_required'
-        throw new LicenseError(activationRequired ? 'ACTIVATION_REQUIRED' : 'QUOTA_EXHAUSTED', activationRequired ? 'Trial activation is required before creating records.' : 'Trial record creation limit reached.')
+      if (status.edition !== 'trial') return operation()
+      if (!(await options.store.reserve())) {
+        // Activation may have committed while this request was waiting for its quota slot.
+        if ((await getStatus()).edition === 'full') return operation()
+        throw new LicenseError('QUOTA_EXHAUSTED', 'Trial record creation limit reached.')
       }
-      if (!(await options.store.reserve())) throw new LicenseError('QUOTA_EXHAUSTED', 'Trial record creation limit reached.')
       try { return await operation() } catch (error) { await options.store.release(); throw error }
     },
   }
 }
-export async function readTrialProfile(root = process.cwd()): Promise<{ trial: boolean; publicKey?: string }> {
+export async function readTrialProfile(root = process.cwd(), deviceIdentity = resolveDeviceIdentity): Promise<{ trial: boolean; publicKey?: string; deviceId?: string }> {
   let contents: string
   try { contents = await readFile(`${root}/trial-build.json`, 'utf8') }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { trial: false }; throw error }
   const marker = JSON.parse(contents) as { edition?: string; recordLimit?: number }
   if (marker.edition !== 'trial' || marker.recordLimit !== TRIAL_LIMIT) throw new Error('Trial build marker is invalid.')
-  return { trial: true, publicKey: await readFile(`${root}/trial-public.pem`, 'utf8') }
+  return { trial: true, publicKey: await readFile(`${root}/trial-public.pem`, 'utf8'), deviceId: await deviceIdentity() }
 }

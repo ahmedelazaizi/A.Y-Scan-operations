@@ -37,7 +37,6 @@ import Phase1View from './Phase1View'
 import { createSession, SessionContext, type Session } from './session'
 import { PublicReportVerification } from './LabReportView'
 import UsersView from './UsersView'
-import TrialActivationView from './TrialActivationView'
 
 type AppView = 'dashboard' | 'patients' | 'catalog' | 'phase1' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
 type ToastTone = 'success' | 'error'
@@ -116,14 +115,31 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
   const [licenseError, setLicenseError] = useState(false)
   const [licenseRetry, setLicenseRetry] = useState(0)
 
-  useEffect(() => { let cancelled = false; fetchLicenseStatus().then((value) => { if (!cancelled) setLicense(value) }).catch(() => { if (!cancelled) { setLicense(null); setLicenseError(true) } }); return () => { cancelled = true } }, [licenseRetry])
-  useEffect(() => {
-    const refreshLicense = () => { void fetchLicenseStatus().then(setLicense).catch(() => setLicenseError(true)) }
-    window.addEventListener(LICENSE_USAGE_REFRESH_EVENT, refreshLicense)
-    return () => window.removeEventListener(LICENSE_USAGE_REFRESH_EVENT, refreshLicense)
-  }, [])
+  const licenseRequest = useRef(0)
+  const [settingsVisit, setSettingsVisit] = useState(0)
 
-  const visibleNav = useMemo(() => NAV_ITEMS.filter((item) => item.anyOf.some((capability) => can(capability))), [can])
+  useEffect(() => {
+    let cancelled = false
+    const refreshLicense = () => {
+      const requestId = ++licenseRequest.current
+      void fetchLicenseStatus().then((status) => {
+        if (!cancelled && requestId === licenseRequest.current) { setLicense(status); setLicenseError(false) }
+      }).catch(() => {
+        if (!cancelled && requestId === licenseRequest.current) setLicenseError(true)
+      })
+    }
+    refreshLicense()
+    window.addEventListener(LICENSE_USAGE_REFRESH_EVENT, refreshLicense)
+    return () => { cancelled = true; window.removeEventListener(LICENSE_USAGE_REFRESH_EVENT, refreshLicense) }
+  }, [licenseRetry])
+
+  const onLicenseActivated = useCallback((status: LicenseStatus) => {
+    // An older usage request must not overwrite the activation response.
+    licenseRequest.current++
+    setLicense(status)
+    setLicenseError(false)
+  }, [])
+  const visibleNav = useMemo(() => NAV_ITEMS.filter((item) => item.view === 'phase1' || item.anyOf.some((capability) => can(capability))), [can])
 
   const refreshDashboard = useCallback(async () => {
     setDashboardLoading(true)
@@ -153,15 +169,16 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
   const showToast = useCallback((message: string, tone: ToastTone = 'success') => setToast({ message, tone }), [])
   const goTo = useCallback((view: AppView) => { setCurrentView(view); setSidebarOpen(false); setOrderModalOpen(false) }, [])
   const backToDashboard = useCallback(() => goTo('dashboard'), [goTo])
+  const openActivationSettings = () => { setSettingsVisit((visit) => visit + 1); goTo('phase1') }
 
   const activeView = visibleNav.some((item) => item.view === currentView) ? currentView : (visibleNav[0]?.view ?? 'dashboard')
 
-  const renderView = () => {
+  const renderView = (currentLicense: LicenseStatus) => {
     switch (activeView) {
       case 'dashboard': return <DashboardView displayName={user.displayName} dashboard={dashboard} loading={dashboardLoading} error={dashboardError} canCreateOrder={can('orders.create')} onRetry={() => void refreshDashboard()} onNewOrder={() => setOrderModalOpen(true)} />
       case 'patients': return <div className="content-wrap"><PatientsView onBack={backToDashboard} onToast={showToast} /></div>
       case 'catalog': return <div className="content-wrap"><CatalogView onBack={backToDashboard} onToast={showToast} /></div>
-      case 'phase1': return <div className="content-wrap"><Phase1View onBack={backToDashboard} onToast={showToast} /></div>
+      case 'phase1': return <div className="content-wrap"><Phase1View key={settingsVisit} license={currentLicense} onActivated={onLicenseActivated} onBack={backToDashboard} onToast={showToast} /></div>
        case 'operations': return <div className="content-wrap"><OperationsView onBack={backToDashboard} onToast={showToast} /></div>
       case 'radiology': return <div className="content-wrap"><RadiologyView onBack={backToDashboard} onToast={showToast} /></div>
       case 'home-visits': return <div className="content-wrap"><HomeVisitsView onBack={backToDashboard} onToast={showToast} /></div>
@@ -177,7 +194,6 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
   if (!license) return licenseError
     ? <main className="trial-gate" dir="rtl"><section className="panel trial-card" role="alert"><h1>تعذر التحقق من الترخيص</h1><p>تحقق من اتصال الخادم ثم أعد المحاولة.</p><button className="primary-button" type="button" onClick={() => { setLicenseError(false); setLicenseRetry((value) => value + 1) }}>إعادة المحاولة</button></section></main>
     : <div className="boot-screen" role="status" aria-live="polite">جارٍ التحقق من حالة الترخيص…</div>
-  if (license.edition === 'trial' && license.status === 'activation_required') return <TrialActivationView status={license} isAdmin={user.role === 'admin'} onActivated={setLicense} onLogout={onLogout} />
 
   return <SessionContext.Provider value={session}>
     <div className="app-shell">
@@ -201,8 +217,9 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
             <UserMenu user={user} onChangePassword={() => setPasswordDialogOpen(true)} onLogout={onLogout} />
           </div>
         </header>
-        {license?.edition === 'trial' && <div className="api-notice" role="status">{license.status === 'limit_reached' ? 'نفدت حصة إنشاء السجلات الجديدة؛ ما زال عرض السجلات الموجودة وتحديثها متاحًا.' : `استخدمت ${license.recordsUsed} من ${license.recordLimit} سجلًا — المتبقي ${license.recordsRemaining}.`}</div>}
-        {renderView()}
+        {licenseError && <div className="api-notice" role="alert">تعذر تحديث حالة الترخيص. قد تكون الحصة المعروضة غير محدثة. <button className="secondary-button" type="button" onClick={() => setLicenseRetry((retry) => retry + 1)}>إعادة المحاولة</button></div>}
+        {license.edition === 'trial' && <div className="api-notice" role="status">{license.status === 'limit_reached' ? 'نفدت حصة التجربة المجانية؛ يظل عرض السجلات وتحديثها متاحًا. فعّل النسخة الكاملة لإنشاء سجلات جديدة بلا حد.' : `تجربة مجانية: استخدمت ${license.recordsUsed} من ${license.recordLimit} عملية إنشاء أساسية — المتبقي ${license.recordsRemaining}، بلا انتهاء زمني.`} <button className="secondary-button" type="button" onClick={openActivationSettings}>تفعيل النظام من الإعدادات</button></div>}
+        {renderView(license)}
         <Toast toast={toast} />
       </main>
       {isOrderModalOpen && can('orders.create') && <NewOrderModal

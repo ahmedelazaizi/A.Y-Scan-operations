@@ -142,10 +142,12 @@ const KNOWN_SERVER_MESSAGES: Record<string, string> = {
   'Catalog test was not found.': 'لم يتم العثور على التحليل.',
   'One or more tests are not in the active catalog.': 'تحليل أو أكثر غير مفعّل في الدليل. حدّث القائمة وحاول مرة أخرى.',
   'patientId does not reference an existing patient.': 'المريض المحدد غير موجود في السجل.',
-  'Activation code is invalid.': 'رمز التفعيل غير صالح أو لا يخص هذا التثبيت.',
-  'This installation already has an activation.': 'هذا التثبيت مفعّل بالفعل ولا يمكن استبدال رمز التفعيل.',
-  'Trial activation is required before creating records.': 'يجب تفعيل نسخة التجربة قبل إنشاء سجلات جديدة.',
-  'Trial record creation limit reached.': 'نفدت حصة إنشاء السجلات الجديدة؛ ما زال عرض السجلات الموجودة وتحديثها متاحًا.',
+  'Only an administrator can activate this installation.': 'تفعيل النظام متاح لمدير النظام فقط.',
+  'activationCode is required.': 'أدخل رمز تفعيل النسخة الكاملة.',
+  'Activation code is invalid.': 'رمز النسخة الكاملة غير صالح أو لا يخص جهاز الخادم. انسخ معرّف الجهاز من الإعدادات واطلب رمزًا مطابقًا.',
+  'This installation already has an activation.': 'النظام مفعّل بالفعل.',
+  'Trial activation is required before creating records.': 'تعذر إنشاء السجل بسبب حالة الترخيص. راجع «تفعيل النظام» في الإعدادات.',
+  'Trial record creation limit reached.': 'نفدت حصة التجربة المجانية (50 عملية إنشاء أساسية). فعّل النسخة الكاملة من الإعدادات؛ يظل عرض السجلات وتحديثها متاحًا.',
 }
 
 export class ApiError extends Error {
@@ -697,6 +699,7 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
     const retryAfterSeconds = isRecord(payload) && typeof payload.retryAfterSeconds === 'number' ? payload.retryAfterSeconds : null
     if (response.status === 401) dispatchAuthRequired()
     if (response.status === 403 && code === 'Password Change Required') dispatchPasswordChangeRequired()
+    if (code === 'QUOTA_EXHAUSTED') window.dispatchEvent(new Event(LICENSE_USAGE_REFRESH_EVENT))
     const message = KNOWN_SERVER_MESSAGES[serverMessage] ?? (response.status < 500 && serverMessage ? serverMessage : statusFallbackMessage(response.status))
     throw new ApiError(message, response.status, { code, serverMessage, retryAfterSeconds })
   }
@@ -973,6 +976,6 @@ export function fetchPhase1Ranges(catalogId?: string): Promise<Phase1Range[]> { 
 export function approvePhase1Range(id: string): Promise<Phase1Range> { return requestJson<Phase1Range>(`/api/phase1/ranges/${encodeURIComponent(id)}/approve`, { method: 'POST' }) }
 export function importPhase1Seed(): Promise<Phase1ImportReport> { return requestJson<Phase1ImportReport>('/api/phase1/import', { method: 'POST', body: '{}' }) }
 
-export type LicenseStatus = { edition: 'legacy' | 'trial'; status: 'not_required' | 'activation_required' | 'active' | 'limit_reached'; installationId: string; recordLimit: number | null; recordsUsed: number; recordsRemaining: number | null; canEnterData: boolean }
+export type LicenseStatus = { edition: 'legacy' | 'trial' | 'full'; status: 'not_required' | 'active' | 'limit_reached'; installationId: string; recordLimit: number | null; recordsUsed: number; recordsRemaining: number | null; canEnterData: boolean }
 export function fetchLicenseStatus(): Promise<LicenseStatus> { return requestJson<LicenseStatus>('/api/license/status') }
 export function activateLicense(activationCode: string): Promise<LicenseStatus> { return requestJson<LicenseStatus>('/api/license/activate', { method: 'POST', body: JSON.stringify({ activationCode }) }) }

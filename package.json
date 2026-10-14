@@ -23,7 +23,8 @@
     "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller -Trial",
     "release:trial": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -Trial",
     "trial:keygen": "tsx tools/trial-license.ts keygen",
-    "trial:issue": "tsx tools/trial-license.ts issue"
+    "trial:issue": "tsx tools/trial-license.ts issue",
+    "activation:tool": "powershell -NoProfile -STA -ExecutionPolicy Bypass -File tools/activation-tool.ps1"
   },
   "dependencies": {
     "pg": "8.16.3",
