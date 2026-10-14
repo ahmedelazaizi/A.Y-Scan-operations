@@ -6,11 +6,12 @@
 [CmdletBinding()]
 param(
     [switch]$Remove,
-    [string]$At = '22:00'
+    [string]$At = '22:00',
+    [string]$TaskName = 'A.Y Scan daily backup'
 )
 
 $ErrorActionPreference = 'Stop'
-$taskName = 'A.Y Scan daily backup'
+$taskName = $TaskName
 
 try {
     if ($Remove) {

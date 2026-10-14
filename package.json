@@ -21,6 +21,7 @@
     "test:db": "tsx --test \"server/**/*.test.ts\"",
     "release": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1",
     "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller -Trial",
+    "release:trial": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -Trial",
     "trial:keygen": "tsx tools/trial-license.ts keygen",
     "trial:issue": "tsx tools/trial-license.ts issue"
   },

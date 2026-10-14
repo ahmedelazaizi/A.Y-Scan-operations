@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Run on a Windows developer machine that has Node.js 20.19+ and (for the final step) Inno Setup 6.5+.
-  Output: release\AYScan-Setup-<version>.exe  (the installer to run on clinic computers; they need no Node.js or Docker).
+  Output: release\AYScan-Setup-<version>[-Trial].exe  (the installer to run on clinic computers; they need no Node.js or Docker).
   Downloads are verified against pinned SHA-256 values and cached in release\cache.
 
 .EXAMPLE
@@ -182,16 +182,19 @@ try {
         Write-Step 'Compiling the installer with Inno Setup'
         $iscc = Find-InnoCompiler
         if (-not $iscc) { throw 'Inno Setup was not found. Install Inno Setup 6.5 or newer from https://jrsoftware.org/isdl.php, or pass -InnoCompiler "C:\path\ISCC.exe".' }
-        Invoke-Checked $iscc @("/DAppVersion=$version", "/DStageDir=$StageDir", "/DOutputDir=$ReleaseRoot", (Join-Path $PSScriptRoot 'ayscan.iss')) 'Inno Setup failed.'
-        $setup = Join-Path $ReleaseRoot "AYScan-Setup-$version.exe"
+        $trialDefine = if ($Trial) { '/DTrialSetup=1' } else { '/DTrialSetup=0' }
+        Invoke-Checked $iscc @("/DAppVersion=$version", "/DStageDir=$StageDir", "/DOutputDir=$ReleaseRoot", $trialDefine, (Join-Path $PSScriptRoot 'ayscan.iss')) 'Inno Setup failed.'
+        $setupBaseName = "AYScan-Setup-$version"
+        if ($Trial) { $setupBaseName += '-Trial' }
+        $setup = Join-Path $ReleaseRoot "$setupBaseName.exe"
         if (-not (Test-Path -LiteralPath $setup)) { throw "Expected installer not found: $setup" }
         $hash = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
-        Set-Content -LiteralPath "$setup.sha256" -Value "$hash  AYScan-Setup-$version.exe" -Encoding ASCII
+        Set-Content -LiteralPath "$setup.sha256" -Value "$hash  $setupBaseName.exe" -Encoding ASCII
         if ($ReleaseRoot -ne $FinalOutputDir) {
             New-Item -ItemType Directory -Force -Path $FinalOutputDir | Out-Null
             Copy-Item -LiteralPath $setup -Destination $FinalOutputDir -Force
             Copy-Item -LiteralPath "$setup.sha256" -Destination $FinalOutputDir -Force
-            $setup = Join-Path $FinalOutputDir "AYScan-Setup-$version.exe"
+            $setup = Join-Path $FinalOutputDir "$setupBaseName.exe"
         }
         Write-Host ''
         Write-Host ("Installer ready: {0} ({1:N0} MB)" -f $setup, ((Get-Item -LiteralPath $setup).Length / 1MB)) -ForegroundColor Green

@@ -9,25 +9,45 @@
 #ifndef OutputDir
   #define OutputDir "..\release"
 #endif
-#define AppName "A.Y Scan"
-#define AppPort "8741"
+#ifndef TrialSetup
+  #define TrialSetup 0
+#endif
+#if TrialSetup
+  #define AppName "A.Y Scan Trial"
+  #define AppPort "8742"
+#else
+  #define AppName "A.Y Scan"
+  #define AppPort "8741"
+#endif
 #define PowerShell "{sys}\WindowsPowerShell\v1.0\powershell.exe"
 #define HasArabic FileExists(CompilerPath + "Languages\Arabic.isl")
 #define HasLauncher FileExists(StageDir + "\AYScan.exe")
 
 [Setup]
+#if TrialSetup
+AppId={{C27DAA91-711F-4EE9-8CB2-66B652A1C80D}
+#else
 ; Never change AppId: it is how upgrades find the previous installation.
 AppId={{8F3A6C52-1B47-4E9D-A0C5-3D2E7B914F60}
+#endif
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher=A.Y Scan
+#if TrialSetup
+DefaultDirName={autopf}\AYScan Trial
+#else
 DefaultDirName={autopf}\AYScan
+#endif
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 UsePreviousAppDir=yes
 OutputDir={#OutputDir}
+#if TrialSetup
+OutputBaseFilename=AYScan-Setup-{#AppVersion}-Trial
+#else
 OutputBaseFilename=AYScan-Setup-{#AppVersion}
+#endif
 Compression=lzma2/max
 SolidCompression=yes
 PrivilegesRequired=admin
@@ -59,6 +79,9 @@ english.TaskLan=Allow other computers on this network to open A.Y Scan (opens po
 english.TaskBackup=Create a daily database backup at 10:00 PM
 english.StartNow=Start A.Y Scan now
 english.AsciiPathRequired=Choose an installation folder whose path uses English letters and digits only (for example C:\Program Files\AYScan). The database does not run reliably from paths with other characters.
+#if TrialSetup
+english.TrialDirectoryRequired=This folder contains an existing installation. Choose an empty folder, or the existing A.Y Scan Trial folder that contains trial-build.json.
+#endif
 english.DataKept=Patient data and backups were kept in:%n%1\data%n%1\backups%nThey are not deleted automatically. Delete these folders yourself only if you no longer need the data.
 english.DbModeTitle=Database
 english.DbModeSubtitle=Where should A.Y Scan keep its data?
@@ -88,6 +111,9 @@ arabic.TaskLan=السماح لأجهزة أخرى في الشبكة بفتح A.Y
 arabic.TaskBackup=إنشاء نسخة احتياطية يومية لقاعدة البيانات الساعة 10 مساءً
 arabic.StartNow=تشغيل A.Y Scan الآن
 arabic.AsciiPathRequired=اختر مجلد تثبيت يحتوي مساره على أحرف إنجليزية وأرقام فقط (مثل C:\Program Files\AYScan)، لأن قاعدة البيانات لا تعمل بثبات مع المسارات التي بها حروف أخرى.
+#if TrialSetup
+arabic.TrialDirectoryRequired=يحتوي هذا المجلد على تثبيت موجود. اختر مجلدًا فارغًا أو مجلد A.Y Scan Trial الحالي الذي يحتوي على trial-build.json.
+#endif
 arabic.DataKept=تم الإبقاء على بيانات المرضى والنسخ الاحتياطية في:%n%1\data%n%1\backups%nلا تُحذف تلقائيًا. احذف هذين المجلدين بنفسك فقط إذا لم تعد تحتاج البيانات.
 arabic.DbModeTitle=قاعدة البيانات
 arabic.DbModeSubtitle=أين تريد أن يحفظ A.Y Scan بياناته؟
@@ -147,7 +173,11 @@ Name: "{commonstartup}\{#AppName}"; Filename: "{#PowerShell}"; Parameters: "-NoP
 [Run]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#AppName}"" dir=in action=allow protocol=TCP localport={#AppPort} profile=private,domain"; Flags: runhidden; Tasks: lan
 ; runasoriginaluser: the backup task must belong to the Windows user who uses the app, not to the elevated installer account.
+#if TrialSetup
+Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\schedule-backup.ps1"" -TaskName ""A.Y Scan Trial daily backup"""; Flags: runhidden runasoriginaluser; Tasks: backup
+#else
 Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\schedule-backup.ps1"""; Flags: runhidden runasoriginaluser; Tasks: backup
+#endif
 #if HasLauncher
 Filename: "{app}\AYScan.exe"; WorkingDir: "{app}"; Description: "{cm:StartNow}"; Flags: postinstall nowait skipifsilent runasoriginaluser
 #else
@@ -156,7 +186,11 @@ Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Wind
 
 [UninstallRun]
 Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\stop.ps1"""; Flags: runhidden; RunOnceId: "StopAYScan"
+#if TrialSetup
+Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\schedule-backup.ps1"" -Remove -TaskName ""A.Y Scan Trial daily backup"""; Flags: runhidden; RunOnceId: "RemoveBackupTask"
+#else
 Filename: "{#PowerShell}"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\schedule-backup.ps1"" -Remove"; Flags: runhidden; RunOnceId: "RemoveBackupTask"
+#endif
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#AppName}"""; Flags: runhidden; RunOnceId: "RemoveFirewallRule"
 
 [Code]
@@ -196,7 +230,11 @@ end;
 
 function UseExistingDatabase: Boolean;
 begin
+#if TrialSetup
+  Result := False;
+#else
   Result := DbModePage.Values[1];
+#endif
 end;
 
 procedure InitializeWizard;
@@ -228,11 +266,15 @@ end;
 // Upgrades keep the existing configuration, so the database pages only appear on a first install.
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
+#if TrialSetup
+  Result := (PageID = DbModePage.ID) or (PageID = DbDetailsPage.ID);
+#else
   Result := False;
   if PageID = DbModePage.ID then
     Result := not IsFirstInstall
   else if PageID = DbDetailsPage.ID then
     Result := (not IsFirstInstall) or (not UseExistingDatabase);
+#endif
 end;
 
 function IsDatabaseName(const Value: String): Boolean;
@@ -291,7 +333,15 @@ begin
     begin
       MsgBox(CustomMessage('AsciiPathRequired'), mbError, MB_OK);
       Result := False;
-    end;
+    end
+#if TrialSetup
+    else if FileExists(WizardDirValue + '\.env') and not FileExists(WizardDirValue + '\trial-build.json') then
+    begin
+      MsgBox(CustomMessage('TrialDirectoryRequired'), mbError, MB_OK);
+      Result := False;
+    end
+#endif
+    ;
   end
   else if CurPageID = DbDetailsPage.ID then
   begin
