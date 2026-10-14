@@ -7,6 +7,7 @@ import { ConfigError, loadServerConfig } from './config.js'
 import { startEmbeddedPostgres, type EmbeddedPostgres } from './embedded-postgres.js'
 import { runMigrations } from './migrations.js'
 import { createStores } from './storage/factory.js'
+import { createPostgresPhase1SeedImporter } from './phase1-seed.js'
 
 const REQUEST_TIMEOUT_MS = 30_000
 const SHUTDOWN_GRACE_MS = 10_000
@@ -43,6 +44,8 @@ if (databaseUrl && config.migrateOnStart) {
   const migrationPool = new Pool({ connectionString: databaseUrl, max: 1 })
   try {
     await runMigrations(migrationPool)
+    const seedReport = await createPostgresPhase1SeedImporter(migrationPool).run(null)
+    console.log(`Phase 1 seed import: ${seedReport.priceRowsInserted} new prices, ${seedReport.priceRowsExisting} existing prices, ${seedReport.rangeRowsInserted} new ranges, ${seedReport.reviewRows} review rows.`)
   } catch (error) {
     console.error(`Database migration failed: ${describeError(error)}`)
     await embeddedPostgres?.stop()
@@ -67,7 +70,7 @@ try {
   await embeddedPostgres?.stop()
   process.exit(1)
 }
-const server = createServer(createApp({ repository: stores.repository, auth: stores.auth, webRoot: config.webRoot ?? undefined }))
+const server = createServer(createApp({ repository: stores.repository, auth: stores.auth, phase1: stores.phase1, phase1Importer: stores.phase1Importer, webRoot: config.webRoot ?? undefined }))
 const sessionPruner = setInterval(() => {
   stores.auth.pruneSessions().catch((error: unknown) => console.error('Session cleanup failed:', describeError(error)))
 }, SESSION_PRUNE_INTERVAL_MS)

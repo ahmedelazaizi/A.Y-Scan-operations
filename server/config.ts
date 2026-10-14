@@ -32,7 +32,7 @@ export function findAppRoot(): string {
 }
 
 function fromAppRoot(target: string): string {
-  return path.isAbsolute(target) ? target : path.resolve(findAppRoot(), target)
+  return path.resolve(findAppRoot(), target)
 }
 
 function parseTimeZone(value: string | undefined): string {

@@ -3,7 +3,7 @@ export const AUTH_REQUIRED_EVENT = 'ay-scan-auth-required'
 
 export const PASSWORD_CHANGE_REQUIRED_EVENT = 'ay-scan-password-change-required'
 
-export const AUTH_ROLES = ['admin', 'branch_manager', 'receptionist', 'lab_technician', 'radiologist', 'accountant'] as const
+export const AUTH_ROLES = ['admin', 'branch_manager', 'receptionist', 'lab_technician', 'radiologist', 'accountant', 'lab_consultant'] as const
 export type AuthRole = (typeof AUTH_ROLES)[number]
 
 export const ROLE_LABELS: Record<AuthRole, string> = {
@@ -13,6 +13,7 @@ export const ROLE_LABELS: Record<AuthRole, string> = {
   lab_technician: 'فني المختبر',
   radiologist: 'أخصائي الأشعة',
   accountant: 'المحاسبة',
+  lab_consultant: 'استشاري المعمل',
 }
 
 /** Mirrors server/permissions.ts. The server stays the authority; the client only hides what it would refuse. */
@@ -50,6 +51,16 @@ export type Capability =
   | 'reports.view'
   | 'audit.view'
   | 'users.manage'
+  | 'settings.view'
+  | 'settings.manage'
+  | 'practitioners.view'
+  | 'practitioners.manage'
+  | 'bundles.view'
+  | 'bundles.manage'
+  | 'catalog.price'
+  | 'ranges.view'
+  | 'ranges.manage'
+  | 'ranges.approve'
 
 export type AuthenticatedUser = {
   id: string
@@ -248,6 +259,25 @@ export type CatalogItem = {
   specimenType: string
   price: number
   isActive: boolean
+}
+
+export type Phase1CatalogItem = {
+  id: string
+  code: string
+  kind: 'lab' | 'radiology'
+  sectionAr: string | null
+  sectionEn: string | null
+  nameAr: string
+  nameEn: string | null
+  specimen: string | null
+  tube: string | null
+  resultType: 'numeric' | 'qualitative' | 'text'
+  contractPricePiastres: number
+  pricePiastres: number
+  insurancePricePiastres: number | null
+  isActive: boolean
+  requiresReview: boolean
+  sourceMetadata: Record<string, unknown>
 }
 
 export type NewCatalogItem = {
@@ -817,3 +847,34 @@ export function transitionHomeVisit(id: string, status: HomeVisitStatus): Promis
     body: JSON.stringify(transition),
   })
 }
+
+export type Phase1Settings = { nameAr: string; nameEn: string; licenseNumber: string | null; phone: string | null; addressAr: string | null; addressEn: string | null; currencyCode: string; reportFooterAr: string | null; reportFooterEn: string | null; logoPath: string | null; sealPath: string | null; signaturePath: string | null; logoMetadata: Record<string, unknown>; sealMetadata: Record<string, unknown>; signatureMetadata: Record<string, unknown>; updatedAt: string }
+export type Phase1Practitioner = { id: string; nameAr: string; nameEn: string | null; specialty: string | null; phone: string | null; commissionType: 'percentage' | 'fixed'; commissionPercent: number | null; commissionAmountPiastres: number | null; isActive: boolean; createdAt: string; updatedAt: string }
+export type Phase1Bundle = { id: string; code: string; nameAr: string; nameEn: string | null; pricePiastres: number; isActive: boolean; items: Array<{ catalogId: string; code: string; nameAr: string; quantity: number }>; createdAt: string; updatedAt: string }
+export type Phase1PriceHistory = { id: string; catalogId: string; oldPricePiastres: number; newPricePiastres: number; actorId: string | null; source: string; createdAt: string }
+export type Phase1Parameter = { id: string; catalogId: string; code: string; nameAr: string; nameEn: string | null; sortOrder: number; resultType: 'numeric' | 'qualitative' | 'text'; unit: string | null; specimen: string | null; tube: string | null }
+export type Phase1Range = { id: string; parameterId: string; parameterCode: string | null; parameterNameAr: string | null; parameterNameEn: string | null; catalogId: string | null; catalogCode: string | null; catalogNameAr: string | null; catalogNameEn: string | null; version: number; resultType: 'numeric' | 'qualitative' | 'text'; sex: 'all' | 'male' | 'female'; ageFromYears: number; ageToYears: number | null; low: number | null; high: number | null; criticalLow: number | null; criticalHigh: number | null; normalText: string | null; textValue: string | null; specimen: string | null; tube: string | null; note: string | null; status: 'proposed' | 'approved' | 'stopped'; proposedBy: string | null; approvedBy: string | null; approvedAt: string | null; sourceMetadata: Record<string, unknown>; createdAt: string; updatedAt: string }
+export type Phase1BulkPreview = { percentage: number; filter: { kind?: 'lab' | 'radiology'; sectionAr?: string; includeReviewRequired?: boolean }; count: number; changes: Array<{ id: string; code: string; oldPricePiastres: number; newPricePiastres: number }> }
+export type Phase1ImportReport = { priceRowsSeen: number; priceRowsInserted: number; priceRowsExisting: number; reviewRows: number; rangeRowsSeen: number; rangeRowsInserted: number; importedAt: string }
+
+export function fetchPhase1Settings(): Promise<Phase1Settings> { return requestJson<Phase1Settings>('/api/phase1/settings') }
+export function updatePhase1Settings(settings: Omit<Phase1Settings, 'updatedAt' | 'logoMetadata' | 'sealMetadata' | 'signatureMetadata'> & Partial<Pick<Phase1Settings, 'logoMetadata' | 'sealMetadata' | 'signatureMetadata'>>): Promise<Phase1Settings> { return requestJson<Phase1Settings>('/api/phase1/settings', { method: 'PATCH', body: JSON.stringify(settings) }) }
+export function fetchPhase1Practitioners(): Promise<Phase1Practitioner[]> { return requestJson<Phase1Practitioner[]>('/api/phase1/practitioners') }
+export function createPhase1Practitioner(input: Omit<Phase1Practitioner, 'id' | 'createdAt' | 'updatedAt'>): Promise<Phase1Practitioner> { return requestJson<Phase1Practitioner>('/api/phase1/practitioners', { method: 'POST', body: JSON.stringify(input) }) }
+export function fetchPhase1Catalog(): Promise<Phase1CatalogItem[]> { return requestJson<Phase1CatalogItem[]>('/api/phase1/catalog') }
+export function updatePhase1Price(id: string, pricePiastres: number): Promise<Phase1CatalogItem> { return requestJson<Phase1CatalogItem>(`/api/phase1/catalog/${encodeURIComponent(id)}/price`, { method: 'PATCH', body: JSON.stringify({ pricePiastres }) }) }
+export function fetchPhase1PriceHistory(id: string): Promise<Phase1PriceHistory[]> { return requestJson<Phase1PriceHistory[]>(`/api/phase1/catalog/${encodeURIComponent(id)}/price-history`) }
+export function previewPhase1BulkPrice(percentage: number, filter: Phase1BulkPreview['filter'] = {}): Promise<Phase1BulkPreview> { return requestJson<Phase1BulkPreview>('/api/phase1/catalog/bulk-price/preview', { method: 'POST', body: JSON.stringify({ percentage, filter }) }) }
+export function applyPhase1BulkPrice(percentage: number, filter: Phase1BulkPreview['filter'] = {}): Promise<{ preview: Phase1BulkPreview; updated: number }> { return requestJson<{ preview: Phase1BulkPreview; updated: number }>('/api/phase1/catalog/bulk-price/apply', { method: 'POST', body: JSON.stringify({ percentage, filter }) }) }
+export function fetchPhase1Bundles(): Promise<Phase1Bundle[]> { return requestJson<Phase1Bundle[]>('/api/phase1/bundles') }
+export type NewPhase1Bundle = { code: string; nameAr: string; nameEn?: string; pricePiastres: number; isActive?: boolean; items: Array<{ catalogId: string; quantity: number }> }
+export function createPhase1Bundle(input: NewPhase1Bundle): Promise<Phase1Bundle> { return requestJson<Phase1Bundle>('/api/phase1/bundles', { method: 'POST', body: JSON.stringify(input) }) }
+export function fetchPhase1Parameters(catalogId?: string): Promise<Phase1Parameter[]> { return requestJson<Phase1Parameter[]>(`/api/phase1/parameters${catalogId ? `?catalogId=${encodeURIComponent(catalogId)}` : ''}`) }
+export type NewPhase1Parameter = Omit<Phase1Parameter, 'id'>
+export function createPhase1Parameter(input: NewPhase1Parameter): Promise<Phase1Parameter> { return requestJson<Phase1Parameter>('/api/phase1/parameters', { method: 'POST', body: JSON.stringify(input) }) }
+export type NewPhase1Range = { parameterId: string; resultType: Phase1Range['resultType']; sex: Phase1Range['sex']; ageFromYears: number; ageToYears: number | null; low: number | null; high: number | null; criticalLow: number | null; criticalHigh: number | null; normalText: string | null; textValue: string | null; specimen: string | null; tube: string | null; note: string | null; sourceMetadata?: Record<string, unknown> }
+export function createPhase1Range(input: NewPhase1Range): Promise<Phase1Range> { return requestJson<Phase1Range>('/api/phase1/ranges', { method: 'POST', body: JSON.stringify(input) }) }
+export function updatePhase1Range(id: string, input: Partial<NewPhase1Range>): Promise<Phase1Range> { return requestJson<Phase1Range>(`/api/phase1/ranges/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) }
+export function fetchPhase1Ranges(catalogId?: string): Promise<Phase1Range[]> { return requestJson<Phase1Range[]>(`/api/phase1/ranges${catalogId ? `?catalogId=${encodeURIComponent(catalogId)}` : ''}`) }
+export function approvePhase1Range(id: string): Promise<Phase1Range> { return requestJson<Phase1Range>(`/api/phase1/ranges/${encodeURIComponent(id)}/approve`, { method: 'POST' }) }
+export function importPhase1Seed(): Promise<Phase1ImportReport> { return requestJson<Phase1ImportReport>('/api/phase1/import', { method: 'POST', body: '{}' }) }

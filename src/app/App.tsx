@@ -30,10 +30,11 @@ import OperationsView from './OperationsView'
 import PatientsView from './PatientsView'
 import RadiologyView from './RadiologyView'
 import ReportsView from './ReportsView'
+import Phase1View from './Phase1View'
 import { createSession, SessionContext, type Session } from './session'
 import UsersView from './UsersView'
 
-type AppView = 'dashboard' | 'patients' | 'catalog' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
+type AppView = 'dashboard' | 'patients' | 'catalog' | 'phase1' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
 type ToastTone = 'success' | 'error'
 type AuthState = { status: 'loading' } | { status: 'anonymous' } | { status: 'ready'; user: AuthenticatedUser; capabilities: Capability[] }
 
@@ -43,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'نظرة عامة', icon: 'grid', view: 'dashboard', anyOf: ['dashboard.view'] },
   { label: 'المرضى', icon: 'users', view: 'patients', anyOf: ['patients.view'] },
   { label: 'دليل التحاليل', icon: 'flask', view: 'catalog', anyOf: ['catalog.view'] },
+  { label: 'إعدادات Phase 1', icon: 'settings', view: 'phase1', anyOf: ['settings.view', 'practitioners.view', 'bundles.view', 'ranges.view'] },
   { label: 'عمليات المختبر', icon: 'scan', view: 'operations', anyOf: ['specimens.view', 'results.view'] },
   { label: 'الأشعة', icon: 'scan', view: 'radiology', anyOf: ['radiology.view'] },
   { label: 'الزيارات المنزلية', icon: 'home', view: 'home-visits', anyOf: ['homeVisits.view'] },
@@ -144,7 +146,8 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
       case 'dashboard': return <DashboardView displayName={user.displayName} dashboard={dashboard} loading={dashboardLoading} error={dashboardError} canCreateOrder={can('orders.create')} onRetry={() => void refreshDashboard()} onNewOrder={() => setOrderModalOpen(true)} />
       case 'patients': return <div className="content-wrap"><PatientsView onBack={backToDashboard} onToast={showToast} /></div>
       case 'catalog': return <div className="content-wrap"><CatalogView onBack={backToDashboard} onToast={showToast} /></div>
-      case 'operations': return <div className="content-wrap"><OperationsView onBack={backToDashboard} onToast={showToast} /></div>
+      case 'phase1': return <div className="content-wrap"><Phase1View onBack={backToDashboard} onToast={showToast} /></div>
+       case 'operations': return <div className="content-wrap"><OperationsView onBack={backToDashboard} onToast={showToast} /></div>
       case 'radiology': return <div className="content-wrap"><RadiologyView onBack={backToDashboard} onToast={showToast} /></div>
       case 'home-visits': return <div className="content-wrap"><HomeVisitsView onBack={backToDashboard} onToast={showToast} /></div>
       case 'billing': return <div className="content-wrap"><BillingView onBack={backToDashboard} onToast={showToast} /></div>

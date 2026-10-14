@@ -5,6 +5,9 @@ import { createRouter, publicRoute, type Route } from './router.js'
 import { authRoutes } from './routes/auth-routes.js'
 import { labRoutes } from './routes/lab-routes.js'
 import { operationsRoutes } from './routes/operations-routes.js'
+import { createMemoryPhase1SeedImporter } from './phase1-seed.js'
+import { createMemoryPhase1Store, type Phase1Store } from './phase1.js'
+import { createPhase1Routes } from './routes/phase1-routes.js'
 import { createStaticHandler } from './static.js'
 import type { OrderRepository } from './storage/repository.js'
 
@@ -13,6 +16,8 @@ const SERVICE_NAME = 'ay-scan-api'
 export type AppDependencies = {
   repository: OrderRepository
   auth: AuthService
+  phase1?: Phase1Store
+  phase1Importer?: ReturnType<typeof createMemoryPhase1SeedImporter>
   /** Directory of the built web app (dist). When set, non-API GET requests are served from it. */
   webRoot?: string
 }
@@ -26,12 +31,13 @@ function systemRoutes(repository: OrderRepository): Route[] {
   ]
 }
 
-export function createApp({ repository, auth, webRoot }: AppDependencies): RequestHandler {
+export function createApp({ repository, auth, phase1 = createMemoryPhase1Store(), phase1Importer = createMemoryPhase1SeedImporter(), webRoot }: AppDependencies): RequestHandler {
   const routes = [
     ...systemRoutes(repository),
     ...authRoutes(auth),
     ...labRoutes(repository),
     ...operationsRoutes(repository),
+    ...createPhase1Routes(phase1, phase1Importer),
   ]
   const router = createRouter(routes, { auth, repository })
   const serveStatic = webRoot ? createStaticHandler(webRoot) : null

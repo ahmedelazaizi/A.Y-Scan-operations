@@ -2,7 +2,7 @@ import { ROLES, type Role } from './auth/types.js'
 
 const ALL: readonly Role[] = ROLES
 const FRONT_DESK: readonly Role[] = ['branch_manager', 'receptionist']
-const LAB: readonly Role[] = ['branch_manager', 'lab_technician']
+const LAB: readonly Role[] = ['branch_manager', 'lab_technician', 'lab_consultant']
 const FINANCE: readonly Role[] = ['branch_manager', 'accountant']
 
 /**
@@ -44,11 +44,22 @@ export const CAPABILITIES = {
   'reports.view': FINANCE,
   'audit.view': ['branch_manager'],
   'users.manage': [],
+  'settings.view': ALL,
+  'settings.manage': ['branch_manager'],
+  'practitioners.view': ALL,
+  'practitioners.manage': ['branch_manager'],
+  'bundles.view': ALL,
+  'bundles.manage': ['branch_manager'],
+  'catalog.price': ['branch_manager'],
+  'ranges.view': [...LAB, 'radiologist'],
+  'ranges.manage': ['branch_manager', 'lab_consultant'],
+  'ranges.approve': ['lab_consultant'],
 } as const satisfies Record<string, readonly Role[]>
 
 export type Capability = keyof typeof CAPABILITIES
 
 export function hasCapability(role: Role, capability: Capability): boolean {
+  if (capability === 'ranges.approve') return role === 'lab_consultant'
   return role === 'admin' || (CAPABILITIES[capability] as readonly Role[]).includes(role)
 }
 

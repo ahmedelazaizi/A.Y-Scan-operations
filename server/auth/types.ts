@@ -1,4 +1,4 @@
-export const ROLES = ['admin', 'branch_manager', 'receptionist', 'lab_technician', 'radiologist', 'accountant'] as const
+export const ROLES = ['admin', 'branch_manager', 'receptionist', 'lab_technician', 'radiologist', 'accountant', 'lab_consultant'] as const
 export type Role = (typeof ROLES)[number]
 
 export function isRole(value: unknown): value is Role {
