@@ -53,6 +53,26 @@ test('phase1 PostgreSQL seed is idempotent, uses piastres, and protects consulta
     assert.equal(revised.version, approved.version + 1)
     const oldRange = (await stores.phase1.listRanges()).find((candidate) => candidate.id === approved.id)
     assert.equal(oldRange?.status, 'approved')
+    const createdRange = await stores.phase1.createRange({
+      parameterId: approved.parameterId,
+      resultType: approved.resultType,
+      sex: approved.sex,
+      ageFromYears: 0,
+      ageToYears: 17,
+      low: approved.low,
+      high: approved.high,
+      criticalLow: approved.criticalLow,
+      criticalHigh: approved.criticalHigh,
+      normalText: approved.normalText,
+      textValue: approved.textValue,
+      specimen: approved.specimen,
+      tube: approved.tube,
+      note: approved.note,
+      sourceMetadata: { source: 'phase1-integration-test' },
+    }, adminUser.id)
+    assert.equal(createdRange.status, 'proposed')
+    assert.equal(createdRange.proposedBy, adminUser.id)
+    assert.deepEqual(createdRange.sourceMetadata, { source: 'phase1-integration-test' })
   } finally {
     await stores.close()
     await migrationPool.end()
