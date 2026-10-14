@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import net from 'node:net'
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
@@ -49,10 +49,29 @@ function run(command: string, args: string[], environment: NodeJS.ProcessEnv = p
   })
 }
 
+function runWithoutCapturedOutput(command: string, args: string[], environment: NodeJS.ProcessEnv = process.env): Promise<{ code: number }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { env: environment, windowsHide: true, stdio: 'ignore' })
+    child.once('error', (error) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        reject(new Error(`Could not run ${path.basename(command)}: ${error.message}`))
+        return
+      }
+      reject(error)
+    })
+    child.once('close', (code) => resolve({ code: code ?? -1 }))
+  })
+}
+
 async function runChecked(command: string, args: string[], failure: string): Promise<string> {
   const result = await run(command, args)
   if (result.code !== 0) throw new Error(`${failure} (exit ${result.code}): ${result.stdout.trim().slice(0, 600)}`)
   return result.stdout
+}
+
+async function runCheckedWithoutCapturedOutput(command: string, args: string[], failure: string): Promise<void> {
+  const result = await runWithoutCapturedOutput(command, args)
+  if (result.code !== 0) throw new Error(`${failure} (exit ${result.code})`)
 }
 
 async function exists(target: string): Promise<boolean> {
@@ -176,7 +195,7 @@ export async function startEmbeddedPostgres(options: EmbeddedPostgresOptions): P
     if (port !== credentials.port) await writeFile(credentialsPath(dataDir), JSON.stringify(effective, null, 2), { mode: 0o600 })
     log('Starting the local database...')
     const logFile = path.join(path.dirname(dataDir), 'postgres.log')
-    await runChecked(executable(options.binDir, 'pg_ctl'), [
+    await runCheckedWithoutCapturedOutput(executable(options.binDir, 'pg_ctl'), [
       'start', '-D', dataDir, '-w', '-t', String(START_TIMEOUT_SECONDS), '-l', logFile,
       '-o', `-p ${port} -c listen_addresses=127.0.0.1 -c unix_socket_directories= -c max_connections=60`,
     ], `Starting PostgreSQL failed (see ${logFile})`)
