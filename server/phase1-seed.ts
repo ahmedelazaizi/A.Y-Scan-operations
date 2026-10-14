@@ -9,7 +9,7 @@ export function createMemoryPhase1SeedImporter(): Phase1SeedImporter {
   return { run: async () => ({ priceRowsSeen: 0, priceRowsInserted: 0, priceRowsExisting: 0, reviewRows: 0, rangeRowsSeen: 0, rangeRowsInserted: 0, importedAt: new Date().toISOString() }) }
 }
 
-type PriceSeedItem = { code: string; kind: 'lab' | 'radiology'; sectionEn: string | null; sectionAr: string | null; nameEn: string | null; nameAr: string | null; contractPrice: number; isNew: boolean; sourceRow: number }
+type PriceSeedItem = { code: string; kind: 'lab' | 'radiology'; isFee?: boolean; sectionEn: string | null; sectionAr: string | null; nameEn: string | null; nameAr: string | null; contractPrice: number; isNew: boolean; sourceRow: number }
 type PriceSeed = { source: string; currency: string; items: PriceSeedItem[]; review?: Array<{ row: number; code: string; reason: string }> }
 type RangeSeedRow = { serviceCode: string; serviceNameEn: string; serviceNameAr: string; parameterCode: string; parameterNameEn: string; parameterNameAr: string; sortOrder: number; resultType: 'numeric' | 'qualitative' | 'text'; unit: string | null; sex: 'all' | 'male' | 'female'; ageFromYears: number; ageToYears: number | null; low: number | null; high: number | null; criticalLow: number | null; criticalHigh: number | null; normalText: string | null; specimen: string | null; tube: string | null; note: string | null; status: string }
 type RangeSeed = { rows: RangeSeedRow[] }
@@ -29,14 +29,14 @@ async function readSeedFiles(seedDirectory: string): Promise<{ prices: PriceSeed
   return { prices: JSON.parse(priceText) as PriceSeed, ranges: JSON.parse(rangeText) as RangeSeed }
 }
 
-async function upsertPrice(client: PoolClient, seed: PriceSeed, item: PriceSeedItem, requiresReview: boolean): Promise<boolean> {
+export async function upsertPrice(client: PoolClient, seed: PriceSeed, item: PriceSeedItem, requiresReview: boolean): Promise<boolean> {
   const contractPricePiastres = toPiastres(item.contractPrice)
   const metadata = priceMetadata(seed, item, requiresReview)
   const inserted = await client.query(
-    `INSERT INTO test_catalog (code, kind, section_en, section_ar, name, name_en, specimen_type, contract_price_piastres, price_piastres, contract_price, price, is_active, source_metadata, requires_review)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $8, $9, $10, $11::jsonb, $12)
+    `INSERT INTO test_catalog (code, kind, section_en, section_ar, name, name_en, specimen_type, contract_price_piastres, price_piastres, contract_price, price, is_active, source_metadata, requires_review, is_fee)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $8, $9, $10, $11::jsonb, $12, $13)
      ON CONFLICT (code) DO NOTHING RETURNING id`,
-    [item.code, item.kind, item.sectionEn, item.sectionAr, item.nameAr || item.nameEn || item.code, item.nameEn, 'غير محدد', contractPricePiastres, item.contractPrice, !requiresReview, metadata, requiresReview],
+    [item.code, item.kind, item.sectionEn, item.sectionAr, item.nameAr || item.nameEn || item.code, item.nameEn, 'غير محدد', contractPricePiastres, item.contractPrice, !requiresReview, metadata, requiresReview, item.isFee ?? false],
   )
   if (inserted.rows[0]) return true
   await client.query(
@@ -44,9 +44,10 @@ async function upsertPrice(client: PoolClient, seed: PriceSeed, item: PriceSeedI
      SET kind = COALESCE(kind, $2), section_en = COALESCE(section_en, $3), section_ar = COALESCE(section_ar, $4),
          name_en = COALESCE(name_en, $5), contract_price_piastres = COALESCE(contract_price_piastres, $6),
          price_piastres = COALESCE(price_piastres, $6), contract_price = COALESCE(contract_price, $6), source_metadata = source_metadata || $7::jsonb,
-         requires_review = requires_review OR $8, is_active = CASE WHEN $8 THEN false ELSE is_active END, updated_at = now()
+         requires_review = requires_review OR $8, is_active = CASE WHEN $8 THEN false ELSE is_active END,
+          is_fee = is_fee OR $9, updated_at = now()
      WHERE code = $1`,
-    [item.code, item.kind, item.sectionEn, item.sectionAr, item.nameEn, contractPricePiastres, metadata, requiresReview],
+    [item.code, item.kind, item.sectionEn, item.sectionAr, item.nameEn, contractPricePiastres, metadata, requiresReview, item.isFee ?? false],
   )
   return false
 }

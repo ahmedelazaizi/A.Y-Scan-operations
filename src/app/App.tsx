@@ -32,6 +32,7 @@ import RadiologyView from './RadiologyView'
 import ReportsView from './ReportsView'
 import Phase1View from './Phase1View'
 import { createSession, SessionContext, type Session } from './session'
+import { PublicReportVerification } from './LabReportView'
 import UsersView from './UsersView'
 
 type AppView = 'dashboard' | 'patients' | 'catalog' | 'phase1' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
@@ -247,6 +248,8 @@ function App() {
 
   const session = useMemo(() => auth.status === 'ready' ? createSession(auth.user, auth.capabilities) : null, [auth])
 
+  const verificationMatch = window.location.pathname.match(/^\/report-verification\/([^/]+)\/?$/)
+  if (verificationMatch) return <PublicReportVerification token={decodeURIComponent(verificationMatch[1])} />
   if (auth.status === 'loading') return <div className="boot-screen" role="status" aria-live="polite">جارٍ التحميل…</div>
   if (auth.status === 'anonymous' || !session) return <LoginView onSuccess={handleLoginSuccess} />
   if (auth.user.mustChangePassword) return <RequiredPasswordChangeView user={auth.user} onChanged={handleUserChange} onLogout={() => void handleLogout()} />

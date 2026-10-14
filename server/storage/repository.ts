@@ -14,10 +14,12 @@ import type {
   SpecimenStatus,
   TestCatalogItem,
   ResultFlag,
+  ResultWorklistItem,
+  ReportRelease,
 } from '../domain.js'
 import type { OperationsReport } from '../reports.js'
 import type { Invoice, InvoiceItemInput, InvoiceStatus, PaymentMethod } from '../billing.js'
-import type { RadiologyModality, RadiologyPriority, RadiologyStudy, RadiologyStudyStatus } from '../radiology.js'
+import type { RadiologyModality, RadiologyOrderItem, RadiologyPriority, RadiologyStudy, RadiologyStudyStatus } from '../radiology.js'
 import type { InventoryAdjustmentDirection, InventoryItem, InventoryMovementResult, InventoryMovementType } from '../inventory.js'
 import type { AuditEvent, AuditEventInput, AuditEventListOptions } from '../audit.js'
 import type { InsuranceClaim, InsuranceClaimStatus, InsurancePolicy } from '../insurance.js'
@@ -75,19 +77,29 @@ export type OrderRepository = {
   listSpecimens(status?: SpecimenStatus, page?: PageOptions): RepositoryValue<Specimen[]>
   createSpecimen(orderId: string, specimenType: string, barcode: string): RepositoryValue<Specimen>
   collectSpecimen(barcode: string): RepositoryValue<Specimen>
+  collectSpecimenWithPaymentOverride(barcode: string): RepositoryValue<Specimen>
+  rejectSpecimen(barcode: string, reason: string): RepositoryValue<Specimen>
+  receiveSpecimen(barcode: string): RepositoryValue<Specimen>
+  listResultWorklist(page?: PageOptions): RepositoryValue<ResultWorklistItem[]>
   listResults(orderId?: string, page?: PageOptions): RepositoryValue<LabResult[]>
-  enterResult(orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag, enteredBy: string): RepositoryValue<LabResult>
-  reviewResult(id: string, reviewedBy: string): RepositoryValue<LabResult>
+  enterResult(orderItemId: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag, enteredBy: string, enteredById?: string, parameterId?: string, referenceRangeSnapshot?: Record<string, unknown>): RepositoryValue<LabResult>
+  reviewResult(id: string, reviewedBy: string, reviewedById?: string): RepositoryValue<LabResult>
+  amendResult(id: string, value: string, unit: string | undefined, referenceRange: string | undefined, flag: ResultFlag, reason: string, enteredBy: string, enteredById?: string, parameterId?: string, referenceRangeSnapshot?: Record<string, unknown>): RepositoryValue<LabResult>
+  releaseReport(orderId: string, releasedById: string, contentSnapshot: Record<string, unknown>, settingsSnapshot: Record<string, unknown>): RepositoryValue<ReportRelease>
+  getReportRelease(id: string): RepositoryValue<ReportRelease | null>
+  listReportReleases(orderId: string): RepositoryValue<ReportRelease[]>
+  getPublicReportVerification(token: string): RepositoryValue<import('../domain.js').PublicReportVerification | null>
   listInvoices(status?: InvoiceStatus, page?: PageOptions): RepositoryValue<Invoice[]>
   createInvoice(orderId: string, items: InvoiceItemInput[], discount?: number, tax?: number): RepositoryValue<Invoice>
   recordPayment(invoiceId: string, amount: number, method: PaymentMethod, reference: string | undefined, receivedBy: string): RepositoryValue<Invoice>
   listRadiologyStudies(status?: RadiologyStudyStatus, page?: PageOptions): RepositoryValue<RadiologyStudy[]>
+  listRadiologyOrderItems(page?: PageOptions): RepositoryValue<RadiologyOrderItem[]>
   createRadiologyStudy(
-    patientId: string,
+    orderItemId: string,
     modality: RadiologyModality,
     bodyPart: string,
     priority: RadiologyPriority,
-    scheduledAt?: string,
+    scheduledAt: string,
     referringProvider?: string,
   ): RepositoryValue<RadiologyStudy>
   startRadiologyStudy(id: string): RepositoryValue<RadiologyStudy>

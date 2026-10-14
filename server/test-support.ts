@@ -7,6 +7,7 @@ import { createAuthService, type AuthService } from './auth/service.js'
 import { ROLES, type Role } from './auth/types.js'
 import { mockRepository } from './domain.js'
 import type { OrderRepository } from './storage/repository.js'
+import { createMemoryPhase1Store, type Phase1Store } from './phase1.js'
 
 /** Deterministic bearer tokens, one per role, valid for every app built by createTestApp. */
 export const TEST_TOKENS: Record<Role, string> = Object.fromEntries(ROLES.map((role) => [role, `test-token-${role}`])) as Record<Role, string>
@@ -17,7 +18,7 @@ const FAR_FUTURE = new Date('2999-01-01T00:00:00.000Z')
 export type TestApp = { handler: ReturnType<typeof createApp>; auth: AuthService }
 
 /** Builds the real app over an in-memory user store seeded with one active user per role (user@<role>.test). */
-export async function createTestApp(repository: OrderRepository = mockRepository): Promise<TestApp> {
+export async function createTestApp(repository: OrderRepository = mockRepository, phase1: Phase1Store = createMemoryPhase1Store()): Promise<TestApp> {
   const store = createMemoryUserStore()
   const auth = createAuthService(store)
   for (const role of ROLES) {
@@ -31,7 +32,7 @@ export async function createTestApp(repository: OrderRepository = mockRepository
     })
     await store.createSession(user.id, createHash('sha256').update(TEST_TOKENS[role]).digest(), FAR_FUTURE)
   }
-  return { handler: createApp({ repository, auth }), auth }
+  return { handler: createApp({ repository, auth, phase1 }), auth }
 }
 
 export async function startTestServer(repository: OrderRepository = mockRepository): Promise<{ server: Server; baseUrl: string; auth: AuthService }> {

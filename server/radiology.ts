@@ -2,7 +2,29 @@ export type RadiologyModality = 'xray' | 'ct' | 'mri' | 'ultrasound' | 'mammogra
 export type RadiologyPriority = 'normal' | 'urgent' | 'stat'
 export type RadiologyStudyStatus = 'scheduled' | 'in_progress' | 'reported' | 'verified' | 'cancelled'
 
+import type { InvoiceStatus } from './billing.js'
+
+export type RadiologyOrderItem = {
+  orderItemId: string
+  orderId: string
+  publicOrderId: string
+  patientId: string
+  patientName: string
+  catalogCode: string
+  catalogName: string
+  invoiceNumber: string | null
+  invoiceStatus: InvoiceStatus | null
+}
+
 export type RadiologyStudy = {
+  orderItemId: string | null
+  orderId: string | null
+  publicOrderId: string | null
+  patientName: string | null
+  catalogCode: string | null
+  catalogName: string | null
+  invoiceNumber: string | null
+  invoiceStatus: InvoiceStatus | null
   id: string
   accessionNumber: string
   patientId: string

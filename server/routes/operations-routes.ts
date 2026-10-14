@@ -80,14 +80,17 @@ function billingRoutes(repository: OrderRepository): Route[] {
 
 function radiologyRoutes(repository: OrderRepository): Route[] {
   return [
+    route('GET', '/api/radiology/order-items', requires('radiology.schedule'), async (context) => {
+      context.json(200, await repository.listRadiologyOrderItems(parseListPage(context.query)))
+    }),
     route('GET', '/api/radiology/studies', requires('radiology.view'), async (context) => {
       context.json(200, await repository.listRadiologyStudies(parseStatus(context.query.get('status'), isRadiologyStudyStatus), parseListPage(context.query)))
     }),
     route('POST', '/api/radiology/studies', requires('radiology.schedule'), async (context) => {
       const input = validateRadiologyStudyInput(await context.body())
-      if (!input) throw new ValidationError('patientId, modality, bodyPart, priority, scheduledAt, and referringProvider are invalid.')
-      const study = await repository.createRadiologyStudy(input.patientId, input.modality, input.bodyPart, input.priority, input.scheduledAt, input.referringProvider)
-      await context.audit({ action: 'radiology.created', entityType: 'radiology', entityId: study.id, metadata: { modality: study.modality, priority: study.priority } })
+      if (!input) throw new ValidationError('orderItemId, modality, bodyPart, priority, scheduledAt, and referringProvider are invalid.')
+      const study = await repository.createRadiologyStudy(input.orderItemId, input.modality, input.bodyPart, input.priority, input.scheduledAt, input.referringProvider)
+      await context.audit({ action: 'radiology.created', entityType: 'radiology', entityId: study.id, metadata: { modality: study.modality, priority: study.priority, orderItemId: study.orderItemId, orderId: study.orderId } })
       context.json(201, study)
     }),
     route('POST', '/api/radiology/studies/:id/start', requires('radiology.perform'), async (context) => {

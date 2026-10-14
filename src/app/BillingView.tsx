@@ -3,11 +3,11 @@ import { fetchReceptionOrders, recordInvoicePayment, type Invoice, type NewPayme
 import { formatDateTime } from './format'
 import { useCan } from './session'
 import { ViewHeader } from './ViewHeader'
+import { Barcode } from './Barcode'
 
 type ToastTone = 'success' | 'error'
 type BillingViewProps = { onBack: () => void; onToast: (message: string, tone?: ToastTone) => void }
 type PaymentDraft = { amount: string; method: PaymentMethod; reference: string }
-const CODE39: Record<string, string> = { '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn','A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn','F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn','K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn','P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn','U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn','Z':'nwwnwnnnn','-':'nwnnnnwnw',' ':'nwnnwnwnn','.':'wwnnnnwnn','$':'nwnwnwnnn','/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn','*':'nwnnwnwnn' }
 const STATUS_LABELS: Record<string, string> = { processing: 'قيد التنفيذ', ready_for_review: 'جاهز للمراجعة', awaiting_sample: 'بانتظار العينة', completed: 'مكتمل' }
 const PAYMENT_OPTIONS: Array<{ value: PaymentMethod; label: string }> = [{ value: 'cash', label: 'نقدي' }, { value: 'card', label: 'بطاقة' }, { value: 'bank_transfer', label: 'تحويل بنكي' }]
 const emptyDraft: PaymentDraft = { amount: '', method: 'cash', reference: '' }
@@ -16,19 +16,7 @@ function paidAmount(invoice: Invoice) { return invoice.payments.reduce((sum, pay
 function money(amount: number, currency = 'EGP') { return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: currency || 'EGP', maximumFractionDigits: 2 }).format(amount) }
 
 function OrderBarcode({ orderId }: { orderId: string }) {
-  const text = `*${orderId.toUpperCase()}*`
-  let cursor = 0
-  const bars: Array<{ x: number; width: number }> = []
-  for (const character of text) {
-    const pattern = CODE39[character] ?? CODE39['-']
-    for (let index = 0; index < pattern.length; index += 1) {
-      const width = pattern[index] === 'w' ? 3 : 1
-      if (index % 2 === 0) bars.push({ x: cursor, width })
-      cursor += width + 1
-    }
-    cursor += 1
-  }
-  return <svg className="receipt-barcode" role="img" aria-label={`باركود الطلب ${orderId}`} viewBox={`0 0 ${cursor} 42`}><title>{orderId}</title>{bars.map((bar, index) => <rect key={index} x={bar.x} y="0" width={bar.width} height="42" fill="#000" />)}</svg>
+  return <Barcode value={orderId} className="receipt-barcode" label={`باركود الطلب ${orderId}`} />
 }
 
 function ThermalReceipt({ order }: { order: ReceptionOrder }) {

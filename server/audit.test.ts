@@ -20,13 +20,22 @@ async function request(baseUrl: string, path: string, options: TestRequestOption
 test('audit metadata keeps only bounded operational values and drops secrets', () => {
   const metadata = sanitizeAuditMetadata({
     status: 'approved',
+    orderItemId: '00000000-0000-4000-8000-000000000101',
+    orderId: '00000000-0000-4000-8000-000000000102',
     password: 'never-store-this',
     token: 'secret-token',
     username: 'person@example.test',
     fullName: 'مريض تجريبي',
     source: 'x'.repeat(10000),
   })
-  assert.deepEqual(metadata, { status: 'approved' })
+  assert.deepEqual(metadata, {
+    orderId: '00000000-0000-4000-8000-000000000102',
+    orderItemId: '00000000-0000-4000-8000-000000000101',
+    status: 'approved',
+  })
+  for (const secretKey of ['password', 'token', 'username', 'fullName']) {
+    assert.equal(secretKey in metadata, false)
+  }
   assert.ok(Buffer.byteLength(JSON.stringify(metadata), 'utf8') <= AUDIT_MAX_METADATA_BYTES)
 })
 

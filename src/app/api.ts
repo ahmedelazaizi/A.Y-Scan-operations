@@ -27,9 +27,12 @@ export type Capability =
   | 'catalog.manage'
   | 'specimens.view'
   | 'specimens.manage'
+  | 'specimens.overridePayment'
   | 'results.view'
   | 'results.enter'
   | 'results.review'
+  | 'labReports.view'
+  | 'labReports.issue'
   | 'billing.view'
   | 'billing.manage'
   | 'radiology.view'
@@ -355,6 +358,12 @@ export type DeviceConnectionResult = {
   lastCheckedAt: string
 }
 
+export type NewSpecimen = {
+  orderId: string
+  specimenType: string
+  barcode: string
+}
+
 export type SpecimenStatus = 'pending' | 'collected' | 'received' | 'processing' | 'rejected' | 'completed'
 
 export type Specimen = {
@@ -367,12 +376,13 @@ export type Specimen = {
   updatedAt: string
   collectedAt: string | null
   rejectedReason: string | null
-}
-
-export type NewSpecimen = {
-  orderId: string
-  specimenType: string
-  barcode: string
+  orderItemId: string | null
+  testName: string | null
+  tube: string | null
+  patientName: string | null
+  invoiceStatus: InvoiceStatus | null
+  paymentCleared: boolean
+  receivedAt: string | null
 }
 
 export type ResultFlag = 'normal' | 'low' | 'high' | 'critical' | 'not_applicable'
@@ -381,24 +391,31 @@ export type ResultStatus = 'draft' | 'in_review' | 'approved' | 'released' | 'am
 export type LabResult = {
   id: string
   orderItemId: string
+  parameterId: string | null
   resultValue: string
   unit: string | null
   referenceRange: string | null
+  referenceRangeSnapshot: Record<string, unknown> | null
   flag: ResultFlag
   status: ResultStatus
+  enteredById: string | null
   enteredBy: string
+  reviewedById: string | null
   reviewedBy: string | null
+  version: number
+  amendmentReason: string | null
+  supersedesResultId: string | null
+  releasedSnapshotId: string | null
   createdAt: string
   updatedAt: string
 }
 
-export type NewLabResult = {
-  orderItemId: string
-  value: string
-  unit?: string
-  referenceRange?: string
-  flag: ResultFlag
-}
+export type NewLabResult = { orderItemId: string; parameterId?: string; value: string }
+export type AmendLabResult = { value: string; reason: string }
+export type ResultWorklistParameter = Phase1Parameter & { selectedRange: Phase1Range | null; rangeStatus: 'approved' | 'no_approved_range' }
+export type ResultWorklistItem = { orderId: string; publicOrderId: string; patientName: string; patientSex: PatientSex | null; patientDateOfBirth: string | null; orderDate: string; orderItemId: string; catalogId: string; catalogCode: string; catalogName: string; catalogKind: 'lab' | 'radiology'; specimenId: string; specimenBarcode: string; specimenType: string; tube: string | null; specimenStatus: SpecimenStatus; parameters: ResultWorklistParameter[]; fallbackRangeStatus?: 'no_approved_range'; results: LabResult[]; releases: ReportRelease[] }
+export type ReportRelease = { id: string; orderId: string; version: number; verificationToken: string; releasedById: string; releasedAt: string; contentSnapshot: Record<string, unknown>; settingsSnapshot: Record<string, unknown> }
+export type PublicReportVerification = { authentic: boolean; version: number; issuedAt: string; labIdentity: Record<string, unknown> }
 
 export type InvoiceStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'void'
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'insurance'
@@ -459,10 +476,20 @@ export type RadiologyModality = 'xray' | 'ct' | 'mri' | 'ultrasound' | 'mammogra
 export type RadiologyPriority = 'normal' | 'urgent' | 'stat'
 export type RadiologyStudyStatus = 'scheduled' | 'in_progress' | 'reported' | 'verified' | 'cancelled'
 
+export type RadiologyOrderItem = { orderItemId: string; orderId: string; publicOrderId: string; patientId: string; patientName: string; catalogCode: string; catalogName: string; invoiceNumber: string | null; invoiceStatus: InvoiceStatus | null }
+
 export type RadiologyStudy = {
   id: string
   accessionNumber: string
   patientId: string
+  orderItemId: string | null
+  orderId: string | null
+  publicOrderId: string | null
+  patientName: string | null
+  catalogCode: string | null
+  catalogName: string | null
+  invoiceNumber: string | null
+  invoiceStatus: InvoiceStatus | null
   modality: RadiologyModality
   bodyPart: string
   priority: RadiologyPriority
@@ -478,11 +505,11 @@ export type RadiologyStudy = {
 }
 
 export type NewRadiologyStudy = {
-  patientId: string
+  orderItemId: string
   modality: RadiologyModality
   bodyPart: string
   priority?: RadiologyPriority
-  scheduledAt?: string
+  scheduledAt: string
   referringProvider?: string
 }
 
@@ -777,6 +804,26 @@ export function collectSpecimen(barcode: string): Promise<Specimen> {
   return requestJson<Specimen>(`/api/specimens/${encodeURIComponent(barcode)}/collect`, { method: 'POST' })
 }
 
+export function collectSpecimenWithOverride(barcode: string, reason: string): Promise<Specimen> {
+  return requestJson<Specimen>(`/api/specimens/${encodeURIComponent(barcode)}/collect-with-override`, { method: 'POST', body: JSON.stringify({ reason }) })
+}
+
+export function rejectSpecimen(barcode: string, reason: string): Promise<Specimen> {
+  return requestJson<Specimen>(`/api/specimens/${encodeURIComponent(barcode)}/reject`, { method: 'POST', body: JSON.stringify({ reason }) })
+}
+
+export function receiveSpecimen(barcode: string): Promise<Specimen> {
+  return requestJson<Specimen>(`/api/specimens/${encodeURIComponent(barcode)}/receive`, { method: 'POST' })
+}
+
+export function fetchResultWorklistPage(limit = 100, offset = 0): Promise<ResultWorklistItem[]> { return requestJson<ResultWorklistItem[]>(`/api/results/worklist?limit=${limit}&offset=${offset}`) }
+export async function fetchResultWorklist(): Promise<ResultWorklistItem[]> { const all: ResultWorklistItem[] = []; let offset = 0; for (;;) { const page = await fetchResultWorklistPage(100, offset); all.push(...page); if (page.length < 100) return all; offset += page.length } }
+export function amendResult(id: string, input: AmendLabResult): Promise<LabResult> { return requestJson<LabResult>(`/api/results/${encodeURIComponent(id)}/amend`, { method: 'POST', body: JSON.stringify(input) }) }
+export function issueLabReport(orderId: string): Promise<ReportRelease> { return requestJson<ReportRelease>(`/api/lab-reports/${encodeURIComponent(orderId)}/issue`, { method: 'POST', body: '{}' }) }
+export function fetchLabReports(orderId: string): Promise<ReportRelease[]> { return requestJson<ReportRelease[]>(`/api/lab-reports/${encodeURIComponent(orderId)}`) }
+export function fetchLabReportRelease(id: string): Promise<ReportRelease> { return requestJson<ReportRelease>(`/api/lab-report-releases/${encodeURIComponent(id)}`) }
+export function verifyLabReport(token: string): Promise<PublicReportVerification> { return requestJson<PublicReportVerification>(`/api/report-verification/${encodeURIComponent(token)}`) }
+
 export function fetchResults(orderId = ''): Promise<LabResult[]> {
   const query = orderId.trim() ? `?orderId=${encodeURIComponent(orderId.trim())}` : ''
   return requestJson<LabResult[]>(`/api/results${query}`)
@@ -801,6 +848,10 @@ export function createInvoice(invoice: NewInvoice): Promise<Invoice> {
 
 export function recordInvoicePayment(invoiceId: string, payment: NewPayment): Promise<Invoice> {
   return requestJson<Invoice>(`/api/billing/invoices/${encodeURIComponent(invoiceId)}/payments`, { method: 'POST', body: JSON.stringify(payment) })
+}
+
+export function fetchRadiologyOrderItems(): Promise<RadiologyOrderItem[]> {
+  return requestJson<RadiologyOrderItem[]>('/api/radiology/order-items')
 }
 
 export function fetchRadiologyStudies(status?: RadiologyStudyStatus): Promise<RadiologyStudy[]> {

@@ -83,21 +83,32 @@ test('full clinic workflow against a freshly migrated PostgreSQL database', { sk
     const firstOrderAudit = await migrationPool.query<{ count: string }>(`SELECT COUNT(*) AS count FROM audit_events ae JOIN orders o ON o.id = ae.entity_id WHERE o.order_number = $1 AND ae.action = 'order.created'`, [orderId.slice(3)])
     assert.equal(firstOrderAudit.rows[0].count, '1')
 
-    const specimen = await call('POST', `/api/specimens/${orderPayload.specimens[0].barcode}/collect`)
+    const specimenBarcode = orderPayload.specimens[0].barcode
+    const blockedCollection = await call('POST', `/api/specimens/${specimenBarcode}/collect`)
+    assert.equal(blockedCollection.status, 409)
+    for (const amount of [49.97, 49.97, 49.96]) {
+      assert.equal((await call('POST', `/api/billing/invoices/${orderPayload.invoice.id}/payments`, { amount, method: 'cash' })).status, 201)
+    }
+    const specimen = await call('POST', `/api/specimens/${specimenBarcode}/collect`)
     assert.equal(specimen.status, 200)
+    assert.equal((await call('POST', `/api/specimens/${specimenBarcode}/receive`)).status, 200)
 
     const itemRow = await migrationPool.query<{ id: string }>('SELECT oi.id FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.order_number = $1', [orderId.slice(3)])
     const result = await call('POST', '/api/results', { orderItemId: itemRow.rows[0].id, value: '13.2', unit: 'g/dL', flag: 'normal' })
     assert.equal(result.status, 201)
     assert.equal(result.payload?.enteredBy, 'مدير النظام')
-    await call('POST', `/api/results/${String(result.payload?.id)}/review`)
+    const firstReview = await call('POST', `/api/results/${String(result.payload?.id)}/review`)
+    assert.equal(firstReview.payload?.status, 'in_review')
+    await stores.auth.createUser({ username: 'consultant@clinic.test', displayName: 'استشاري المختبر', role: 'lab_consultant', password: PASSWORD }, { mustChangePassword: false })
+    const consultantLogin = await call('POST', '/api/auth/login', { username: 'consultant@clinic.test', password: PASSWORD })
+    assert.equal(consultantLogin.status, 200)
+    token = String(consultantLogin.payload?.token)
     const approved = await call('POST', `/api/results/${String(result.payload?.id)}/review`)
+    assert.equal(approved.status, 200, `POST /api/results/:id/review failed: ${JSON.stringify(approved.payload)}`)
     assert.equal(approved.payload?.status, 'approved')
+    token = String(login.payload?.token)
 
     const invoiceId = orderPayload.invoice.id
-    for (const amount of [49.97, 49.97, 49.96]) {
-      assert.equal((await call('POST', `/api/billing/invoices/${invoiceId}/payments`, { amount, method: 'cash' })).status, 201)
-    }
     const invoices = await call('GET', '/api/billing/invoices?status=paid&limit=10')
     assert.equal((invoices.payload as unknown as unknown[]).length, 1)
     assert.equal((await call('POST', `/api/billing/invoices/${invoiceId}/payments`, { amount: 0.01, method: 'cash' })).status, 409)
@@ -108,10 +119,101 @@ test('full clinic workflow against a freshly migrated PostgreSQL database', { sk
     assert.equal(metrics[2].value, '1')
     assert.equal(metrics[3].value, '149.90')
 
+    const radiologyCatalog = await migrationPool.query<{ id: string; is_active: boolean; name: string }>("SELECT id, is_active, name FROM test_catalog WHERE code = 'RAD-045'")
+    assert.equal(radiologyCatalog.rows.length, 1)
+    const radiologyService = radiologyCatalog.rows[0]
+    if (!radiologyService.is_active) {
+      const activatedRadiology = await call('PATCH', `/api/catalog/${radiologyService.id}`, { isActive: true })
+      assert.equal(activatedRadiology.status, 200)
+    }
+    const radiologyFee = await migrationPool.query<{ id: string; name: string }>("SELECT id, name FROM test_catalog WHERE code = 'RAD-300'")
+    assert.equal(radiologyFee.rows.length, 1)
+    const radiologyOrderResponse = await call('POST', '/api/orders', { patientId: patient.payload?.id, testIds: [radiologyService.id, radiologyFee.rows[0].id], priority: 'urgent' })
+    assert.equal(radiologyOrderResponse.status, 201, `POST /api/orders with radiology items failed: ${JSON.stringify(radiologyOrderResponse.payload)}`)
+    const radiologyOrder = radiologyOrderResponse.payload as Record<string, unknown> & { id: string; invoice: { id: string; invoiceNumber: string; status: string; total: number } }
+    const radiologyStoredOrder = await migrationPool.query<{ id: string }>('SELECT id FROM orders WHERE order_number = $1', [radiologyOrder.id.slice(3)])
+    const radiologyInternalOrderId = radiologyStoredOrder.rows[0].id
+    assert.equal(radiologyOrder.invoice.status, 'issued')
+    const invoiceLines = await migrationPool.query<{ description: string }>('SELECT description FROM invoice_items WHERE invoice_id = $1 ORDER BY item_index', [radiologyOrder.invoice.id])
+    assert.deepEqual(invoiceLines.rows.map((line) => line.description).sort(), [radiologyService.name, radiologyFee.rows[0].name].sort())
+
+    const radiologyItemsResponse = await call('GET', '/api/radiology/order-items')
+    assert.equal(radiologyItemsResponse.status, 200)
+    const radiologyItems = radiologyItemsResponse.payload as unknown as Array<Record<string, unknown>>
+    const radiologyOrderItems = await migrationPool.query<{ id: string; code: string }>(`SELECT oi.id, tc.code FROM order_items oi JOIN test_catalog tc ON tc.id = oi.test_catalog_id WHERE oi.order_id = $1`, [radiologyInternalOrderId])
+    const serviceOrderItemId = radiologyOrderItems.rows.find((item) => item.code === 'RAD-045')?.id
+    const feeOrderItemId = radiologyOrderItems.rows.find((item) => item.code === 'RAD-300')?.id
+    assert.ok(serviceOrderItemId && feeOrderItemId)
+    const schedulableItem = radiologyItems.find((item) => item.orderItemId === serviceOrderItemId)
+    assert.ok(schedulableItem)
+    assert.equal(schedulableItem.catalogCode, 'RAD-045')
+    assert.equal(schedulableItem.orderId, radiologyInternalOrderId)
+    assert.equal(schedulableItem.publicOrderId, radiologyOrder.id)
+    assert.equal(schedulableItem.patientId, patient.payload?.id)
+    assert.equal(schedulableItem.patientName, 'مريض تكامل')
+    assert.equal(schedulableItem.catalogName, radiologyService.name)
+    assert.equal(schedulableItem.invoiceNumber, radiologyOrder.invoice.invoiceNumber)
+    assert.equal(schedulableItem.invoiceStatus, radiologyOrder.invoice.status)
+    assert.ok(!radiologyItems.some((item) => item.orderItemId === feeOrderItemId || item.catalogCode === 'RAD-300'))
+
+    const studyInput = { orderItemId: serviceOrderItemId, modality: 'ct', bodyPart: 'chest', priority: 'urgent', scheduledAt: '2026-02-01T10:00:00.000Z', referringProvider: 'Integration radiologist' }
+    const rejectedFeeStudy = await call('POST', '/api/radiology/studies', { ...studyInput, orderItemId: feeOrderItemId })
+    assert.equal(rejectedFeeStudy.status, 400)
+    const scheduledStudyResponse = await call('POST', '/api/radiology/studies', studyInput)
+    assert.equal(scheduledStudyResponse.status, 201, `POST /api/radiology/studies failed: ${JSON.stringify(scheduledStudyResponse.payload)}`)
+    const scheduledStudy = scheduledStudyResponse.payload as Record<string, unknown> & { id: string }
+    assert.equal(scheduledStudy.status, 'scheduled')
+    assert.equal(scheduledStudy.orderItemId, serviceOrderItemId)
+    assert.equal(scheduledStudy.orderId, radiologyInternalOrderId)
+    assert.equal(scheduledStudy.patientId, patient.payload?.id)
+    assert.equal(scheduledStudy.invoiceNumber, schedulableItem.invoiceNumber)
+    assert.equal(scheduledStudy.invoiceStatus, radiologyOrder.invoice.status)
+    assert.ok(String(scheduledStudy.accessionNumber).startsWith('RAD-'))
+
+    const startedStudyResponse = await call('POST', `/api/radiology/studies/${scheduledStudy.id}/start`)
+    assert.equal(startedStudyResponse.status, 200)
+    const startedStudy = startedStudyResponse.payload as Record<string, unknown>
+    assert.equal(startedStudy.status, 'in_progress')
+    const reportedStudyResponse = await call('POST', `/api/radiology/studies/${scheduledStudy.id}/report`, { reportText: 'No acute finding.', impression: 'Normal radiology study.' })
+    assert.equal(reportedStudyResponse.status, 200)
+    const reportedStudy = reportedStudyResponse.payload as Record<string, unknown>
+    assert.equal(reportedStudy.status, 'reported')
+    assert.equal(reportedStudy.reportText, 'No acute finding.')
+    const verifiedStudyResponse = await call('POST', `/api/radiology/studies/${scheduledStudy.id}/verify`)
+    assert.equal(verifiedStudyResponse.status, 200)
+    const verifiedStudy = verifiedStudyResponse.payload as Record<string, unknown>
+    assert.equal(verifiedStudy.status, 'verified')
+    for (const study of [startedStudy, reportedStudy, verifiedStudy]) {
+      assert.equal(study.orderItemId, serviceOrderItemId)
+      assert.equal(study.orderId, radiologyInternalOrderId)
+      assert.equal(study.patientId, patient.payload?.id)
+      assert.equal(study.invoiceNumber, schedulableItem.invoiceNumber)
+      assert.equal(study.invoiceStatus, radiologyOrder.invoice.status)
+      assert.equal(study.accessionNumber, scheduledStudy.accessionNumber)
+    }
+    assert.ok(verifiedStudy.verifiedBy)
+    const radiologyAudit = await call('GET', '/api/audit-events?limit=100')
+    assert.ok((radiologyAudit.payload as unknown as Array<Record<string, unknown>>).some((event) => event.action === 'radiology.created' && (event.metadata as Record<string, unknown>)?.orderItemId === serviceOrderItemId))
+
     const report = await call('GET', '/api/reports/operations')
     assert.equal(report.status, 200)
     const audit = await call('GET', '/api/audit-events?limit=100')
     assert.ok((audit.payload as unknown as Array<Record<string, unknown>>).some((event) => event.action === 'payment.recorded'))
+
+    const multiInvoiceOrderResponse = await call('POST', '/api/orders', { patientId: patient.payload?.id, testIds: [String(cbc?.id)] })
+    assert.equal(multiInvoiceOrderResponse.status, 201)
+    const multiInvoiceOrder = multiInvoiceOrderResponse.payload as { id: string; invoice: { id: string; total: number }; specimens: Array<{ barcode: string }> }
+    const additionalInvoiceResponse = await call('POST', '/api/billing/invoices', { orderId: multiInvoiceOrder.id, items: [{ description: 'Additional order charge', quantity: 1, unitPrice: 10 }] })
+    assert.equal(additionalInvoiceResponse.status, 201)
+    const additionalInvoice = additionalInvoiceResponse.payload as { id: string }
+    const multiInvoiceBarcode = multiInvoiceOrder.specimens[0].barcode
+    const specimensForMultiInvoiceOrder = await call('GET', '/api/specimens?limit=100')
+    const matchingBarcodeRows = (specimensForMultiInvoiceOrder.payload as unknown as Array<{ barcode: string }>).filter((item) => item.barcode === multiInvoiceBarcode)
+    assert.equal(matchingBarcodeRows.length, 1)
+    assert.equal((await call('POST', `/api/billing/invoices/${multiInvoiceOrder.invoice.id}/payments`, { amount: multiInvoiceOrder.invoice.total, method: 'cash' })).status, 201)
+    assert.equal((await call('POST', `/api/specimens/${multiInvoiceBarcode}/collect`)).status, 409)
+    assert.equal((await call('POST', `/api/billing/invoices/${additionalInvoice.id}/payments`, { amount: 10, method: 'cash' })).status, 201)
+    assert.equal((await call('POST', `/api/specimens/${multiInvoiceBarcode}/collect`)).status, 200)
 
     const practitionerResponse = await call('POST', '/api/phase1/practitioners', { nameAr: 'طبيب استقبال تكامل', nameEn: 'Reception Doctor', specialty: 'باطنة', phone: null, commissionType: 'fixed', commissionPercent: null, commissionAmountPiastres: 1500, isActive: true })
     assert.equal(practitionerResponse.status, 201)
@@ -139,11 +241,20 @@ test('full clinic workflow against a freshly migrated PostgreSQL database', { sk
     assert.deepEqual(receptionStored.rows[0], { order_count: '1', item_count: '1', specimen_count: '1', commission_count: '1', insurance_amount: '50.00', order_audit_count: '1' })
     const receptionList = await call('GET', '/api/reception/orders?limit=100')
     assert.ok((receptionList.payload as unknown as Array<Record<string, unknown>>).some((item) => item.id === receptionId))
+    const receptionBarcode = (receptionPayload.specimens as Array<{ barcode: string }>)[0].barcode
+    assert.equal((await call('POST', `/api/specimens/${receptionBarcode}/collect`)).status, 409)
     const collectRemaining = await call('POST', `/api/billing/invoices/${receptionPayload.invoice.id}/payments`, { amount: 80, method: 'cash' })
     assert.equal(collectRemaining.status, 201)
+    assert.equal((await call('POST', `/api/specimens/${receptionBarcode}/collect`)).status, 200)
+    assert.equal((await call('POST', `/api/specimens/${receptionBarcode}/receive`)).status, 200)
     const paidReceptionList = await call('GET', '/api/reception/orders?limit=100')
     const paidReception = (paidReceptionList.payload as unknown as Array<Record<string, unknown>>).find((item) => item.id === receptionId)
     assert.equal((paidReception?.invoice as { status?: string } | undefined)?.status, 'paid')
+    const insuredOrder = await call('POST', '/api/orders', { patientId: patient.payload?.id, testIds: [], bundleIds: [bundleId], insuranceCoveragePiastres: 18000, insuranceCompany: 'تأمين كامل للاختبار', initialPaymentPiastres: 0 })
+    assert.equal(insuredOrder.status, 201)
+    const insured = insuredOrder.payload as { specimens: Array<{ barcode: string }>; invoice: { status: string } }
+    assert.equal(insured.invoice.status, 'paid')
+    assert.equal((await call('POST', `/api/specimens/${insured.specimens[0].barcode}/collect`)).status, 200)
 
     await migrationPool.query(`CREATE FUNCTION it_fail_invoice_item() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected invoice failure'; END $$`)
     await migrationPool.query('CREATE TRIGGER it_fail_invoice_item_trigger BEFORE INSERT ON invoice_items FOR EACH ROW EXECUTE FUNCTION it_fail_invoice_item()')

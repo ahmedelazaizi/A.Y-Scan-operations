@@ -7342,6 +7342,7 @@
   },
   {
    "code": "RAD-300",
+   "isFee": true,
    "kind": "radiology",
    "modality": "OTHER",
    "sectionAr": "الرنين المعناطيسى",

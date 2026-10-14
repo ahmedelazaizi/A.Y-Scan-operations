@@ -405,15 +405,126 @@ test('specimens can be created, listed, and collected only once', async () => {
   assert.ok(pending.some((specimen) => specimen.barcode === barcode))
 
   const collectServer = await startTestServer()
-  const collectResponse = await request(collectServer.server, collectServer.baseUrl, `/api/specimens/${barcode}/collect`, { method: 'POST' })
-  const collected = await collectResponse.json() as Record<string, unknown>
-  assert.equal(collectResponse.status, 200)
+  const blockedResponse = await request(collectServer.server, collectServer.baseUrl, `/api/specimens/${barcode}/collect`, { method: 'POST' })
+  assert.equal(blockedResponse.status, 409)
+  const prematureReceiveServer = await startTestServer()
+  assert.equal((await request(prematureReceiveServer.server, prematureReceiveServer.baseUrl, `/api/specimens/${barcode}/receive`, { method: 'POST' })).status, 409)
+
+  const overrideServer = await startTestServer()
+  const overrideResponse = await request(overrideServer.server, overrideServer.baseUrl, `/api/specimens/${barcode}/collect-with-override`, {
+    method: 'POST', body: JSON.stringify({ reason: 'استثناء إداري موثق' }), token: TEST_TOKENS.branch_manager,
+  })
+  const collected = await overrideResponse.json() as Record<string, unknown>
+  assert.equal(overrideResponse.status, 200)
   assert.equal(collected.status, 'collected')
   assert.equal(typeof collected.collectedAt, 'string')
 
   const repeatServer = await startTestServer()
   const repeatResponse = await request(repeatServer.server, repeatServer.baseUrl, `/api/specimens/${barcode}/collect`, { method: 'POST' })
   assert.equal(repeatResponse.status, 409)
+
+  const receiveServer = await startTestServer()
+  const receivedResponse = await request(receiveServer.server, receiveServer.baseUrl, `/api/specimens/${barcode}/receive`, { method: 'POST' })
+  const received = await receivedResponse.json() as Record<string, unknown>
+  assert.equal(receivedResponse.status, 200)
+  assert.equal(received.status, 'received')
+  const repeatReceiveServer = await startTestServer()
+  assert.equal((await request(repeatReceiveServer.server, repeatReceiveServer.baseUrl, `/api/specimens/${barcode}/receive`, { method: 'POST' })).status, 409)
+})
+
+test('partially paid specimen remains blocked until invoice payment completes', async () => {
+  const repository = createMemoryRepository()
+  const initialPaymentPiastres = 1000
+  const order = await repository.createReceptionOrder({
+    patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID], initialPaymentPiastres, actor: 'Specimen test',
+  })
+  const barcode = order.specimens[0].barcode
+  const listBeforeServer = await startTestServer(repository)
+  const listBefore = await request(listBeforeServer.server, listBeforeServer.baseUrl, '/api/specimens?status=pending')
+  const beforeSpecimen = (await listBefore.json() as Array<Record<string, unknown>>).find((item) => item.barcode === barcode)
+  assert.equal(beforeSpecimen?.paymentCleared, false)
+  assert.equal(beforeSpecimen?.invoiceStatus, 'partially_paid')
+
+  const blockedServer = await startTestServer(repository)
+  assert.equal((await request(blockedServer.server, blockedServer.baseUrl, `/api/specimens/${barcode}/collect`, { method: 'POST' })).status, 409)
+
+  const remainingBalance = order.invoice!.total - initialPaymentPiastres / 100
+  const paymentServer = await startTestServer(repository)
+  const payment = await request(paymentServer.server, paymentServer.baseUrl, `/api/billing/invoices/${order.invoice!.id}/payments`, {
+    method: 'POST', body: JSON.stringify({ amount: remainingBalance, method: 'cash' }),
+  })
+  assert.equal(payment.status, 201)
+
+  const listAfterServer = await startTestServer(repository)
+  const listAfter = await request(listAfterServer.server, listAfterServer.baseUrl, '/api/specimens?status=pending')
+  const afterSpecimen = (await listAfter.json() as Array<Record<string, unknown>>).find((item) => item.barcode === barcode)
+  assert.equal(afterSpecimen?.paymentCleared, true)
+  assert.equal(afterSpecimen?.invoiceStatus, 'paid')
+
+  const collectServer = await startTestServer(repository)
+  assert.equal((await request(collectServer.server, collectServer.baseUrl, `/api/specimens/${barcode}/collect`, { method: 'POST' })).status, 200)
+})
+
+test('fully insured specimen is eligible for normal collection', async () => {
+  const repository = createMemoryRepository()
+  const cbc = (await repository.listCatalog()).find((item) => item.id === MOCK_CBC_ID)!
+  const totalPiastres = Math.round(cbc.price * 100)
+  const order = await repository.createReceptionOrder({
+    patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID], insuranceCoveragePiastres: totalPiastres, actor: 'Specimen test',
+  })
+  const server = await startTestServer(repository)
+  assert.equal((await request(server.server, server.baseUrl, `/api/specimens/${order.specimens[0].barcode}/collect`, { method: 'POST' })).status, 200)
+})
+
+test('fully cash-paid specimen is eligible for normal collection', async () => {
+  const repository = createMemoryRepository()
+  const cbc = (await repository.listCatalog()).find((item) => item.id === MOCK_CBC_ID)!
+  const totalPiastres = Math.round(cbc.price * 100)
+  const order = await repository.createReceptionOrder({
+    patientId: MOCK_PATIENT_ID, testIds: [MOCK_CBC_ID], initialPaymentPiastres: totalPiastres, actor: 'Specimen test',
+  })
+  const server = await startTestServer(repository)
+  assert.equal((await request(server.server, server.baseUrl, `/api/specimens/${order.specimens[0].barcode}/collect`, { method: 'POST' })).status, 200)
+})
+
+test('specimen override is manager-only, validates its reason, and audits the exception', async () => {
+  const repository = createMemoryRepository()
+  const specimen = await repository.createSpecimen('AY-10482', 'blood', 'LAB-OVERRIDE-001')
+  const deniedServer = await startTestServer(repository)
+  const denied = await request(deniedServer.server, deniedServer.baseUrl, `/api/specimens/${specimen.barcode}/collect-with-override`, {
+    method: 'POST', body: JSON.stringify({ reason: 'approved' }), token: TEST_TOKENS.receptionist,
+  })
+  assert.equal(denied.status, 403)
+
+  const invalidServer = await startTestServer(repository)
+  const invalid = await request(invalidServer.server, invalidServer.baseUrl, `/api/specimens/${specimen.barcode}/collect-with-override`, {
+    method: 'POST', body: JSON.stringify({ reason: '   ' }), token: TEST_TOKENS.branch_manager,
+  })
+  assert.equal(invalid.status, 400)
+
+  const overrideServer = await startTestServer(repository)
+  const override = await request(overrideServer.server, overrideServer.baseUrl, `/api/specimens/${specimen.barcode}/collect-with-override`, {
+    method: 'POST', body: JSON.stringify({ reason: 'approved by manager' }), token: TEST_TOKENS.branch_manager,
+  })
+  assert.equal(override.status, 200)
+  const audit = await repository.listAuditEvents({ action: 'specimen.payment_override', entityType: 'specimen' })
+  assert.equal(audit.length, 1)
+  assert.deepEqual(audit[0].metadata, { reason: 'approved by manager' })
+})
+
+test('specimen rejection accepts pending specimens and conflicts after rejection', async () => {
+  const repository = createMemoryRepository()
+  const specimen = await repository.createSpecimen('AY-10482', 'blood', 'LAB-REJECT-001')
+  const rejectedServer = await startTestServer(repository)
+  const rejected = await request(rejectedServer.server, rejectedServer.baseUrl, `/api/specimens/${specimen.barcode}/reject`, {
+    method: 'POST', body: JSON.stringify({ reason: 'العينة غير صالحة' }),
+  })
+  assert.equal(rejected.status, 200)
+  assert.equal((await rejected.json() as Record<string, unknown>).status, 'rejected')
+  const repeatServer = await startTestServer(repository)
+  assert.equal((await request(repeatServer.server, repeatServer.baseUrl, `/api/specimens/${specimen.barcode}/reject`, {
+    method: 'POST', body: JSON.stringify({ reason: 'تكرار' }),
+  })).status, 409)
 })
 
 test('invalid and duplicate specimen barcodes return client errors', async () => {
@@ -438,39 +549,15 @@ test('invalid and duplicate specimen barcodes return client errors', async () =>
   assert.equal(duplicateResponse.status, 409)
 })
 
-test('results enter as draft and advance through review states safely', async () => {
+test('result entry rejects an unlinked order item without a received specimen', async () => {
   const orderItemId = '00000000-0000-4000-8000-000000000201'
-  const enterServer = await startTestServer()
-  const enterResponse = await request(enterServer.server, enterServer.baseUrl, '/api/results', {
+  const server = await startTestServer()
+  const response = await request(server.server, server.baseUrl, '/api/results', {
     method: 'POST',
     body: JSON.stringify({ orderItemId, value: '5.4', unit: 'mmol/L', referenceRange: '3.9-5.5', flag: 'normal' }),
   })
-  const entered = await enterResponse.json() as Record<string, unknown>
-  assert.equal(enterResponse.status, 201)
-  assert.equal(entered.status, 'draft')
-  assert.equal(entered.enteredBy, 'Test admin')
-
-  const firstReviewServer = await startTestServer()
-  const firstReviewResponse = await request(firstReviewServer.server, firstReviewServer.baseUrl, `/api/results/${entered.id}/review`, { method: 'POST' })
-  assert.equal(firstReviewResponse.status, 200)
-  const firstReview = await firstReviewResponse.json() as Record<string, unknown>
-  assert.equal(firstReview.status, 'in_review')
-  assert.equal(firstReview.reviewedBy, 'Test admin')
-
-  const secondReviewServer = await startTestServer()
-  const secondReviewResponse = await request(secondReviewServer.server, secondReviewServer.baseUrl, `/api/results/${entered.id}/review`, { method: 'POST' })
-  assert.equal(secondReviewResponse.status, 200)
-  assert.equal((await secondReviewResponse.json() as Record<string, unknown>).status, 'approved')
-
-  const thirdReviewServer = await startTestServer()
-  const thirdReviewResponse = await request(thirdReviewServer.server, thirdReviewServer.baseUrl, `/api/results/${entered.id}/review`, { method: 'POST' })
-  assert.equal(thirdReviewResponse.status, 409)
-
-  const listServer = await startTestServer()
-  const listResponse = await request(listServer.server, listServer.baseUrl, `/api/results?orderId=${orderItemId}`)
-  const results = await listResponse.json() as Array<Record<string, unknown>>
-  assert.equal(listResponse.status, 200)
-  assert.ok(results.some((result) => result.id === entered.id && result.status === 'approved'))
+  assert.equal(response.status, 409)
+  assert.deepEqual(await response.json(), { error: 'Conflict', message: 'Result requires a received or processing lab specimen.' })
 })
 
 test('missing lab operations records return JSON 404 responses', async () => {

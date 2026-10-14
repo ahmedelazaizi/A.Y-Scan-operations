@@ -23,7 +23,8 @@
     "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller"
   },
   "dependencies": {
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -31,6 +32,7 @@
     "@fontsource/montserrat": "5.1.1",
     "@types/node": "22.15.21",
     "@types/pg": "8.15.5",
+    "@types/qrcode": "1.5.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",

@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto'
-import { calculateInvoiceTotals, cloneInvoice, fromMinorUnits, isInvoiceStatus, isPaymentMethod, lineTotalMinor, normalizePaymentAmount, outstandingMinor, roundMoney, toMinorUnits, type Invoice, type Payment } from './billing.js'
-import { cloneRadiologyStudy, isRadiologyModality, isRadiologyPriority, isRadiologyStudyStatus, type RadiologyStudy } from './radiology.js'
+import { randomBytes, randomUUID } from 'node:crypto'
+import { calculateInvoiceTotals, cloneInvoice, fromMinorUnits, isInvoiceStatus, isPaymentMethod, lineTotalMinor, normalizePaymentAmount, outstandingMinor, roundMoney, toMinorUnits, type Invoice, type InvoiceStatus, type Payment } from './billing.js'
+import { cloneRadiologyStudy, isRadiologyModality, isRadiologyPriority, isRadiologyStudyStatus, type RadiologyOrderItem, type RadiologyStudy } from './radiology.js'
 import {
   cloneInventoryItem,
   cloneInventoryMovement,
@@ -82,6 +82,13 @@ export type Specimen = {
   updatedAt: string
   collectedAt: string | null
   rejectedReason: string | null
+  orderItemId: string | null
+  testName: string | null
+  tube: string | null
+  patientName: string | null
+  invoiceStatus: InvoiceStatus | null
+  paymentCleared: boolean
+  receivedAt: string | null
 }
 
 export type ResultFlag = 'normal' | 'low' | 'high' | 'critical' | 'not_applicable'
@@ -90,16 +97,55 @@ export type ResultStatus = 'draft' | 'in_review' | 'approved' | 'released' | 'am
 export type LabResult = {
   id: string
   orderItemId: string
+  parameterId: string | null
   resultValue: string
   unit: string | null
   referenceRange: string | null
+  referenceRangeSnapshot: Record<string, unknown> | null
   flag: ResultFlag
   status: ResultStatus
+  enteredById: string | null
   enteredBy: string
+  reviewedById: string | null
   reviewedBy: string | null
+  version: number
+  amendmentReason: string | null
+  supersedesResultId: string | null
+  releasedSnapshotId: string | null
   createdAt: string
   updatedAt: string
 }
+
+export type ResultWorklistItem = {
+  orderId: string
+  publicOrderId: string
+  patientName: string
+  patientSex: PatientSex | null
+  patientDateOfBirth: string | null
+  orderDate: string
+  orderItemId: string
+  catalogId: string
+  catalogCode: string
+  catalogName: string
+  catalogKind: 'lab' | 'radiology'
+  specimenId: string
+  specimenBarcode: string
+  specimenType: string
+  tube: string | null
+  specimenStatus: SpecimenStatus
+}
+
+export type ReportRelease = {
+  id: string
+  orderId: string
+  version: number
+  verificationToken: string
+  releasedById: string
+  releasedAt: string
+  contentSnapshot: Record<string, unknown>
+  settingsSnapshot: Record<string, unknown>
+}
+export type PublicReportVerification = { authentic: boolean; version: number; issuedAt: string; labIdentity: Record<string, unknown> }
 
 export type PatientListOptions = {
   query?: string
@@ -114,6 +160,8 @@ export type TestCatalogItem = {
   specimenType: string
   price: number
   isActive: boolean
+  kind?: 'lab' | 'radiology'
+  isFee?: boolean
 }
 
 export type CreateOrderInput = {
@@ -212,9 +260,11 @@ const MOCK_PATIENTS: Patient[] = [
 ]
 
 const MOCK_CATALOG: TestCatalogItem[] = [
-  { id: '00000000-0000-4000-8000-000000000101', code: 'CBC', name: 'CBC / صورة دم كاملة', specimenType: 'blood / دم', price: 150, isActive: true },
-  { id: '00000000-0000-4000-8000-000000000102', code: 'HBA1C', name: 'HbA1c / سكر تراكمي', specimenType: 'blood / دم', price: 180, isActive: true },
-  { id: '00000000-0000-4000-8000-000000000103', code: 'URINALYSIS', name: 'Urinalysis / تحليل بول كامل', specimenType: 'urine / بول', price: 100, isActive: true },
+  { id: '00000000-0000-4000-8000-000000000101', code: 'CBC', name: 'CBC / صورة دم كاملة', specimenType: 'blood / دم', price: 150, isActive: true, kind: 'lab', isFee: false },
+  { id: '00000000-0000-4000-8000-000000000102', code: 'HBA1C', name: 'HbA1c / سكر تراكمي', specimenType: 'blood / دم', price: 180, isActive: true, kind: 'lab', isFee: false },
+  { id: '00000000-0000-4000-8000-000000000103', code: 'URINALYSIS', name: 'Urinalysis / تحليل بول كامل', specimenType: 'urine / بول', price: 100, isActive: true, kind: 'lab', isFee: false },
+  { id: '00000000-0000-4000-8000-000000000104', code: 'RAD-CT-CHEST', name: 'CT chest', specimenType: 'imaging', price: 500, isActive: true, kind: 'radiology', isFee: false },
+  { id: '00000000-0000-4000-8000-000000000105', code: 'RAD-300', name: 'Radiology fee', specimenType: 'fee', price: 50, isActive: true, kind: 'radiology', isFee: true },
 ]
 
 const MOCK_RECEPTION_BUNDLE = { id: '00000000-0000-4000-8000-000000000201', name: 'باقة صورة الدم', pricePiastres: 14500, testIds: [MOCK_CATALOG[0].id], isActive: true }
@@ -251,7 +301,7 @@ function cloneSpecimen(specimen: Specimen): Specimen {
 }
 
 function cloneLabResult(labResult: LabResult): LabResult {
-  return { ...labResult }
+  return structuredClone(labResult)
 }
 
 function countReportRecords<T extends { status: string }>(records: T[], query: ReportQuery, getTimestamp: (record: T) => string, status?: string): number {
@@ -401,8 +451,8 @@ function createMemoryReceptionInvoice(orderId: string, invoiceNumber: number, li
   return { id: randomUUID(), orderId, invoiceNumber: `INV-${invoiceNumber}`, currency: 'EGP', subtotal: invoiceTotals.subtotal, discount: invoiceTotals.discount, tax: 0, total: invoiceTotals.total, status: paid === 0 ? 'issued' : paid >= totals.totalPiastres ? 'paid' : 'partially_paid', items: invoiceTotals.items.map((line) => ({ ...line, id: randomUUID(), lineTotal: fromMinorUnits(lineTotalMinor(line.quantity, line.unitPrice)) })), payments, createdAt: timestamp, updatedAt: timestamp }
 }
 
-function createMemoryReceptionSpecimens(orderId: string, tests: TestCatalogItem[], timestamp: string): Specimen[] {
-  return [...new Set(tests.map((test) => test.specimenType))].map((specimenType) => ({ id: randomUUID(), orderId, barcode: `AY${randomUUID().replaceAll('-', '').toUpperCase()}`, specimenType, status: 'pending', createdAt: timestamp, updatedAt: timestamp, collectedAt: null, rejectedReason: null }))
+function createMemoryReceptionSpecimens(orderId: string, tests: TestCatalogItem[], patientName: string, invoice: Invoice, timestamp: string): Specimen[] {
+  return tests.map((test) => ({ id: randomUUID(), orderId, barcode: `AY${randomUUID().replaceAll('-', '').toUpperCase()}`, specimenType: test.specimenType, status: 'pending', createdAt: timestamp, updatedAt: timestamp, collectedAt: null, rejectedReason: null, orderItemId: randomUUID(), testName: test.name, tube: null, patientName, invoiceStatus: invoice.status, paymentCleared: outstandingMinor(toMinorUnits(invoice.total), invoice.payments.map((payment) => toMinorUnits(payment.amount))) === 0, receivedAt: null }))
 }
 
 function calculateMemoryCommission(selection: MemoryReceptionSelection, basePiastres: number): ReceptionOrder['commission'] {
@@ -422,6 +472,7 @@ export function createMemoryRepository(): OrderRepository {
   let catalog = MOCK_CATALOG.map(cloneCatalogItem)
   let specimens: Specimen[] = []
   let labResults: LabResult[] = []
+  const reportReleases: ReportRelease[] = []
   let nextInvoiceNumber = 1
   let invoices: Invoice[] = []
   let receptionOrders: ReceptionOrder[] = []
@@ -434,6 +485,37 @@ export function createMemoryRepository(): OrderRepository {
   let homeVisits: HomeVisit[] = []
   let devices: LabDevice[] = []
   const auditEvents: AuditEvent[] = []
+  const enrichRadiologyStudy = (study: RadiologyStudy): RadiologyStudy => {
+    if (!study.orderItemId) return cloneRadiology(study)
+    const linked = specimens.find((specimen) => specimen.orderItemId === study.orderItemId)
+    const reception = linked ? receptionOrders.find((candidate) => candidate.id === linked.orderId) : undefined
+    const catalogItem = linked ? catalog.find((item) => item.name === linked.testName) : undefined
+    const invoice = linked ? invoices.filter((item) => item.orderId === linked.orderId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] : undefined
+    return { ...cloneRadiology(study), patientId: reception?.patientId ?? study.patientId, orderId: linked?.orderId ?? null, publicOrderId: linked?.orderId ?? null, patientName: linked?.patientName ?? null, catalogCode: catalogItem?.code ?? null, catalogName: catalogItem?.name ?? null, invoiceNumber: invoice?.invoiceNumber ?? null, invoiceStatus: invoice?.status ?? null }
+  }
+  const enrichSpecimen = (specimen: Specimen): Specimen => {
+    const order = orders.find((candidate) => candidate.id === specimen.orderId)
+    const patient = order ? patients.find((candidate) => candidate.fullName === order.patient) : undefined
+    const orderInvoices = invoices.filter((invoice) => invoice.orderId === specimen.orderId)
+    const activeInvoices = orderInvoices.filter((invoice) => invoice.status !== 'void')
+    const paymentIsComplete = (invoice: Invoice) => outstandingMinor(toMinorUnits(invoice.total), invoice.payments.map((payment) => toMinorUnits(payment.amount))) === 0
+    const latestInvoice = [...orderInvoices].sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]
+    return { ...specimen, patientName: patient?.fullName ?? order?.patient ?? specimen.patientName, invoiceStatus: latestInvoice?.status ?? null, paymentCleared: activeInvoices.length > 0 && activeInvoices.every(paymentIsComplete) }
+  }
+  const collectMemorySpecimen = (barcode: string, mode: 'payment-required' | 'manager-override'): Specimen => {
+    const specimen = specimens.find((candidate) => candidate.barcode === barcode)
+    if (!specimen) throw new RepositoryNotFoundError('Specimen was not found.')
+    if (specimen.status !== 'pending') throw new RepositoryConflictError('Specimen can only be collected from pending status.')
+    const enriched = enrichSpecimen(specimen)
+    if (mode === 'payment-required' && !enriched.paymentCleared) throw new RepositoryConflictError('Specimen collection requires full invoice payment.')
+    const timestamp = new Date().toISOString()
+    specimen.status = 'collected'
+    specimen.collectedAt = timestamp
+    specimen.updatedAt = timestamp
+    specimen.invoiceStatus = enriched.invoiceStatus
+    specimen.paymentCleared = enriched.paymentCleared
+    return enrichSpecimen(specimen)
+  }
 
   return {
     databaseMode: 'memory' as const,
@@ -477,7 +559,7 @@ export function createMemoryRepository(): OrderRepository {
       const invoiceLines = [...selection.directTests.map((test) => ({ description: test.name, amountPiastres: toMinorUnits(test.price) })), ...selection.bundleLines]
       const invoice = createMemoryReceptionInvoice(order.id, nextInvoiceNumber, invoiceLines, totals, input, actor, timestamp)
       const selectedTests = [...selection.directTests, ...selection.bundleTests]
-      const createdSpecimens = createMemoryReceptionSpecimens(order.id, selectedTests, timestamp)
+      const createdSpecimens = createMemoryReceptionSpecimens(order.id, selectedTests, patient.fullName, invoice, timestamp)
       const receptionOrder: ReceptionOrder = { ...order, patientId: patient.id, practitionerId: selection.practitioner?.id ?? null, practitioner: selection.practitioner?.name ?? null, fasting: input.fasting ?? false, diagnosis: input.diagnosis ?? null, subtotalPiastres: totals.subtotalPiastres, discountPiastres: totals.discountPiastres, insuranceCoveragePiastres: totals.coveragePiastres, invoice, specimens: createdSpecimens, commission: calculateMemoryCommission(selection, totals.totalPiastres) }
       recordAuditEvent(auditEvents, { actorId: input.actorId ?? actor, action: 'order.created', entityType: 'order', metadata: { priority: order.priority, amount: totals.totalPiastres } })
       nextOrderNumber += 1
@@ -491,8 +573,8 @@ export function createMemoryRepository(): OrderRepository {
     },
     listReceptionOrders: (page) => {
       const createdIds = new Set(receptionOrders.map((item) => item.id))
-      const legacy = orders.filter((order) => !createdIds.has(order.id)).map((order): ReceptionOrder => ({ ...order, patientId: patients.find((patient) => patient.fullName === order.patient)?.id ?? '', practitionerId: null, practitioner: null, fasting: false, diagnosis: null, subtotalPiastres: 0, discountPiastres: 0, insuranceCoveragePiastres: 0, invoice: null, specimens: specimens.filter((specimen) => specimen.orderId === order.id).map(cloneSpecimen), commission: null }))
-      return paginate([...receptionOrders.map((item) => ({ ...item, invoice: item.invoice ? cloneInvoice(item.invoice) : null, specimens: item.specimens.map(cloneSpecimen) })), ...legacy], page)
+      const legacy = orders.filter((order) => !createdIds.has(order.id)).map((order): ReceptionOrder => ({ ...order, patientId: patients.find((patient) => patient.fullName === order.patient)?.id ?? '', practitionerId: null, practitioner: null, fasting: false, diagnosis: null, subtotalPiastres: 0, discountPiastres: 0, insuranceCoveragePiastres: 0, invoice: null, specimens: specimens.filter((specimen) => specimen.orderId === order.id).map(enrichSpecimen), commission: null }))
+      return paginate([...receptionOrders.map((item) => ({ ...item, invoice: item.invoice ? cloneInvoice(item.invoice) : null, specimens: item.specimens.map(enrichSpecimen) })), ...legacy], page)
     },
     createOrder: (input) => {
       const patient = patients.find((candidate) => candidate.id === input.patientId)
@@ -514,49 +596,111 @@ export function createMemoryRepository(): OrderRepository {
       orders = [order, ...orders]
       return cloneOrder(order)
     },
-    listSpecimens: (status, page) => paginate(specimens.filter((specimen) => !status || specimen.status === status), page).map(cloneSpecimen),
+    listSpecimens: (status, page) => paginate(specimens.filter((specimen) => !status || specimen.status === status), page).map(enrichSpecimen),
     createSpecimen: (orderId, specimenType, barcode) => {
       if (!orders.some((order) => order.id === orderId)) throw new RepositoryNotFoundError('Order was not found.')
       if (specimens.some((specimen) => specimen.barcode === barcode)) throw new RepositoryConflictError('Barcode already exists.')
       const timestamp = new Date().toISOString()
       const specimen: Specimen = {
         id: randomUUID(), orderId, barcode, specimenType, status: 'pending', createdAt: timestamp,
-        updatedAt: timestamp, collectedAt: null, rejectedReason: null,
+        updatedAt: timestamp, collectedAt: null, rejectedReason: null, orderItemId: null, testName: null, tube: null,
+        patientName: null, invoiceStatus: invoices.find((invoice) => invoice.orderId === orderId)?.status ?? null,
+        paymentCleared: false, receivedAt: null,
       }
       specimens = [specimen, ...specimens]
-      return cloneSpecimen(specimen)
+      return enrichSpecimen(specimen)
     },
-    collectSpecimen: (barcode) => {
+    collectSpecimen: (barcode) => collectMemorySpecimen(barcode, 'payment-required'),
+    collectSpecimenWithPaymentOverride: (barcode) => collectMemorySpecimen(barcode, 'manager-override'),
+    rejectSpecimen: (barcode, reason) => {
       const specimen = specimens.find((candidate) => candidate.barcode === barcode)
       if (!specimen) throw new RepositoryNotFoundError('Specimen was not found.')
-      if (specimen.status !== 'pending') throw new RepositoryConflictError('Specimen can only be collected from pending status.')
+      if (!['pending', 'collected'].includes(specimen.status)) throw new RepositoryConflictError('Specimen can only be rejected from pending or collected status.')
       const timestamp = new Date().toISOString()
-      specimen.status = 'collected'
-      specimen.collectedAt = timestamp
-      specimen.updatedAt = timestamp
-      return cloneSpecimen(specimen)
+      specimen.status = 'rejected'; specimen.rejectedReason = reason; specimen.updatedAt = timestamp
+      return enrichSpecimen(specimen)
     },
-    listResults: (orderId, page) => paginate(labResults.filter((labResult) => !orderId || labResult.orderItemId === orderId), page)
+    receiveSpecimen: (barcode) => {
+      const specimen = specimens.find((candidate) => candidate.barcode === barcode)
+      if (!specimen) throw new RepositoryNotFoundError('Specimen was not found.')
+      if (specimen.status !== 'collected') throw new RepositoryConflictError('Specimen can only be received from collected status.')
+      const timestamp = new Date().toISOString()
+      specimen.status = 'received'; specimen.receivedAt = timestamp; specimen.updatedAt = timestamp
+      return enrichSpecimen(specimen)
+    },
+    listResultWorklist: (page) => paginate(specimens.filter((specimen) => specimen.orderItemId && specimen.testName && ['received', 'processing'].includes(specimen.status)).map((specimen): ResultWorklistItem | null => {
+      const order = orders.find((candidate) => candidate.id === specimen.orderId)
+      const reception = receptionOrders.find((candidate) => candidate.id === specimen.orderId)
+      const patient = reception ? patients.find((candidate) => candidate.id === reception.patientId) : undefined
+      const catalogItem = catalog.find((candidate) => candidate.name === specimen.testName)
+      if (!order || !catalogItem) return null
+      return { orderId: order.id, publicOrderId: order.id, patientName: patient?.fullName ?? order.patient, patientSex: patient?.sex ?? null, patientDateOfBirth: patient?.dateOfBirth ?? null, orderDate: order.time, orderItemId: specimen.orderItemId as string, catalogId: catalogItem.id, catalogCode: catalogItem.code, catalogName: catalogItem.name, catalogKind: 'lab', specimenId: specimen.id, specimenBarcode: specimen.barcode, specimenType: specimen.specimenType, tube: specimen.tube, specimenStatus: specimen.status }
+    }).filter((entry): entry is ResultWorklistItem => entry !== null), page),
+    listResults: (orderId, page) => paginate(labResults.filter((labResult) => !orderId || labResult.orderItemId === orderId || specimens.some((specimen) => specimen.orderItemId === labResult.orderItemId && specimen.orderId === orderId)), page)
       .map(cloneLabResult),
-    enterResult: (orderItemId, value, unit, referenceRange, flag, enteredBy) => {
+    enterResult: (orderItemId, value, unit, referenceRange, flag, enteredBy, enteredById, parameterId, referenceRangeSnapshot) => {
+      const specimen = specimens.find((candidate) => candidate.orderItemId === orderItemId && ['received', 'processing'].includes(candidate.status))
+      if (!specimen) throw new RepositoryConflictError('Result requires a received or processing lab specimen.')
       const timestamp = new Date().toISOString()
       const labResult: LabResult = {
-        id: randomUUID(), orderItemId, resultValue: value, unit: unit ?? null, referenceRange: referenceRange ?? null,
-        flag, status: 'draft', enteredBy: normalizeActor(enteredBy), reviewedBy: null, createdAt: timestamp, updatedAt: timestamp,
+        id: randomUUID(), orderItemId, parameterId: parameterId ?? null, resultValue: value, unit: unit ?? null, referenceRange: referenceRange ?? null,
+        referenceRangeSnapshot: referenceRangeSnapshot ? structuredClone(referenceRangeSnapshot) : null, flag, status: 'draft', enteredById: enteredById ?? null,
+        enteredBy: normalizeActor(enteredBy), reviewedById: null, reviewedBy: null, version: 1, amendmentReason: null, supersedesResultId: null, releasedSnapshotId: null, createdAt: timestamp, updatedAt: timestamp,
       }
       labResults = [labResult, ...labResults]
       return cloneLabResult(labResult)
     },
-    reviewResult: (id, reviewedBy) => {
+    reviewResult: (id, reviewedBy, reviewedById) => {
       const reviewer = normalizeActor(reviewedBy)
       const labResult = labResults.find((candidate) => candidate.id === id)
       if (!labResult) throw new RepositoryNotFoundError('Lab result was not found.')
+      if (labResult.status === 'in_review' && (!reviewedById || !labResult.enteredById || labResult.enteredById === reviewedById)) throw new RepositoryConflictError('A different user identity is required to approve the result.')
       if (labResult.status === 'draft') labResult.status = 'in_review'
       else if (labResult.status === 'in_review') labResult.status = 'approved'
       else throw new RepositoryConflictError('Lab result is not in a reviewable status.')
+      labResult.reviewedById = reviewedById ?? null
       labResult.reviewedBy = reviewer
       labResult.updatedAt = new Date().toISOString()
       return cloneLabResult(labResult)
+    },
+    amendResult: (id, value, unit, referenceRange, flag, reason, enteredBy, enteredById, parameterId, referenceRangeSnapshot) => {
+      const previous = labResults.find((candidate) => candidate.id === id)
+      if (!previous) throw new RepositoryNotFoundError('Lab result was not found.')
+      if (previous.status !== 'approved' && previous.status !== 'released' && previous.status !== 'amended') throw new RepositoryConflictError('Only approved or released results can be amended.')
+      if (labResults.some((candidate) => candidate.supersedesResultId === id)) throw new RepositoryConflictError('This result version already has an amendment.')
+      if (!reason.trim()) throw new RepositoryInputError('Amendment reason is required.')
+      const amended = { ...previous, id: randomUUID(), resultValue: value, unit: unit ?? null, referenceRange: referenceRange ?? null, referenceRangeSnapshot: referenceRangeSnapshot ? structuredClone(referenceRangeSnapshot) : null, flag, status: 'draft' as const, enteredBy: normalizeActor(enteredBy), enteredById: enteredById ?? null, reviewedBy: null, reviewedById: null, version: previous.version + 1, amendmentReason: reason.trim(), supersedesResultId: previous.id, releasedSnapshotId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      labResults = [amended, ...labResults]
+      return cloneLabResult(amended)
+    },
+    releaseReport: (orderId, releasedById, contentSnapshot, settingsSnapshot) => {
+      if (!UUID_PATTERN.test(releasedById)) throw new RepositoryInputError('releasedById must be a valid UUID.')
+      const verificationToken = randomBytes(32).toString('base64url')
+      if (!orders.some((candidate) => candidate.id === orderId) && !receptionOrders.some((candidate) => candidate.id === orderId)) throw new RepositoryNotFoundError('Order was not found.')
+      const version = reportReleases.filter((release) => release.orderId === orderId).reduce((max, release) => Math.max(max, release.version), 0) + 1
+      const release: ReportRelease = { id: randomUUID(), orderId, version, verificationToken, releasedById, releasedAt: new Date().toISOString(), contentSnapshot: structuredClone(contentSnapshot), settingsSnapshot: structuredClone(settingsSnapshot) }
+      const orderItemIds = new Set(specimens.filter((specimen) => specimen.orderId === orderId).map((specimen) => specimen.orderItemId))
+      for (const labResult of labResults) {
+        if (labResult.status === 'approved' && orderItemIds.has(labResult.orderItemId)) {
+          labResult.status = 'released'
+          labResult.releasedSnapshotId = release.id
+          labResult.updatedAt = release.releasedAt
+        }
+      }
+      reportReleases.push(release)
+      return structuredClone(release)
+    },
+    getReportRelease: (id) => {
+      const release = reportReleases.find((candidate) => candidate.id === id)
+      return release ? structuredClone(release) : null
+    },
+    listReportReleases: (orderId) => reportReleases.filter((release) => release.orderId === orderId).sort((left, right) => right.version - left.version).map((release) => structuredClone(release)),
+    getPublicReportVerification: (token) => {
+      const release = reportReleases.find((candidate) => candidate.verificationToken === token)
+      if (!release) return null
+      const settings = release.settingsSnapshot
+      const labIdentity = Object.fromEntries(['nameAr', 'nameEn', 'licenseNumber'].filter((key) => typeof settings[key] === 'string').map((key) => [key, settings[key]]))
+      return { authentic: true, version: release.version, issuedAt: release.releasedAt, labIdentity }
     },
     listInvoices: (status, page) => {
       if (status !== undefined && !isInvoiceStatus(status)) throw new RepositoryInputError('status is invalid.')
@@ -607,28 +751,47 @@ export function createMemoryRepository(): OrderRepository {
       invoice.updatedAt = new Date().toISOString()
       return cloneInvoice(invoice)
     },
+    listRadiologyOrderItems: (page) => {
+      const scheduledItemIds = new Set(radiologyStudies.map((study) => study.orderItemId).filter((id): id is string => id !== null))
+      const items: RadiologyOrderItem[] = specimens.flatMap((specimen) => {
+        if (!specimen.orderItemId || scheduledItemIds.has(specimen.orderItemId)) return []
+        const order = orders.find((candidate) => candidate.id === specimen.orderId)
+        const reception = receptionOrders.find((candidate) => candidate.id === specimen.orderId)
+        const item = catalog.find((candidate) => candidate.name === specimen.testName)
+        const invoice = invoices.filter((candidate) => candidate.orderId === specimen.orderId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+        if (!order || String(order.status) === 'cancelled' || !reception || !item || item.kind !== 'radiology' || item.isFee || !invoice) return []
+        return [{ orderItemId: specimen.orderItemId, orderId: order.id, publicOrderId: order.id, patientId: reception.patientId, patientName: patients.find((patient) => patient.id === reception.patientId)?.fullName ?? order.patient, catalogCode: item.code, catalogName: item.name, invoiceNumber: invoice.invoiceNumber, invoiceStatus: invoice.status }]
+      })
+      return paginate(items, page)
+    },
     listRadiologyStudies: (status, page) => {
       if (status !== undefined && !isRadiologyStudyStatus(status)) throw new RepositoryInputError('status is invalid.')
-      return paginate(radiologyStudies.filter((study) => status === undefined || study.status === status), page)
-        .map(cloneRadiology)
+      return paginate(radiologyStudies.filter((study) => status === undefined || study.status === status), page).map(enrichRadiologyStudy)
     },
-    createRadiologyStudy: (patientId, modality, bodyPart, priority, scheduledAt, referringProvider) => {
-      if (!UUID_PATTERN.test(patientId) || !isRadiologyModality(modality) || !bodyPart.trim() || bodyPart.trim().length > 200 || !isRadiologyPriority(priority)) {
-        throw new RepositoryInputError('Radiology study input is invalid.')
-      }
-      if (scheduledAt !== undefined && Number.isNaN(new Date(scheduledAt).getTime())) throw new RepositoryInputError('scheduledAt is invalid.')
-      if (referringProvider !== undefined && (!referringProvider.trim() || referringProvider.trim().length > 200)) {
-        throw new RepositoryInputError('referringProvider is invalid.')
-      }
-      if (!patients.some((patient) => patient.id === patientId)) throw new RepositoryNotFoundError('Patient was not found.')
+    createRadiologyStudy: (orderItemId, modality, bodyPart, priority, scheduledAt, referringProvider) => {
+      if (!UUID_PATTERN.test(orderItemId) || !isRadiologyModality(modality) || !bodyPart.trim() || bodyPart.trim().length > 200 || !isRadiologyPriority(priority)) throw new RepositoryInputError('Radiology study input is invalid.')
+      if (Number.isNaN(new Date(scheduledAt).getTime())) throw new RepositoryInputError('scheduledAt is invalid.')
+      if (referringProvider !== undefined && (!referringProvider.trim() || referringProvider.trim().length > 200)) throw new RepositoryInputError('referringProvider is invalid.')
+      const linked = specimens.find((candidate) => candidate.orderItemId === orderItemId)
+      if (!linked) throw new RepositoryNotFoundError('Radiology order item was not found.')
+      const order = orders.find((candidate) => candidate.id === linked.orderId)
+      const reception = receptionOrders.find((candidate) => candidate.id === linked.orderId)
+      const catalogItem = catalog.find((candidate) => candidate.name === linked.testName)
+      if (!catalogItem || catalogItem.kind !== 'radiology' || catalogItem.isFee) throw new RepositoryInputError('Order item must be a radiology service, not a fee.')
+      if (!order || !reception) throw new RepositoryNotFoundError('Radiology order item was not found.')
+      if (String(order.status) === 'cancelled') throw new RepositoryConflictError('Cancelled orders cannot be scheduled for radiology.')
+      if (!invoices.some((invoice) => invoice.orderId === order.id)) throw new RepositoryConflictError('Radiology order item requires an invoice.')
+      if (radiologyStudies.some((study) => study.orderItemId === orderItemId)) throw new RepositoryConflictError('Radiology order item already has a study.')
       const timestamp = new Date().toISOString()
       const study: RadiologyStudy = {
-        id: randomUUID(), accessionNumber: `RAD-${nextAccessionNumber++}`, patientId, modality, bodyPart: bodyPart.trim(), priority,
-        status: 'scheduled', scheduledAt: scheduledAt ?? null, performedAt: null, reportText: null, impression: null,
+        orderItemId, orderId: order.id, publicOrderId: order.id, patientName: reception.patient,
+        catalogCode: catalogItem.code, catalogName: catalogItem.name, invoiceNumber: null, invoiceStatus: null,
+        id: randomUUID(), accessionNumber: `RAD-${nextAccessionNumber++}`, patientId: reception.patientId, modality, bodyPart: bodyPart.trim(), priority,
+        status: 'scheduled', scheduledAt: new Date(scheduledAt).toISOString(), performedAt: null, reportText: null, impression: null,
         referringProvider: referringProvider ?? null, verifiedBy: null, createdAt: timestamp, updatedAt: timestamp,
       }
       radiologyStudies = [study, ...radiologyStudies]
-      return cloneRadiology(study)
+      return enrichRadiologyStudy(study)
     },
     startRadiologyStudy: (id) => {
       validateRadiologyId(id)
@@ -638,7 +801,7 @@ export function createMemoryRepository(): OrderRepository {
       study.status = 'in_progress'
       study.performedAt = new Date().toISOString()
       study.updatedAt = study.performedAt
-      return cloneRadiology(study)
+      return enrichRadiologyStudy(study)
     },
     reportRadiologyStudy: (id, reportText, impression) => {
       validateRadiologyId(id)
@@ -650,7 +813,7 @@ export function createMemoryRepository(): OrderRepository {
       study.reportText = reportText.trim()
       study.impression = impression.trim()
       study.updatedAt = new Date().toISOString()
-      return cloneRadiology(study)
+      return enrichRadiologyStudy(study)
     },
     verifyRadiologyStudy: (id, verifiedBy) => {
       validateRadiologyId(id)
@@ -662,7 +825,7 @@ export function createMemoryRepository(): OrderRepository {
       study.status = 'verified'
       study.verifiedBy = verifier
       study.updatedAt = new Date().toISOString()
-      return cloneRadiology(study)
+      return enrichRadiologyStudy(study)
     },
     listInventoryItems: (activeOnly) => inventoryItems
       .filter((item) => activeOnly !== true || item.isActive)

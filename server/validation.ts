@@ -15,15 +15,23 @@ export const DEFAULT_PAGE_SIZE = 50
 export const MAX_PAGE_SIZE = 100
 
 export type CreateSpecimenInput = { orderId: string; specimenType: string; barcode: string }
-export type EnterResultInput = { orderItemId: string; value: string; unit?: string; referenceRange?: string; flag: ResultFlag }
+export type SpecimenReasonInput = { reason: string }
+
+export function validateSpecimenReasonInput(value: unknown): SpecimenReasonInput | null {
+  if (!isRecord(value)) return null
+  const reason = validateText(value.reason, 500)
+  return reason && reason.length >= 1 ? { reason } : null
+}
+export type EnterResultInput = { orderItemId: string; parameterId?: string; value: string }
+export type AmendResultInput = { value: string; reason: string }
 export type CreateInvoiceInput = { orderId: string; items: InvoiceItemInput[]; discount: number; tax: number }
 export type RecordPaymentInput = { amount: number; method: PaymentMethod; reference?: string }
 export type CreateRadiologyStudyInput = {
-  patientId: string
+  orderItemId: string
   modality: RadiologyModality
   bodyPart: string
   priority: RadiologyPriority
-  scheduledAt?: string
+  scheduledAt: string
   referringProvider?: string
 }
 export type ReportRadiologyStudyInput = { reportText: string; impression: string }
@@ -186,11 +194,16 @@ export function validateResultInput(value: unknown): EnterResultInput | null {
   if (!isRecord(value)) return null
   const orderItemId = validateText(value.orderItemId, 100)
   const resultValue = validateText(value.value, 2000)
-  const unit = validateOptionalText(value.unit, 100)
-  const referenceRange = validateOptionalText(value.referenceRange, 200)
-  const flag = value.flag
-  if (!orderItemId || !resultValue || unit === null || referenceRange === null || !isResultFlag(flag)) return null
-  return { orderItemId, value: resultValue, unit: unit ?? undefined, referenceRange: referenceRange ?? undefined, flag }
+  const parameterId = value.parameterId === undefined ? undefined : validateText(value.parameterId, 100)
+  if (!orderItemId || !resultValue || (value.parameterId !== undefined && !parameterId)) return null
+  return { orderItemId, value: resultValue, ...(parameterId ? { parameterId } : {}) }
+}
+
+export function validateAmendResultInput(value: unknown): AmendResultInput | null {
+  if (!isRecord(value)) return null
+  const resultValue = validateText(value.value, 2000)
+  const reason = validateText(value.reason, 500)
+  return resultValue && reason ? { value: resultValue, reason } : null
 }
 
 export function validateNonNegativeNumber(value: unknown): value is number {
@@ -228,19 +241,15 @@ export function isValidDateTime(value: string): boolean {
 }
 
 export function validateRadiologyStudyInput(value: unknown): CreateRadiologyStudyInput | null {
-  if (!isRecord(value) || typeof value.patientId !== 'string' || !isUuid(value.patientId.trim())) return null
+  if (!isRecord(value) || typeof value.orderItemId !== 'string' || !isUuid(value.orderItemId.trim())) return null
   const modality = value.modality
   const bodyPart = validateText(value.bodyPart, 200)
   const priority = value.priority === undefined ? 'normal' : value.priority
-  const scheduledAt = value.scheduledAt === undefined ? undefined : value.scheduledAt
+  const scheduledAt = value.scheduledAt
   const referringProvider = validateOptionalText(value.referringProvider, 200)
   if (!isRadiologyModality(modality) || !bodyPart || !isRadiologyPriority(priority) || referringProvider === null) return null
-  if (scheduledAt !== undefined && (typeof scheduledAt !== 'string' || !isValidDateTime(scheduledAt))) return null
-  return {
-    patientId: value.patientId.trim(), modality, bodyPart, priority,
-    ...(scheduledAt !== undefined ? { scheduledAt } : {}),
-    ...(referringProvider ? { referringProvider } : {}),
-  }
+  if (typeof scheduledAt !== 'string' || !isValidDateTime(scheduledAt)) return null
+  return { orderItemId: value.orderItemId.trim(), modality, bodyPart, priority, scheduledAt, ...(referringProvider ? { referringProvider } : {}) }
 }
 
 export function validateRadiologyReportInput(value: unknown): ReportRadiologyStudyInput | null {

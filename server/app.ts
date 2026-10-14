@@ -35,7 +35,7 @@ export function createApp({ repository, auth, phase1 = createMemoryPhase1Store()
   const routes = [
     ...systemRoutes(repository),
     ...authRoutes(auth),
-    ...labRoutes(repository),
+    ...labRoutes(repository, phase1),
     ...operationsRoutes(repository),
     ...createPhase1Routes(phase1, phase1Importer),
   ]
