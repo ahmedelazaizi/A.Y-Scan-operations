@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
 import { once } from 'node:events'
-import { createApp } from './app.js'
+import { createApp, type AppDependencies } from './app.js'
 import { createMemoryUserStore } from './auth/memory-user-store.js'
 import { createAuthService, type AuthService } from './auth/service.js'
 import { ROLES, type Role } from './auth/types.js'
@@ -18,7 +18,7 @@ const FAR_FUTURE = new Date('2999-01-01T00:00:00.000Z')
 export type TestApp = { handler: ReturnType<typeof createApp>; auth: AuthService }
 
 /** Builds the real app over an in-memory user store seeded with one active user per role (user@<role>.test). */
-export async function createTestApp(repository: OrderRepository = mockRepository, phase1: Phase1Store = createMemoryPhase1Store()): Promise<TestApp> {
+export async function createTestApp(repository: OrderRepository = mockRepository, phase1: Phase1Store = createMemoryPhase1Store(), trialLicense?: AppDependencies['trialLicense']): Promise<TestApp> {
   const store = createMemoryUserStore()
   const auth = createAuthService(store)
   for (const role of ROLES) {
@@ -32,11 +32,11 @@ export async function createTestApp(repository: OrderRepository = mockRepository
     })
     await store.createSession(user.id, createHash('sha256').update(TEST_TOKENS[role]).digest(), FAR_FUTURE)
   }
-  return { handler: createApp({ repository, auth, phase1 }), auth }
+  return { handler: createApp({ repository, auth, phase1, trialLicense }), auth }
 }
 
-export async function startTestServer(repository: OrderRepository = mockRepository): Promise<{ server: Server; baseUrl: string; auth: AuthService }> {
-  const app = await createTestApp(repository)
+export async function startTestServer(repository: OrderRepository = mockRepository, trialLicense?: AppDependencies['trialLicense']): Promise<{ server: Server; baseUrl: string; auth: AuthService }> {
+  const app = await createTestApp(repository, createMemoryPhase1Store(), trialLicense)
   const server = createServer(app.handler)
   server.listen(0)
   await once(server, 'listening')

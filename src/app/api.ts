@@ -142,6 +142,10 @@ const KNOWN_SERVER_MESSAGES: Record<string, string> = {
   'Catalog test was not found.': 'لم يتم العثور على التحليل.',
   'One or more tests are not in the active catalog.': 'تحليل أو أكثر غير مفعّل في الدليل. حدّث القائمة وحاول مرة أخرى.',
   'patientId does not reference an existing patient.': 'المريض المحدد غير موجود في السجل.',
+  'Activation code is invalid.': 'رمز التفعيل غير صالح أو لا يخص هذا التثبيت.',
+  'This installation already has an activation.': 'هذا التثبيت مفعّل بالفعل ولا يمكن استبدال رمز التفعيل.',
+  'Trial activation is required before creating records.': 'يجب تفعيل نسخة التجربة قبل إنشاء سجلات جديدة.',
+  'Trial record creation limit reached.': 'نفدت حصة إنشاء السجلات الجديدة؛ ما زال عرض السجلات الموجودة وتحديثها متاحًا.',
 }
 
 export class ApiError extends Error {
@@ -663,6 +667,8 @@ function statusFallbackMessage(status: number): string {
   return 'تعذر إتمام الطلب.'
 }
 
+export const LICENSE_USAGE_REFRESH_EVENT = 'ayscan-license-usage-refresh'
+
 async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers)
   if (options?.body !== undefined && options.body !== null && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
@@ -695,6 +701,9 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
     throw new ApiError(message, response.status, { code, serverMessage, retryAfterSeconds })
   }
 
+  if (options?.method && ['POST', 'PATCH'].includes(options.method.toUpperCase()) && path !== '/api/license/activate') {
+    window.dispatchEvent(new Event(LICENSE_USAGE_REFRESH_EVENT))
+  }
   return payload as T
 }
 
@@ -963,3 +972,7 @@ export function updatePhase1Range(id: string, input: Partial<NewPhase1Range>): P
 export function fetchPhase1Ranges(catalogId?: string): Promise<Phase1Range[]> { return requestJson<Phase1Range[]>(`/api/phase1/ranges${catalogId ? `?catalogId=${encodeURIComponent(catalogId)}` : ''}`) }
 export function approvePhase1Range(id: string): Promise<Phase1Range> { return requestJson<Phase1Range>(`/api/phase1/ranges/${encodeURIComponent(id)}/approve`, { method: 'POST' }) }
 export function importPhase1Seed(): Promise<Phase1ImportReport> { return requestJson<Phase1ImportReport>('/api/phase1/import', { method: 'POST', body: '{}' }) }
+
+export type LicenseStatus = { edition: 'legacy' | 'trial'; status: 'not_required' | 'activation_required' | 'active' | 'limit_reached'; installationId: string; recordLimit: number | null; recordsUsed: number; recordsRemaining: number | null; canEnterData: boolean }
+export function fetchLicenseStatus(): Promise<LicenseStatus> { return requestJson<LicenseStatus>('/api/license/status') }
+export function activateLicense(activationCode: string): Promise<LicenseStatus> { return requestJson<LicenseStatus>('/api/license/activate', { method: 'POST', body: JSON.stringify({ activationCode }) }) }

@@ -15,6 +15,7 @@
 [CmdletBinding()]
 param(
     [switch]$SkipInstaller,
+    [switch]$Trial,
     # Path to ISCC.exe when Inno Setup is installed somewhere unusual.
     [string]$InnoCompiler
 )
@@ -93,6 +94,13 @@ try {
     Write-Step 'Preparing the staging folder'
     if (Test-Path -LiteralPath $StageDir) { Remove-Item -LiteralPath $StageDir -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
+    if ($Trial) {
+        $trialPublicKey = Join-Path $script:ProjectRoot 'secrets\trial-public.pem'
+        if (-not (Test-Path -LiteralPath $trialPublicKey)) { throw 'Trial public key is missing. Run pnpm trial:keygen, then build again.' }
+        $trialUtf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText((Join-Path $StageDir 'trial-build.json'), '{"edition":"trial","recordLimit":50}', $trialUtf8NoBom)
+        Copy-Item -LiteralPath $trialPublicKey -Destination (Join-Path $StageDir 'trial-public.pem')
+    }
     Copy-Item -LiteralPath (Join-Path $script:ProjectRoot 'dist') -Destination (Join-Path $StageDir 'dist') -Recurse
     Copy-Item -LiteralPath (Join-Path $script:ProjectRoot 'dist-server') -Destination (Join-Path $StageDir 'dist-server') -Recurse
     New-Item -ItemType Directory -Force -Path (Join-Path $StageDir 'db') | Out-Null

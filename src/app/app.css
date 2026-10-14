@@ -383,6 +383,7 @@ button:focus-visible { outline: 3px solid rgba(18, 169, 207, .45); outline-offse
   body:has(.receipt-print-list) .receipt-print-list { display: block !important; position: absolute !important; inset: 0 auto auto 0 !important; width: 74mm !important; }
   body:has(.receipt-print-list) .thermal-receipt { width: 74mm !important; margin: 0 !important; padding: 0 !important; color: #000 !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+.trial-gate { min-height: 100vh; display: grid; place-items: center; padding: 22px; background: var(--surface); }.trial-card { width: min(100%, 520px); padding: 26px; }.trial-card h1 { margin: 0 0 8px; color: var(--navy); font-size: 22px; }.trial-card > p { color: var(--muted); }.trial-id-row { display: flex; gap: 8px; direction: ltr; }.trial-id-row .form-input { margin-bottom: 16px; }.trial-card textarea { min-height: 110px; resize: vertical; }.trial-card form .primary-button { justify-content: center; width: 100%; }
 @page specimen-label { size: 50mm 30mm; margin: 0; }
 @media print {
   body:has(.specimen-label-print-list) { width: 50mm !important; min-width: 0 !important; }

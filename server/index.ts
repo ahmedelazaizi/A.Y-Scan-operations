@@ -8,6 +8,7 @@ import { startEmbeddedPostgres, type EmbeddedPostgres } from './embedded-postgre
 import { runMigrations } from './migrations.js'
 import { createStores } from './storage/factory.js'
 import { createPostgresPhase1SeedImporter } from './phase1-seed.js'
+import { readTrialProfile } from './trial-license.js'
 
 const REQUEST_TIMEOUT_MS = 30_000
 const SHUTDOWN_GRACE_MS = 10_000
@@ -59,7 +60,8 @@ if (config.webRoot && !existsSync(path.join(config.webRoot, 'index.html'))) {
   console.error(`WARNING: the web app was not found at ${config.webRoot} (index.html is missing). The server will answer API requests only.`)
 }
 
-const stores = createStores(databaseUrl, { timeZone: config.timeZone })
+const trialProfile = await readTrialProfile()
+const stores = createStores(databaseUrl, { timeZone: config.timeZone, ...trialProfile })
 try {
   const bootstrap = await stores.auth.bootstrapAdmin(process.env, { useDefaults: true })
   if (bootstrap === 'created') console.log('Created the first admin account from AUTH_ADMIN_USERNAME.')
@@ -70,7 +72,7 @@ try {
   await embeddedPostgres?.stop()
   process.exit(1)
 }
-const server = createServer(createApp({ repository: stores.repository, auth: stores.auth, phase1: stores.phase1, phase1Importer: stores.phase1Importer, webRoot: config.webRoot ?? undefined }))
+const server = createServer(createApp({ repository: stores.repository, auth: stores.auth, phase1: stores.phase1, phase1Importer: stores.phase1Importer, trialLicense: stores.trialLicense, webRoot: config.webRoot ?? undefined }))
 const sessionPruner = setInterval(() => {
   stores.auth.pruneSessions().catch((error: unknown) => console.error('Session cleanup failed:', describeError(error)))
 }, SESSION_PRUNE_INTERVAL_MS)

@@ -4,6 +4,8 @@ import {
   AUTH_REQUIRED_EVENT,
   clearStoredAuthToken,
   fetchCurrentUser,
+  fetchLicenseStatus,
+  LICENSE_USAGE_REFRESH_EVENT,
   fetchDashboard,
   getStoredAuthToken,
   logout,
@@ -14,6 +16,7 @@ import {
   type Capability,
   type Dashboard,
   type LoginResponse,
+  type LicenseStatus,
 } from './api'
 import { ChangePasswordDialog, RequiredPasswordChangeView } from './ChangePasswordView'
 import BillingView from './BillingView'
@@ -34,6 +37,7 @@ import Phase1View from './Phase1View'
 import { createSession, SessionContext, type Session } from './session'
 import { PublicReportVerification } from './LabReportView'
 import UsersView from './UsersView'
+import TrialActivationView from './TrialActivationView'
 
 type AppView = 'dashboard' | 'patients' | 'catalog' | 'phase1' | 'operations' | 'radiology' | 'home-visits' | 'billing' | 'inventory' | 'insurance' | 'devices' | 'reports' | 'users'
 type ToastTone = 'success' | 'error'
@@ -108,6 +112,16 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
   const [isOrderModalOpen, setOrderModalOpen] = useState(false)
   const [isPasswordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null)
+  const [license, setLicense] = useState<LicenseStatus | null>(null)
+  const [licenseError, setLicenseError] = useState(false)
+  const [licenseRetry, setLicenseRetry] = useState(0)
+
+  useEffect(() => { let cancelled = false; fetchLicenseStatus().then((value) => { if (!cancelled) setLicense(value) }).catch(() => { if (!cancelled) { setLicense(null); setLicenseError(true) } }); return () => { cancelled = true } }, [licenseRetry])
+  useEffect(() => {
+    const refreshLicense = () => { void fetchLicenseStatus().then(setLicense).catch(() => setLicenseError(true)) }
+    window.addEventListener(LICENSE_USAGE_REFRESH_EVENT, refreshLicense)
+    return () => window.removeEventListener(LICENSE_USAGE_REFRESH_EVENT, refreshLicense)
+  }, [])
 
   const visibleNav = useMemo(() => NAV_ITEMS.filter((item) => item.anyOf.some((capability) => can(capability))), [can])
 
@@ -160,6 +174,11 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
     }
   }
 
+  if (!license) return licenseError
+    ? <main className="trial-gate" dir="rtl"><section className="panel trial-card" role="alert"><h1>تعذر التحقق من الترخيص</h1><p>تحقق من اتصال الخادم ثم أعد المحاولة.</p><button className="primary-button" type="button" onClick={() => { setLicenseError(false); setLicenseRetry((value) => value + 1) }}>إعادة المحاولة</button></section></main>
+    : <div className="boot-screen" role="status" aria-live="polite">جارٍ التحقق من حالة الترخيص…</div>
+  if (license.edition === 'trial' && license.status === 'activation_required') return <TrialActivationView status={license} isAdmin={user.role === 'admin'} onActivated={setLicense} onLogout={onLogout} />
+
   return <SessionContext.Provider value={session}>
     <div className="app-shell">
       <aside className={`sidebar ${isSidebarOpen ? 'sidebar-open' : ''}`} aria-label="التنقل الرئيسي">
@@ -182,6 +201,7 @@ function AuthenticatedApp({ session, onSessionUserChange, onLogout }: { session:
             <UserMenu user={user} onChangePassword={() => setPasswordDialogOpen(true)} onLogout={onLogout} />
           </div>
         </header>
+        {license?.edition === 'trial' && <div className="api-notice" role="status">{license.status === 'limit_reached' ? 'نفدت حصة إنشاء السجلات الجديدة؛ ما زال عرض السجلات الموجودة وتحديثها متاحًا.' : `استخدمت ${license.recordsUsed} من ${license.recordLimit} سجلًا — المتبقي ${license.recordsRemaining}.`}</div>}
         {renderView()}
         <Toast toast={toast} />
       </main>

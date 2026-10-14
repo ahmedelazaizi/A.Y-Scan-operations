@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
+import { generateKeyPairSync, sign } from 'node:crypto'
 import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
 import { createMemoryRepository, mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
+import { createMemoryTrialLicenseStore, createTrialLicenseService } from './trial-license.js'
 import { startTestServer, TEST_ADMIN_TOKEN, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
 const MOCK_PATIENT_ID = '00000000-0000-4000-8000-000000000001'
@@ -216,6 +218,25 @@ test('catalog tests can be created and repriced by managers only', async () => {
   } finally {
     server.close()
   }
+})
+
+test('trial quota counts primary creates but not catalog updates', async () => {
+  const pair = generateKeyPairSync('ed25519')
+  const store = createMemoryTrialLicenseStore()
+  const license = createTrialLicenseService({ store, trial: true, publicKey: pair.publicKey.export({ type: 'spki', format: 'pem' }).toString() })
+  const installationId = (await license.getStatus()).installationId
+  const payload = JSON.stringify({ version: 1, installationId, edition: 'trial', recordLimit: 50, issuedAt: new Date().toISOString() })
+  await license.activate(`${Buffer.from(payload).toString('base64url')}.${sign(null, Buffer.from(payload), pair.privateKey).toString('base64url')}`)
+  const testServer = await startTestServer(createMemoryRepository(), license)
+  const call = (url: string, method: string, body?: unknown) => fetch(`${testServer.baseUrl}${url}`, { method, headers: testHeaders({ token: TEST_ADMIN_TOKEN, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }), body: body === undefined ? undefined : JSON.stringify(body) })
+  try {
+    const created = await call('/api/catalog', 'POST', { code: 'TRIAL', name: 'Trial item', specimenType: 'serum', price: 100, isActive: false })
+    assert.equal(created.status, 201)
+    const item = await created.json() as { id: string }
+    assert.equal((await (await call('/api/license/status', 'GET')).json() as { recordsUsed: number }).recordsUsed, 1)
+    assert.equal((await call(`/api/catalog/${item.id}`, 'PATCH', { price: 125, isActive: true })).status, 200)
+    assert.equal((await (await call('/api/license/status', 'GET')).json() as { recordsUsed: number }).recordsUsed, 1)
+  } finally { testServer.server.close() }
 })
 
 test('malformed order JSON returns clear JSON error', async () => {

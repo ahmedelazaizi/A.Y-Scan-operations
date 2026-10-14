@@ -20,7 +20,9 @@
     "start": "node dist-server/server/index.js",
     "test:db": "tsx --test \"server/**/*.test.ts\"",
     "release": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1",
-    "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller"
+    "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller -Trial",
+    "trial:keygen": "tsx tools/trial-license.ts keygen",
+    "trial:issue": "tsx tools/trial-license.ts issue"
   },
   "dependencies": {
     "pg": "8.16.3",

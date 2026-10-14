@@ -16,6 +16,7 @@ import {
 } from './http.js'
 import { hasCapability, type Capability } from './permissions.js'
 import { ReportValidationError } from './reports.js'
+import { LicenseError } from './trial-license.js'
 import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError, type OrderRepository } from './storage/repository.js'
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH'
@@ -99,6 +100,7 @@ function bearerToken(request: IncomingMessage): string | null {
 }
 
 export function sendError(response: ServerResponse, error: unknown): void {
+  if (error instanceof LicenseError) return sendJson(response, error.code === 'ACTIVATION_REQUIRED' ? 423 : error.code === 'QUOTA_EXHAUSTED' ? 429 : 400, { error: error.code, code: error.code, message: error.message })
   if (error instanceof RequestBodyError) return sendRequestBodyError(response, error)
   if (
     error instanceof ValidationError || error instanceof AuditValidationError || error instanceof RepositoryInputError
@@ -119,8 +121,12 @@ export function sendUnauthorized(response: ServerResponse): void {
   sendJson(response, 401, { error: 'Unauthorized', message: 'Authentication required.' })
 }
 
-export function createRouter(routes: Route[], dependencies: { auth: AuthService; repository: OrderRepository }) {
-  const compiled: CompiledRoute[] = routes.map((entry) => ({ ...entry, segments: splitPath(entry.path) }))
+export function createRouter(routes: Route[], dependencies: { auth: AuthService; repository: OrderRepository; trialLicense?: { withRecordEntry<T>(operation: () => Promise<T>): Promise<T> } }) {
+  const recordCreationPath = (entry: Route) => (entry.method === 'POST' && /^\/api\/(orders|patients|catalog|specimens|results|billing\/invoices|billing\/invoices\/:id\/payments|radiology\/studies|inventory\/items|inventory\/items\/:id\/movements|insurance\/policies|insurance\/claims|home-visits|devices|users|phase1\/(practitioners|bundles|parameters|ranges))$/.test(entry.path)) || (entry.method === 'POST' && /^\/api\/results\/:id\/amend$/.test(entry.path)) || (entry.method === 'PATCH' && entry.path === '/api/phase1/ranges/:id')
+  const compiled: CompiledRoute[] = routes.map((entry) => {
+    if (!recordCreationPath(entry) || !dependencies.trialLicense) return { ...entry, segments: splitPath(entry.path) }
+    return { ...entry, handler: (context) => dependencies.trialLicense!.withRecordEntry(() => Promise.resolve(entry.handler(context))), segments: splitPath(entry.path) }
+  })
 
   async function recordAudit(actorId: string, event: Omit<AuditEventInput, 'actorId'>): Promise<void> {
     try {
