@@ -99,7 +99,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $script:ProjectRoot 'db\migrations') -Destination (Join-Path $StageDir 'db\migrations') -Recurse
     Copy-Item -LiteralPath (Join-Path $script:ProjectRoot 'db\seed') -Destination (Join-Path $StageDir 'db\seed') -Recurse
     New-Item -ItemType Directory -Force -Path (Join-Path $StageDir 'installer') | Out-Null
-    foreach ($script in @('common.ps1', 'start.ps1', 'stop.ps1', 'backup.ps1', 'restore.ps1', 'schedule-backup.ps1', 'start.cmd', 'stop.cmd', 'backup.cmd')) {
+    foreach ($script in @('common.ps1', 'setup-database.ps1', 'start.ps1', 'stop.ps1', 'backup.ps1', 'restore.ps1', 'schedule-backup.ps1', 'start.cmd', 'stop.cmd', 'backup.cmd')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $script) -Destination (Join-Path $StageDir "installer\$script")
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ay-scan.ico') -Destination (Join-Path $StageDir 'installer\ay-scan.ico')
