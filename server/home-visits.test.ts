@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { createApp } from './app.js'
 import {
   canTransitionHomeVisit,
   validateCreateHomeVisitInput,
@@ -11,33 +9,16 @@ import {
 } from './home-visits.js'
 import { mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
-
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 const PATIENT_ID = '00000000-0000-4000-8000-000000000001'
 
-type TestServer = { server: Server; baseUrl: string }
-type RequestOptions = { method?: string; body?: string; token?: string }
-
-async function startTestServer(): Promise<TestServer> {
-  const server = createServer(createApp(mockRepository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
 
 async function stopTestServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 
-async function request(baseUrl: string, path: string, options: RequestOptions = {}): Promise<Response> {
-  const headers: Record<string, string> = {}
-  if (options.body) headers['content-type'] = 'application/json'
-  if (options.token) headers.authorization = `Bearer ${options.token}`
-  return fetch(`${baseUrl}${path}`, {
-    method: options.method ?? 'GET', body: options.body,
-    headers: Object.keys(headers).length > 0 ? headers : undefined,
-  })
+async function request(baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
+  return fetch(`${baseUrl}${path}`, { method: options.method ?? 'GET', body: options.body, headers: testHeaders(options) })
 }
 
 test('home visit validation normalizes dates and enforces legal transitions', () => {
@@ -118,18 +99,27 @@ test('memory HTTP home visits map invalid input, missing records, and illegal tr
   }
 })
 
-test('AUTH_REQUIRED protects home visit routes', async () => {
-  const previousAuthRequired = process.env.AUTH_REQUIRED
-  process.env.AUTH_REQUIRED = 'true'
+test('home visit routes require authentication and a home visit role', async () => {
   const testServer = await startTestServer()
   try {
-    const response = await request(testServer.baseUrl, '/api/home-visits')
-    assert.equal(response.status, 401)
-    assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+    const anonymous = await request(testServer.baseUrl, '/api/home-visits', { token: null })
+    assert.equal(anonymous.status, 401)
+    assert.deepEqual(await anonymous.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+
+    const accountant = await request(testServer.baseUrl, '/api/home-visits', { token: TEST_TOKENS.accountant })
+    assert.equal(accountant.status, 403)
+    assert.deepEqual(await accountant.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+    const labSchedule = await request(testServer.baseUrl, '/api/home-visits', {
+      method: 'POST', token: TEST_TOKENS.lab_technician,
+      body: JSON.stringify({ patientId: PATIENT_ID, address: 'Test Forbidden Address', contactPhone: '01000000000', scheduledAt: '2026-05-01T09:00:00Z' }),
+    })
+    assert.equal(labSchedule.status, 403)
+
+    const labTechnician = await request(testServer.baseUrl, '/api/home-visits', { token: TEST_TOKENS.lab_technician })
+    assert.equal(labTechnician.status, 200)
   } finally {
     await stopTestServer(testServer.server)
-    if (previousAuthRequired === undefined) delete process.env.AUTH_REQUIRED
-    else process.env.AUTH_REQUIRED = previousAuthRequired
   }
 })
 
@@ -173,5 +163,5 @@ test('postgres home visit listing uses parameterized patient and status filters'
   assert.deepEqual(await repository.listHomeVisits(PATIENT_ID, 'confirmed'), [])
   assert.match(queries[0].sql, /hv\.patient_id = \$1/)
   assert.match(queries[0].sql, /hv\.status = \$2/)
-  assert.deepEqual(queries[0].params, [PATIENT_ID, 'confirmed'])
+  assert.deepEqual(queries[0].params, [PATIENT_ID, 'confirmed', 100, 0])
 })

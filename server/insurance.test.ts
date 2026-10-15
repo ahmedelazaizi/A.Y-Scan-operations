@@ -1,41 +1,22 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { createApp } from './app.js'
 import { mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
 import { RepositoryInputError } from './storage/repository.js'
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
 const PATIENT_ID = '00000000-0000-4000-8000-000000000001'
 const CLAIM_ID = '00000000-0000-4000-8000-000000000901'
 
-type TestServer = { server: Server; baseUrl: string }
-type RequestOptions = { method?: string; body?: string; token?: string }
-
-async function startTestServer(): Promise<TestServer> {
-  const server = createServer(createApp(mockRepository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
 
 async function stopTestServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 
-async function request(baseUrl: string, path: string, options: RequestOptions = {}): Promise<Response> {
-  const headers: Record<string, string> = {}
-  if (options.body) headers['content-type'] = 'application/json'
-  if (options.token) headers.authorization = `Bearer ${options.token}`
-  return fetch(`${baseUrl}${path}`, {
-    method: options.method ?? 'GET',
-    body: options.body,
-    headers: Object.keys(headers).length > 0 ? headers : undefined,
-  })
+async function request(baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
+  return fetch(`${baseUrl}${path}`, { method: options.method ?? 'GET', body: options.body, headers: testHeaders(options) })
 }
 
 function policyInput(memberNumber: string): Record<string, unknown> {
@@ -101,18 +82,26 @@ test('insurance claims follow the safe workflow and return client errors', async
   }
 })
 
-test('AUTH_REQUIRED protects insurance routes', async () => {
-  const previousAuthRequired = process.env.AUTH_REQUIRED
-  process.env.AUTH_REQUIRED = 'true'
+test('insurance routes require authentication and a finance or front desk role', async () => {
   const testServer = await startTestServer()
   try {
-    const response = await request(testServer.baseUrl, '/api/insurance/policies')
-    assert.equal(response.status, 401)
-    assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+    const anonymous = await request(testServer.baseUrl, '/api/insurance/policies', { token: null })
+    assert.equal(anonymous.status, 401)
+    assert.deepEqual(await anonymous.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+
+    const labTechnician = await request(testServer.baseUrl, '/api/insurance/policies', { token: TEST_TOKENS.lab_technician })
+    assert.equal(labTechnician.status, 403)
+    assert.deepEqual(await labTechnician.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+    const receptionistClaim = await request(testServer.baseUrl, '/api/insurance/claims', {
+      method: 'POST', token: TEST_TOKENS.receptionist, body: JSON.stringify({ policyId: CLAIM_ID, amount: 10 }),
+    })
+    assert.equal(receptionistClaim.status, 403)
+
+    const receptionist = await request(testServer.baseUrl, '/api/insurance/policies', { token: TEST_TOKENS.receptionist })
+    assert.equal(receptionist.status, 200)
   } finally {
     await stopTestServer(testServer.server)
-    if (previousAuthRequired === undefined) delete process.env.AUTH_REQUIRED
-    else process.env.AUTH_REQUIRED = previousAuthRequired
   }
 })
 

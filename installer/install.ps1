@@ -1,176 +1,231 @@
+<#
+.SYNOPSIS
+  Installs (or upgrades) A.Y Scan on this computer.
+
+.DESCRIPTION
+  - Checks Node.js and Docker, creates .env with generated secrets (never overwrites existing values).
+  - Starts PostgreSQL in Docker (loopback only), builds the app and applies database migrations.
+  - Creates the first admin account on a fresh install (the password is never written to disk).
+  - On Windows: desktop shortcut, optional start at sign-in, and a daily database backup task.
+  Safe to run again to upgrade: data, .env values and backups are kept.
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\installer\install.ps1
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\installer\install.ps1 -AllowNetworkAccess -Port 8080
+#>
 [CmdletBinding()]
-param()
+param(
+    # Optional: create this admin instead of the default one (admin / admin123). The password comes from -AdminPassword or AYSCAN_ADMIN_PASSWORD.
+    [string]$AdminUsername,
+    [string]$AdminPassword,
+    [string]$AdminName,
+    [ValidateRange(1, 65535)][int]$Port = 0,
+    # Lets other computers on the clinic network open the app (binds 0.0.0.0 and opens the Windows firewall port).
+    [switch]$AllowNetworkAccess,
+    # Use an existing PostgreSQL server instead of Docker, e.g. postgresql://user:pass@localhost:5432/ayscan
+    [string]$ExternalDatabaseUrl,
+    [switch]$NoShortcuts,
+    [switch]$NoAutoStart,
+    [switch]$NoBackupSchedule,
+    # For unattended installs: the admin password is read from the AYSCAN_ADMIN_PASSWORD environment variable.
+    [switch]$NonInteractive
+)
 
-$ErrorActionPreference = 'Stop'
-$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-Set-Location -LiteralPath $ProjectRoot
+. "$PSScriptRoot\common.ps1"
+Set-Location -LiteralPath $script:ProjectRoot
 
-$script:PnpmCommand = $null
-$script:PnpmPrefix = @()
+$KnownDefaultPassword = 'change-me-development-only'
+$MinimumNode = [Version]'20.19.0'
 
-function Invoke-CheckedCommand {
-    param(
-        [Parameter(Mandatory = $true)][string]$Command,
-        [Parameter(Mandatory = $true)][string[]]$Arguments,
-        [Parameter(Mandatory = $true)][string]$FailureMessage
-    )
-
-    & $Command @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "$FailureMessage Exit code: $LASTEXITCODE."
-    }
+function Assert-Node {
+    $node = Get-NodeCommand
+    $versionText = (& $node --version | Select-Object -First 1).ToString().TrimStart('v')
+    $version = [Version]($versionText -replace '[^0-9.].*$', '')
+    if ($version -lt $MinimumNode) { throw "Node.js $MinimumNode or newer is required (found $versionText). Install the current LTS from https://nodejs.org." }
+    Write-Host "Node.js $versionText"
 }
 
-function Invoke-Pnpm {
-    param([Parameter(Mandatory = $true)][string[]]$Arguments)
-
-    & $script:PnpmCommand @($script:PnpmPrefix + $Arguments)
-    if ($LASTEXITCODE -ne 0) {
-        throw "pnpm command failed: $($Arguments -join ' '). Exit code: $LASTEXITCODE."
-    }
+function Test-PasswordPolicy([string]$Password) {
+    return $Password.Length -ge 4 -and $Password.Length -le 200
 }
 
-function Import-DotEnvFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    foreach ($line in Get-Content -LiteralPath $Path) {
-        $trimmedLine = $line.Trim()
-        if ($trimmedLine.Length -eq 0 -or $trimmedLine.StartsWith('#')) {
-            continue
-        }
-
-        $separatorIndex = $trimmedLine.IndexOf('=')
-        if ($separatorIndex -lt 1) {
-            continue
-        }
-
-        $name = $trimmedLine.Substring(0, $separatorIndex).Trim()
-        $value = $trimmedLine.Substring($separatorIndex + 1).Trim()
-        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
-            $value = $value.Substring(1, $value.Length - 2)
-        }
-
-        [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+# Creates .env on first install and fills in anything an older version did not have, without touching existing values.
+function Initialize-Environment {
+    $isNew = -not (Test-Path -LiteralPath $script:EnvFile)
+    if ($isNew) {
+        Copy-Item -LiteralPath (Join-Path $script:ProjectRoot '.env.example') -Destination $script:EnvFile
+        Write-Host 'Created .env'
+    } else {
+        Write-Host 'Keeping the existing .env (missing settings are added).'
     }
+    $current = Read-DotEnv
+    $updates = @{}
+
+    if ($ExternalDatabaseUrl) {
+        $updates['USE_DOCKER_DATABASE'] = 'false'
+        $updates['DATABASE_URL'] = $ExternalDatabaseUrl
+    } elseif ($current['USE_DOCKER_DATABASE'] -ne 'false') {
+        $updates['USE_DOCKER_DATABASE'] = 'true'
+        # Installs made before v1.0 used the compose defaults ayscan_dev/ayscan_dev and a fixed development password.
+        $legacyInstall = -not $isNew -and [string]::IsNullOrWhiteSpace($current['POSTGRES_USER'])
+        $user = if ($legacyInstall) { 'ayscan_dev' } elseif ($current['POSTGRES_USER']) { $current['POSTGRES_USER'] } else { 'ayscan' }
+        $database = if ($legacyInstall) { 'ayscan_dev' } elseif ($current['POSTGRES_DB']) { $current['POSTGRES_DB'] } else { 'ayscan' }
+        $password = $current['POSTGRES_PASSWORD']
+        if ([string]::IsNullOrWhiteSpace($password)) { $password = if ($legacyInstall) { $KnownDefaultPassword } else { New-RandomSecret } }
+        $databasePort = if ($current['POSTGRES_PORT']) { $current['POSTGRES_PORT'] } else { '55433' }
+        $updates['POSTGRES_USER'] = $user
+        $updates['POSTGRES_DB'] = $database
+        $updates['POSTGRES_PASSWORD'] = $password
+        $updates['POSTGRES_PORT'] = $databasePort
+        $updates['DATABASE_URL'] = "postgresql://${user}:${password}@127.0.0.1:${databasePort}/${database}"
+    }
+
+    if ($Port -gt 0) { $updates['PORT'] = "$Port" } elseif (-not $current['PORT']) { $updates['PORT'] = '3001' }
+    if ($AllowNetworkAccess) { $updates['HOST'] = '0.0.0.0' } elseif (-not $current['HOST']) { $updates['HOST'] = '127.0.0.1' }
+    foreach ($pair in @(@('NODE_ENV', 'production'), @('APP_TIMEZONE', 'Africa/Cairo'), @('MIGRATE_ON_START', 'true'), @('ALLOW_IN_MEMORY_STORE', 'false'))) {
+        if (-not $current[$pair[0]]) { $updates[$pair[0]] = $pair[1] }
+    }
+    # Settings from older versions that no longer exist; blank them so nobody relies on them.
+    foreach ($obsolete in @('AUTH_REQUIRED', 'AUTH_TOKEN_SECRET', 'AUTH_ADMIN_ROLE', 'AUTH_ADMIN_PASSWORD')) {
+        if ($current.Contains($obsolete) -and $current[$obsolete]) { $updates[$obsolete] = '' }
+    }
+    Set-DotEnvValues $updates
+    Import-DotEnv | Out-Null
 }
 
-function Set-LocalDatabaseUrl {
-    $postgresPort = $env:POSTGRES_PORT
-    if ([string]::IsNullOrWhiteSpace($postgresPort)) {
-        $postgresPort = '55433'
-    }
-
-    if ($env:DATABASE_URL -match '@localhost:5432/' -and $postgresPort -ne '5432') {
-        $env:DATABASE_URL = $env:DATABASE_URL -replace '@localhost:5432/', "@localhost:$postgresPort/"
-        Write-Warning "DATABASE_URL used the .env.example localhost:5432 value; this run uses the Docker host port $postgresPort without changing .env."
-    }
+# Replaces the well-known development password from older installs with a generated one.
+function Update-LegacyDatabasePassword {
+    if (-not (Test-UsesDockerDatabase) -or $env:POSTGRES_PASSWORD -ne $KnownDefaultPassword) { return }
+    Write-Step 'Replacing the default database password with a generated one'
+    $newPassword = New-RandomSecret
+    $docker = Get-DockerCommand
+    Invoke-Checked $docker @('exec', $script:DatabaseContainer, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', $env:POSTGRES_USER, '-d', $env:POSTGRES_DB, '-c', "ALTER USER `"$($env:POSTGRES_USER)`" WITH PASSWORD '$newPassword'") 'Could not rotate the database password.'
+    Set-DotEnvValues @{ POSTGRES_PASSWORD = $newPassword; DATABASE_URL = "postgresql://$($env:POSTGRES_USER):${newPassword}@127.0.0.1:$($env:POSTGRES_PORT)/$($env:POSTGRES_DB)" }
+    Import-DotEnv | Out-Null
 }
 
-function Select-Pnpm {
-    $corepack = Get-Command corepack -ErrorAction SilentlyContinue
-    if ($null -ne $corepack) {
-        & $corepack.Source pnpm --version *> $null
-        if ($LASTEXITCODE -eq 0) {
-            $script:PnpmCommand = $corepack.Source
-            $script:PnpmPrefix = @('pnpm')
-            return
+function Initialize-AdminAccount([string]$Node) {
+    & $Node 'dist-server/server/create-admin.js' '--check' | Out-Null
+    if ($LASTEXITCODE -eq 0) { Write-Host 'User accounts already exist; skipping admin creation.'; return $null }
+    if ($LASTEXITCODE -ne 3) { throw 'Could not check existing user accounts.' }
+    if ([string]::IsNullOrWhiteSpace($AdminUsername)) {
+        Write-Host 'No admin was requested: the default account (username admin, password admin123) is created on first start. Change the password after signing in.'
+        return $null
+    }
+    $password = if ($AdminPassword) { $AdminPassword } else { $env:AYSCAN_ADMIN_PASSWORD }
+    if (-not (Test-PasswordPolicy $password)) { throw 'Give the admin password with -AdminPassword or AYSCAN_ADMIN_PASSWORD (4 or more characters).' }
+    $env:AUTH_ADMIN_USERNAME = $AdminUsername.Trim()
+    $env:AUTH_ADMIN_PASSWORD = $password
+    try {
+        Invoke-Checked $Node @('dist-server/server/create-admin.js') 'Could not create the admin account.' | Out-Host
+    } finally {
+        Remove-Item Env:\AUTH_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+    }
+    return $AdminUsername.Trim()
+}
+
+function New-Shortcut([string]$Path, [string]$Target, [string]$Arguments, [string]$Description) {
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($Path)
+    $shortcut.TargetPath = $Target
+    $shortcut.Arguments = $Arguments
+    $shortcut.WorkingDirectory = $script:ProjectRoot
+    $shortcut.Description = $Description
+    $icon = Join-Path $script:ProjectRoot 'installer\ay-scan.ico'
+    if (Test-Path -LiteralPath $icon) { $shortcut.IconLocation = $icon }
+    $shortcut.Save()
+}
+
+function Install-WindowsIntegration {
+    if (-not (Test-IsWindowsHost)) { Write-Host 'Not Windows: skipping shortcuts, auto-start and scheduled backups.'; return }
+    $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $startArguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$(Join-Path $PSScriptRoot 'start.ps1')`""
+    if (-not $NoShortcuts) {
+        New-Shortcut (Join-Path ([Environment]::GetFolderPath('Desktop')) 'A.Y Scan.lnk') $powershell $startArguments 'Start A.Y Scan and open it in the browser'
+        New-Shortcut (Join-Path ([Environment]::GetFolderPath('Desktop')) 'A.Y Scan - Stop.lnk') $powershell "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $PSScriptRoot 'stop.ps1')`"" 'Stop A.Y Scan'
+        Write-Host 'Desktop shortcuts created.'
+    }
+    $startupShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'A.Y Scan.lnk'
+    if ($NoAutoStart) {
+        Remove-Item -LiteralPath $startupShortcut -ErrorAction SilentlyContinue
+    } else {
+        New-Shortcut $startupShortcut $powershell "$startArguments -NoBrowser" 'Start A.Y Scan when you sign in'
+        Write-Host 'A.Y Scan will start automatically when you sign in to Windows.'
+    }
+    if (-not $NoBackupSchedule) {
+        try {
+            $action = New-ScheduledTaskAction -Execute $powershell -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$(Join-Path $PSScriptRoot 'backup.ps1')`""
+            $trigger = New-ScheduledTaskTrigger -Daily -At '22:00'
+            $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries -AllowStartIfOnBatteries
+            Register-ScheduledTask -TaskName 'A.Y Scan daily backup' -Action $action -Trigger $trigger -Settings $settings -Description 'Daily PostgreSQL backup of A.Y Scan' -Force | Out-Null
+            Write-Host 'Daily database backup scheduled at 22:00 (missed runs execute at next sign-in).'
+        } catch {
+            Write-Warning "Could not schedule the daily backup: $($_.Exception.Message). Run installer\backup.ps1 manually."
         }
     }
-
-    $pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
-    if ($null -eq $pnpm) {
-        throw 'pnpm was not found. Install Node.js with Corepack support or install pnpm, then run this script again.'
+    if ($AllowNetworkAccess) {
+        try {
+            $ruleName = "A.Y Scan (TCP $($env:PORT))"
+            if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
+                New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP -LocalPort $env:PORT -Action Allow -Profile Private, Domain | Out-Null
+            }
+            Write-Host "Firewall opened for TCP $($env:PORT) on private networks."
+        } catch {
+            Write-Warning "Could not open the firewall port (run the installer as Administrator once): $($_.Exception.Message)"
+        }
     }
-
-    $script:PnpmCommand = $pnpm.Source
 }
 
 try {
-    $node = Get-Command node -ErrorAction SilentlyContinue
-    if ($null -eq $node) {
-        throw 'Node.js was not found. Install Node.js 20 or newer and run this script again.'
-    }
-
-    $nodeVersionOutput = (& $node.Source --version | Select-Object -First 1).ToString()
-    $nodeVersionMatch = [regex]::Match($nodeVersionOutput, '^v?(\d+)')
-    if (-not $nodeVersionMatch.Success -or [int]$nodeVersionMatch.Groups[1].Value -lt 20) {
-        throw "Node.js 20 or newer is required. Detected: $nodeVersionOutput"
-    }
-    Write-Host "Node.js check passed: $nodeVersionOutput"
-
-    $docker = Get-Command docker -ErrorAction SilentlyContinue
-    if ($null -eq $docker) {
-        throw 'Docker CLI was not found. Install Docker Desktop or Docker CLI, then run this script again.'
-    }
-    Invoke-CheckedCommand $docker.Source @('version', '--format', '{{.Client.Version}}') 'Docker CLI check failed.'
-    Invoke-CheckedCommand $docker.Source @('info', '--format', '{{.ServerVersion}}') 'Docker daemon is not available. Start Docker Desktop and run this script again.'
-    Invoke-CheckedCommand $docker.Source @('compose', 'version') 'Docker Compose is not available through the Docker CLI.'
-
+    Write-Step 'Checking prerequisites'
+    Assert-Node
     Select-Pnpm
-    Write-Host 'Using pnpm through Corepack when available.'
 
-    if (-not (Test-Path -LiteralPath '.env')) {
-        if (-not (Test-Path -LiteralPath '.env.example')) {
-            throw '.env.example was not found; cannot create the local environment file.'
-        }
-        Copy-Item -LiteralPath '.env.example' -Destination '.env'
-        Write-Host 'Created .env from .env.example. Existing .env files are never overwritten.'
-    } else {
-        Write-Host 'Using the existing .env without overwriting it.'
+    Write-Step 'Preparing configuration (.env)'
+    Initialize-Environment
+    if (Test-UsesDockerDatabase) { Wait-DockerEngine; Write-Host 'Docker is running.' }
+
+    $server = Get-ServerProcess
+    if ($null -ne $server) {
+        Write-Step 'Stopping the running A.Y Scan server for the upgrade'
+        Stop-Process -Id $server.Id -Force
+        Remove-Item -LiteralPath $script:PidFile -ErrorAction SilentlyContinue
     }
 
-    Import-DotEnvFile '.env'
-    Set-LocalDatabaseUrl
-    if ($env:AUTH_REQUIRED -and $env:AUTH_REQUIRED.Trim().ToLowerInvariant() -eq 'true') {
-        if ([string]::IsNullOrWhiteSpace($env:AUTH_ADMIN_PASSWORD) -or [string]::IsNullOrWhiteSpace($env:AUTH_TOKEN_SECRET)) {
-            Write-Warning 'AUTH_REQUIRED=true: set AUTH_ADMIN_PASSWORD and AUTH_TOKEN_SECRET in .env before using authenticated routes.'
-        }
-    }
-
-    Write-Host 'Installing dependencies from pnpm-lock.yaml...'
+    Write-Step 'Installing dependencies'
     Invoke-Pnpm @('install', '--frozen-lockfile')
 
-    Write-Host 'Starting PostgreSQL project ay-scan-local-v2...'
-    Invoke-Pnpm @('db:up')
-
-    $healthDeadline = (Get-Date).AddSeconds(120)
-    $healthStatus = ''
-    while ((Get-Date) -lt $healthDeadline) {
-        $healthOutput = & $docker.Source inspect '--format' '{{.State.Health.Status}}' 'ay-scan-postgres-v2' 2>$null | Select-Object -First 1
-        if ($null -eq $healthOutput) {
-            $healthStatus = ''
-        } else {
-            $healthStatus = $healthOutput.ToString().Trim()
-        }
-        if ($healthStatus -eq 'healthy') {
-            break
-        }
-        if ($healthStatus -eq 'unhealthy') {
-            break
-        }
-        Start-Sleep -Seconds 3
-    }
-
-    if ($healthStatus -ne 'healthy') {
-        $recentLogs = ((& $docker.Source logs '--tail' '40' 'ay-scan-postgres-v2' 2>&1 | Out-String).Trim())
-        throw "PostgreSQL did not become healthy within 120 seconds. Last status: '$healthStatus'. Recent container logs:`n$recentLogs"
-    }
-    Write-Host 'PostgreSQL health check passed.'
-
-    foreach ($migrationScript in @('db:migrate', 'db:migrate:lab', 'db:migrate:auth', 'db:migrate:billing', 'db:migrate:radiology', 'db:migrate:inventory', 'db:migrate:insurance', 'db:migrate:home-visits', 'db:migrate:devices')) {
-        Write-Host "Applying $migrationScript..."
-        Invoke-Pnpm @($migrationScript)
-    }
-
-    Write-Host 'Building frontend...'
+    Write-Step 'Building the application'
     Invoke-Pnpm @('build')
-    Write-Host 'Building server...'
     Invoke-Pnpm @('server:build')
 
-    Write-Host 'Installation completed. No Docker volumes were removed.'
-    Write-Host 'If AUTH_REQUIRED=true, set AUTH_ADMIN_PASSWORD and AUTH_TOKEN_SECRET in .env before starting the server.'
-    Write-Host 'Run: pwsh -ExecutionPolicy Bypass -File .\installer\start.ps1'
+    if (Test-UsesDockerDatabase) {
+        Write-Step 'Starting PostgreSQL (Docker)'
+        Start-Database
+        Update-LegacyDatabasePassword
+    }
+
+    Write-Step 'Applying database migrations'
+    $node = Get-NodeCommand
+    Invoke-Checked $node @('dist-server/server/migrate.js') 'Database migration failed.'
+
+    $createdAdmin = Initialize-AdminAccount $node
+
+    Write-Step 'Windows integration'
+    Install-WindowsIntegration
+
+    New-Item -ItemType Directory -Force -Path $script:LogDirectory, $script:RunDirectory, (Join-Path $script:ProjectRoot 'backups') | Out-Null
+
+    Write-Host ''
+    Write-Host 'A.Y Scan is installed.' -ForegroundColor Green
+    Write-Host "  Open:        $(Get-ServerUrl)"
+    if ($createdAdmin) { Write-Host "  Sign in as:  $createdAdmin" }
+    if ($env:HOST -eq '0.0.0.0') { Write-Host "  Network:     other computers can use http://<this-computer-name>:$($env:PORT)" }
+    Write-Host "  Backups:     $(Join-Path $script:ProjectRoot 'backups')"
+    Write-Host '  Start:       desktop shortcut "A.Y Scan" or installer\start.cmd'
 } catch {
-    Write-Error "Local installation stopped: $($_.Exception.Message)"
+    Write-Host ''
+    Write-Host "Installation stopped: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }

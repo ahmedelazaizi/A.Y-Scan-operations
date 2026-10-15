@@ -12,6 +12,7 @@ import {
   type InsurancePolicyStatus,
   type NewInsurancePolicy,
 } from './api'
+import { useCan } from './session'
 import { ViewHeader } from './ViewHeader'
 
 type ToastTone = 'success' | 'error'
@@ -165,12 +166,12 @@ function CreateClaimPanel({ policies, onCreated, onToast }: { policies: Insuranc
   </section>
 }
 
-function PolicyList({ policies, loading, error, patientFilter, onPatientFilterChange, onApply, onClear, onRetry }: { policies: InsurancePolicy[]; loading: boolean; error: string; patientFilter: string; onPatientFilterChange: (value: string) => void; onApply: () => void; onClear: () => void; onRetry: () => void }) {
+function PolicyList({ canAdd, policies, loading, error, patientFilter, onPatientFilterChange, onApply, onClear, onRetry }: { canAdd: boolean; policies: InsurancePolicy[]; loading: boolean; error: string; patientFilter: string; onPatientFilterChange: (value: string) => void; onApply: () => void; onClear: () => void; onRetry: () => void }) {
   return <section className="panel insurance-list-panel" aria-labelledby="policy-list-title">
     <div className="panel-heading insurance-list-heading"><div><h2 id="policy-list-title">وثائق التأمين</h2><p>تصفية اختيارية حسب معرّف المريض.</p></div><form className="insurance-filter" onSubmit={(event) => { event.preventDefault(); onApply() }}><label className="form-label" htmlFor="policy-patient-filter">معرّف المريض</label><div className="insurance-filter-controls"><input id="policy-patient-filter" className="form-input" value={patientFilter} onChange={(event) => onPatientFilterChange(event.target.value)} placeholder="UUID اختياري" dir="ltr" /><button className="secondary-button" type="submit">تطبيق</button>{patientFilter && <button className="text-button" type="button" onClick={onClear}>مسح</button>}</div></form></div>
     {loading && <div className="state-card" role="status">جارٍ تحميل وثائق التأمين…</div>}
     {!loading && error && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل الوثائق</strong><span>{error}</span><button className="secondary-button" type="button" onClick={onRetry}>إعادة المحاولة</button></div>}
-    {!loading && !error && policies.length === 0 && <div className="state-card" role="status">لا توجد وثائق مطابقة. أضف وثيقة تجريبية أو غيّر مرشح المريض.</div>}
+    {!loading && !error && policies.length === 0 && <div className="state-card" role="status">لا توجد وثائق مطابقة. {canAdd ? 'أضف وثيقة تجريبية أو غيّر مرشح المريض.' : 'غيّر مرشح المريض.'}</div>}
     {!loading && !error && policies.length > 0 && <div className="insurance-table-wrap"><table className="insurance-policy-table"><caption className="sr-only">قائمة وثائق التأمين</caption><thead><tr><th scope="col">الجهة / الخطة</th><th scope="col">المريض</th><th scope="col">العضوية</th><th scope="col">التغطية</th><th scope="col">الصلاحية</th><th scope="col">الحالة</th></tr></thead><tbody>{policies.map((policy) => <tr key={policy.id}><td><strong>{policy.payerName}</strong><span className="table-subtext">{policy.planName}</span></td><td><span className="insurance-code" dir="ltr">{policy.patientId}</span></td><td><span dir="ltr">{policy.memberNumber}</span></td><td><strong className="insurance-number" dir="ltr">{policy.coveragePercent}%</strong></td><td><span className="table-subtext">{formatDate(policy.validFrom)} — {formatDate(policy.validTo)}</span></td><td><StatusBadge status={policy.status} labels={POLICY_STATUS_LABELS} tones={POLICY_STATUS_TONES} /></td></tr>)}</tbody></table></div>}
   </section>
 }
@@ -188,17 +189,20 @@ function ClaimActions({ claim, busy, onTransition }: { claim: InsuranceClaim; bu
   return <div className="insurance-actions">{next.map((status) => <button className="secondary-button row-action-button" type="button" key={status} onClick={() => onTransition(claim, status)} disabled={busy}>{busy ? 'جارٍ التحديث…' : `نقل إلى ${CLAIM_STATUS_LABELS[status]}`}</button>)}</div>
 }
 
-function ClaimsList({ claims, loading, error, filter, onFilterChange, onRetry, busyClaimId, onTransition }: { claims: InsuranceClaim[]; loading: boolean; error: string; filter: ClaimFilter; onFilterChange: (value: ClaimFilter) => void; onRetry: () => void; busyClaimId: string | null; onTransition: (claim: InsuranceClaim, status: InsuranceClaimStatus) => void }) {
+function ClaimsList({ canTransition, claims, loading, error, filter, onFilterChange, onRetry, busyClaimId, onTransition }: { canTransition: boolean; claims: InsuranceClaim[]; loading: boolean; error: string; filter: ClaimFilter; onFilterChange: (value: ClaimFilter) => void; onRetry: () => void; busyClaimId: string | null; onTransition: (claim: InsuranceClaim, status: InsuranceClaimStatus) => void }) {
   return <section className="panel insurance-claims-panel" aria-labelledby="claims-list-title">
     <div className="panel-heading insurance-list-heading"><div><h2 id="claims-list-title">المطالبات</h2><p>تظهر أرقام المطالبات العامة بصيغة `CLM-*`.</p></div><label className="filter-field" htmlFor="claim-status-filter"><span>تصفية الحالة</span><select id="claim-status-filter" className="form-input" value={filter} onChange={(event) => onFilterChange(event.target.value as ClaimFilter)}>{CLAIM_FILTER_OPTIONS.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label></div>
     {loading && <div className="state-card" role="status">جارٍ تحميل المطالبات…</div>}
     {!loading && error && <div className="state-card state-card-error" role="alert"><strong>تعذر تحميل المطالبات</strong><span>{error}</span><button className="secondary-button" type="button" onClick={onRetry}>إعادة المحاولة</button></div>}
     {!loading && !error && claims.length === 0 && <div className="state-card" role="status">لا توجد مطالبات بهذه الحالة.</div>}
-    {!loading && !error && claims.length > 0 && <div className="insurance-table-wrap"><table className="insurance-claims-table"><caption className="sr-only">قائمة المطالبات التأمينية</caption><thead><tr><th scope="col">المطالبة</th><th scope="col">وثيقة التأمين</th><th scope="col">الطلب</th><th scope="col">المبلغ</th><th scope="col">الحالة</th><th scope="col">إجراءات الانتقال</th></tr></thead><tbody>{claims.map((claim) => <tr key={claim.id}><td><strong className="insurance-code" dir="ltr">{claim.claimNumber}</strong><span className="table-subtext">{formatDate(claim.createdAt)}</span></td><td><span className="insurance-code" dir="ltr">{claim.policyId}</span></td><td>{claim.orderId ? <span className="insurance-code" dir="ltr">{claim.orderId}</span> : <span className="muted-note">بدون طلب</span>}</td><td><strong className="insurance-number" dir="ltr">{formatMoney(claim.amount)}</strong></td><td><StatusBadge status={claim.status} labels={CLAIM_STATUS_LABELS} tones={CLAIM_STATUS_TONES} /></td><td><ClaimActions claim={claim} busy={busyClaimId === claim.id} onTransition={onTransition} /></td></tr>)}</tbody></table></div>}
+    {!loading && !error && claims.length > 0 && <div className="insurance-table-wrap"><table className="insurance-claims-table"><caption className="sr-only">قائمة المطالبات التأمينية</caption><thead><tr><th scope="col">المطالبة</th><th scope="col">وثيقة التأمين</th><th scope="col">الطلب</th><th scope="col">المبلغ</th><th scope="col">الحالة</th>{canTransition && <th scope="col">إجراءات الانتقال</th>}</tr></thead><tbody>{claims.map((claim) => <tr key={claim.id}><td><strong className="insurance-code" dir="ltr">{claim.claimNumber}</strong><span className="table-subtext">{formatDate(claim.createdAt)}</span></td><td><span className="insurance-code" dir="ltr">{claim.policyId}</span></td><td>{claim.orderId ? <span className="insurance-code" dir="ltr">{claim.orderId}</span> : <span className="muted-note">بدون طلب</span>}</td><td><strong className="insurance-number" dir="ltr">{formatMoney(claim.amount)}</strong></td><td><StatusBadge status={claim.status} labels={CLAIM_STATUS_LABELS} tones={CLAIM_STATUS_TONES} /></td>{canTransition && <td><ClaimActions claim={claim} busy={busyClaimId === claim.id} onTransition={onTransition} /></td>}</tr>)}</tbody></table></div>}
   </section>
 }
 
 function InsuranceView({ onBack, onToast }: InsuranceViewProps) {
+  const can = useCan()
+  const canPolicies = can('insurance.policies')
+  const canClaims = can('insurance.claims')
   const [policies, setPolicies] = useState<InsurancePolicy[]>([])
   const [claims, setClaims] = useState<InsuranceClaim[]>([])
   const [policyFilterDraft, setPolicyFilterDraft] = useState('')
@@ -253,13 +257,13 @@ function InsuranceView({ onBack, onToast }: InsuranceViewProps) {
   }
 
   return <>
-    <ViewHeader title="التأمين" description="أدر وثائق المرضى وتابع دورة المطالبات. البيانات المعروضة تجريبية فقط." onBack={onBack} />
+    <ViewHeader title="التأمين" description={canPolicies || canClaims ? 'أدر وثائق المرضى وتابع دورة المطالبات. البيانات المعروضة تجريبية فقط.' : 'تابع وثائق المرضى ودورة المطالبات. البيانات المعروضة تجريبية فقط.'} onBack={onBack} />
     <div className="insurance-layout">
-      <CreatePolicyPanel onCreated={loadPolicies} onToast={onToast} />
+      {canPolicies && <CreatePolicyPanel onCreated={loadPolicies} onToast={onToast} />}
       <div className="insurance-stack">
-        <PolicyList policies={policies} loading={policiesLoading} error={policiesError} patientFilter={policyFilterDraft} onPatientFilterChange={setPolicyFilterDraft} onApply={() => setPolicyFilter(policyFilterDraft.trim())} onClear={() => { setPolicyFilterDraft(''); setPolicyFilter('') }} onRetry={() => void loadPolicies()} />
-        <CreateClaimPanel policies={policyOptions} onCreated={loadClaims} onToast={onToast} />
-        <ClaimsList claims={claims} loading={claimsLoading} error={claimsError} filter={claimFilter} onFilterChange={setClaimFilter} onRetry={() => void loadClaims()} busyClaimId={busyClaimId} onTransition={(claim, status) => void transitionClaim(claim, status)} />
+        <PolicyList canAdd={canPolicies} policies={policies} loading={policiesLoading} error={policiesError} patientFilter={policyFilterDraft} onPatientFilterChange={setPolicyFilterDraft} onApply={() => setPolicyFilter(policyFilterDraft.trim())} onClear={() => { setPolicyFilterDraft(''); setPolicyFilter('') }} onRetry={() => void loadPolicies()} />
+        {canClaims && <CreateClaimPanel policies={policyOptions} onCreated={loadClaims} onToast={onToast} />}
+        <ClaimsList canTransition={canClaims} claims={claims} loading={claimsLoading} error={claimsError} filter={claimFilter} onFilterChange={setClaimFilter} onRetry={() => void loadClaims()} busyClaimId={busyClaimId} onTransition={(claim, status) => void transitionClaim(claim, status)} />
       </div>
     </div>
   </>

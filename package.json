@@ -1,7 +1,7 @@
 {
-  "name": "ay-scan-frontend",
+  "name": "ay-scan",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,35 +14,44 @@
     "db:up": "docker compose -p ay-scan-local-v2 up -d ay-scan-postgres",
     "db:down": "docker compose -p ay-scan-local-v2 down",
     "db:migrate": "tsx server/migrate.ts",
-    "db:migrate:lab": "tsx server/migrate-lab.ts",
-    "db:migrate:auth": "tsx server/migrate-auth.ts",
-    "db:migrate:billing": "tsx server/migrate-billing.ts",
-    "db:migrate:radiology": "tsx server/migrate-radiology.ts",
-    "db:migrate:inventory": "tsx server/migrate-inventory.ts",
-    "db:migrate:insurance": "tsx server/migrate-insurance.ts",
-    "db:migrate:home-visits": "tsx server/migrate-home-visits.ts",
-    "db:migrate:devices": "tsx server/migrate-devices.ts",
-    "test": "tsx --test server/**/*.test.ts"
+    "db:migrate:prod": "node dist-server/server/migrate.js",
+    "test": "tsx --test \"server/**/*.test.ts\"",
+    "admin:create": "node dist-server/server/create-admin.js",
+    "start": "node dist-server/server/index.js",
+    "test:db": "tsx --test \"server/**/*.test.ts\"",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1",
+    "release:stage": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -SkipInstaller -Trial",
+    "release:trial": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-release.ps1 -Trial",
+    "trial:keygen": "tsx tools/trial-license.ts keygen",
+    "trial:issue": "tsx tools/trial-license.ts issue",
+    "activation:tool": "powershell -NoProfile -STA -ExecutionPolicy Bypass -File tools/activation-tool.ps1"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "^5.7.2",
-    "react": "latest",
-    "react-dom": "latest",
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "@eslint/js": "latest",
-    "eslint": "latest",
-    "eslint-plugin-react-hooks": "latest",
-    "eslint-plugin-react-refresh": "latest",
-    "globals": "latest",
-    "typescript-eslint": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
+    "@eslint/js": "10.0.1",
+    "@fontsource/cairo": "5.1.1",
+    "@fontsource/montserrat": "5.1.1",
     "@types/node": "22.15.21",
     "@types/pg": "8.15.5",
-    "tsx": "4.19.3"
+    "@types/qrcode": "1.5.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.13.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsx": "4.19.3",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vite": "8.3.4"
+  },
+  "engines": {
+    "node": ">=20.19"
   }
 }

@@ -1,25 +1,13 @@
 import assert from 'node:assert/strict'
-import { once } from 'node:events'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import test from 'node:test'
 import type { Pool } from 'pg'
-import { createApp } from './app.js'
 import { mockRepository } from './domain.js'
 import { createPostgresRepository } from './storage/postgres-repository.js'
-import { RepositoryConflictError, RepositoryNotFoundError } from './storage/repository.js'
+import { RepositoryConflictError, RepositoryInputError, RepositoryNotFoundError } from './storage/repository.js'
+import { startTestServer, TEST_TOKENS, testHeaders, type TestRequestOptions } from './test-support.js'
 
-type TestServer = { server: Server; baseUrl: string }
-
-type RequestOptions = { method?: string; body?: string }
-
-async function startTestServer(): Promise<TestServer> {
-  const server = createServer(createApp(mockRepository))
-  server.listen(0)
-  await once(server, 'listening')
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` }
-}
+const CASHIER = 'Test cashier'
 
 async function stopTestServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -27,11 +15,11 @@ async function stopTestServer(server: Server): Promise<void> {
   })
 }
 
-async function request(baseUrl: string, path: string, options: RequestOptions = {}): Promise<Response> {
+async function request(baseUrl: string, path: string, options: TestRequestOptions = {}): Promise<Response> {
   return fetch(`${baseUrl}${path}`, {
     method: options.method ?? 'GET',
     body: options.body,
-    headers: options.body ? { 'content-type': 'application/json' } : undefined,
+    headers: testHeaders(options),
   })
 }
 
@@ -72,18 +60,19 @@ test('invoice totals are calculated server-side and list filters by status', asy
 
 test('payments transition an invoice from partial to paid', async () => {
   const invoice = await mockRepository.createInvoice('AY-10481', [{ description: 'Lipid profile', quantity: 1, unitPrice: 100 }])
-  const partial = await mockRepository.recordPayment(invoice.id, 40, 'cash', 'CASH-001')
+  const partial = await mockRepository.recordPayment(invoice.id, 40, 'cash', 'CASH-001', CASHIER)
   assert.equal(partial.status, 'partially_paid')
   assert.equal(partial.payments[0].reference, 'CASH-001')
-  const paid = await mockRepository.recordPayment(invoice.id, 60, 'card')
+  assert.equal(partial.payments[0].receivedBy, CASHIER)
+  const paid = await mockRepository.recordPayment(invoice.id, 60, 'card', undefined, CASHIER)
   assert.equal(paid.status, 'paid')
   assert.equal(paid.payments.reduce((sum, payment) => sum + payment.amount, 0), 100)
 })
 
 test('overpayment, void payment, and invalid method return repository errors', async () => {
   const invoice = await mockRepository.createInvoice('AY-10480', [{ description: 'Urinalysis', quantity: 1, unitPrice: 25 }])
-  await assert.rejects(async () => mockRepository.recordPayment(invoice.id, 26, 'cash'), RepositoryConflictError)
-  await assert.rejects(async () => mockRepository.recordPayment(invoice.id, 1, 'crypto' as never), /method is invalid/)
+  await assert.rejects(async () => mockRepository.recordPayment(invoice.id, 26, 'cash', undefined, CASHIER), RepositoryConflictError)
+  await assert.rejects(async () => mockRepository.recordPayment(invoice.id, 1, 'crypto' as never, undefined, CASHIER), /method is invalid/)
 
   const client = {
     query: async (sql: string) => {
@@ -94,7 +83,7 @@ test('overpayment, void payment, and invalid method return repository errors', a
   }
   const fakePool = { connect: async () => client } as unknown as Pool
   const postgresRepository = createPostgresRepository('postgres://unused', fakePool)
-  await assert.rejects(async () => postgresRepository.recordPayment('00000000-0000-4000-8000-000000000401', 1, 'cash'), RepositoryConflictError)
+  await assert.rejects(async () => postgresRepository.recordPayment('00000000-0000-4000-8000-000000000401', 1, 'cash', undefined, CASHIER), RepositoryConflictError)
 })
 
 test('missing order and invoice ids return repository not-found errors', async () => {
@@ -102,7 +91,7 @@ test('missing order and invoice ids return repository not-found errors', async (
     async () => mockRepository.createInvoice('AY-99999', [{ description: 'Missing order', quantity: 1, unitPrice: 1 }]),
     RepositoryNotFoundError,
   )
-  await assert.rejects(async () => mockRepository.recordPayment('missing-invoice', 1, 'cash'), RepositoryNotFoundError)
+  await assert.rejects(async () => mockRepository.recordPayment('missing-invoice', 1, 'cash', undefined, CASHIER), RepositoryNotFoundError)
 })
 
 test('billing HTTP endpoints create, list, and record payments', async () => {
@@ -125,9 +114,10 @@ test('billing HTTP endpoints create, list, and record payments', async () => {
       method: 'POST',
       body: JSON.stringify({ amount: 60, method: 'bank_transfer', reference: 'TR-001' }),
     })
-    const paid = await paymentResponse.json() as Record<string, unknown>
+    const paid = await paymentResponse.json() as { status: string; payments: Array<{ receivedBy: string }> }
     assert.equal(paymentResponse.status, 201)
     assert.equal(paid.status, 'paid')
+    assert.equal(paid.payments[0].receivedBy, 'Test admin')
   } finally {
     await stopTestServer(testServer.server)
   }
@@ -154,19 +144,42 @@ test('billing HTTP rejects invalid payment methods without stack traces', async 
   }
 })
 
-test('AUTH_REQUIRED protects billing routes', async () => {
-  const previousAuthRequired = process.env.AUTH_REQUIRED
-  process.env.AUTH_REQUIRED = 'true'
+test('billing routes require authentication and a finance role', async () => {
   const testServer = await startTestServer()
   try {
-    const response = await request(testServer.baseUrl, '/api/billing/invoices')
+    const response = await request(testServer.baseUrl, '/api/billing/invoices', { token: null })
     assert.equal(response.status, 401)
     assert.deepEqual(await response.json(), { error: 'Unauthorized', message: 'Authentication required.' })
+
+    const forbidden = await request(testServer.baseUrl, '/api/billing/invoices', { token: TEST_TOKENS.lab_technician })
+    assert.equal(forbidden.status, 403)
+    assert.deepEqual(await forbidden.json(), { error: 'Forbidden', message: 'Your role does not allow this action.' })
+
+    const accountant = await request(testServer.baseUrl, '/api/billing/invoices', { token: TEST_TOKENS.accountant })
+    assert.equal(accountant.status, 200)
   } finally {
     await stopTestServer(testServer.server)
-    if (previousAuthRequired === undefined) delete process.env.AUTH_REQUIRED
-    else process.env.AUTH_REQUIRED = previousAuthRequired
   }
+})
+
+test('postgres payments reject a blank actor without inserting a payment', async () => {
+  const queries: string[] = []
+  const client = {
+    query: async (sql: string) => {
+      queries.push(sql)
+      if (sql.startsWith('SELECT status, total')) return { rows: [{ status: 'draft', total: '25.00' }] }
+      if (sql.startsWith('SELECT COALESCE')) return { rows: [{ paid: '0' }] }
+      return { rows: [] }
+    },
+    release: () => undefined,
+  }
+  const fakePool = { connect: async () => client } as unknown as Pool
+  const postgresRepository = createPostgresRepository('postgres://unused', fakePool)
+  await assert.rejects(
+    async () => postgresRepository.recordPayment('00000000-0000-4000-8000-000000000401', 1, 'cash', undefined, ' '),
+    RepositoryInputError,
+  )
+  assert.ok(queries.every((sql) => !sql.includes('INSERT INTO payments')))
 })
 
 test('postgres invoice creation resolves public AY order numbers before UUID inserts', async () => {

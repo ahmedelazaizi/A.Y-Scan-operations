@@ -1,0 +1,2288 @@
+[
+ {
+  "id": "roche-cobas-c311",
+  "manufacturer": "Roche",
+  "model": "cobas c 311 (also c 111 family: unverified)",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": 9600,
+     "dataBits": 8,
+     "parity": "none",
+     "stopBits": 1,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (point-to-point serial; no credentials in protocol)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "989",
+    "name": "Sodium (ISE)",
+    "loinc": "2951-2",
+    "unit": "mmol/L",
+    "notes": "documented: ISE Na=989 (cobas c 311 host manual)"
+   },
+   {
+    "instrumentCode": "990",
+    "name": "Potassium (ISE)",
+    "loinc": "2823-3",
+    "unit": "mmol/L",
+    "notes": "documented: K=990"
+   },
+   {
+    "instrumentCode": "991",
+    "name": "Chloride (ISE)",
+    "loinc": "2075-0",
+    "unit": "mmol/L",
+    "notes": "documented: Cl=991"
+   },
+   {
+    "instrumentCode": "992/993/994",
+    "name": "Serum index L/H/I",
+    "loinc": "",
+    "unit": "",
+    "notes": "documented: L=992, H=993, I=994 (lipemia/hemolysis/icterus)"
+   },
+   {
+    "instrumentCode": "961-968",
+    "name": "Calculated tests",
+    "loinc": "",
+    "unit": "",
+    "notes": "documented range for calculated tests"
+   },
+   {
+    "instrumentCode": "1-910",
+    "name": "Photometric tests (glucose, urea, ALT, ...)",
+    "loinc": "",
+    "unit": "",
+    "notes": "Application code is the lab's configured 'Host Test No.' (up to 5 digits); the per-assay table is NOT in the manual - export it from the analyzer's Utility/Application screen. Do not assume numbers."
+   }
+  ],
+  "samples": [
+   {
+    "title": "cobas c 311 real-time result upload (host manual trace, record text only; framing ENQ/STX/ETX/checksum not shown in the trace)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691",
+    "message": "H|^&|||cobas c 311^1|||||host|RSUPL^REAL|P|1\\rP|1\\rO|1| 000004|40^50005^005^^S1^SC|^^^10^^^^30^3^^^40^|R||||||N||||1|||||||20051220095504|||F\\rR|1|^^^10/|1.25|ulU/ml||N||F||admin|||P1\\rC|1|I|0|I\\rL|1|N\\r"
+   },
+   {
+    "title": "cobas c 311 host query (Q record) and host test-selection reply",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691",
+    "message": "H|^&|||cobas c 311^1|||||host|TSREQ^REAL|P|1\\rQ|1|^^ 000002^3^50002^002^^S1^SC||ALL||||||||O\\rL|1|N\\r  <-- reply -->  H|^&|||host^1|||||cobas c 311|TSDWN^REPLY|P|1\\rP|1\\rO|1| 000002|3^50002^002^^S1^SC|^^^10^|R||||||A||||1||||||||||O\\rL|1|N\\r"
+   },
+   {
+    "title": "Generic ASTM E1381/E1394 session (framing illustration, NOT device-specific)",
+    "protocol": "astm",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://webstore.ansi.org/preview-pages/CLSI/preview_LIS1-A.pdf",
+    "message": "<ENQ>\\n<ACK expected>\\n<STX>1H|\\^&|||LAB-LIS|||||||P|1|20260101120000\\r<ETX>C9\\r\\n  <ACK expected>\\n<STX>2P|1||PID001\\r<ETX>A5\\r\\n  <ACK expected>\\n<STX>3O|1|SAMPLE001||^^^GLU|R\\r<ETX>D6\\r\\n  <ACK expected>\\n<STX>4R|1|^^^GLU|5.2|mmol/L||N||F\\r<ETX>02\\r\\n  <ACK expected>\\n<STX>5L|1|N\\r<ETX>08\\r\\n  <ACK expected>\\n<EOT>"
+   }
+  ],
+  "sources": [
+   "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691",
+   "https://www.scribd.com/doc/236496140/Host-Interface-Manual-Cobas-c-311"
+  ],
+  "confidence": "high",
+  "confidenceNote": "Host Interface Manual v1.3 (May 2011) read in full text for c 311 serial params, O/R/Q records and trace samples; other cobas c models (c111, c501/503, 6000/8000, Integra) NOT verified.",
+  "askVendor": [
+   "هل الـ c 111 يستخدم نفس بروتوكول c 311 أم HL7؟ (غير مؤكد)",
+   "أرسل لنا جدول Host Test No. (application codes) المركّب عندنا",
+   "هل الاتصال serial فقط أم TCP متاح على الموديل؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-c111",
+  "manufacturer": "Roche",
+  "model": "cobas c 111",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed; not verified)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "c-series modules share the Roche application-code concept (c 311 manual) but per-model tables not verified"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No model-specific document opened; Roche cobas c 311 manual suggests ASTM/RS-232 lineage but this is NOT confirmed for this model.",
+  "askVendor": [
+   "البروتوكول (ASTM serial أم TCP أم HL7)؟",
+   "هل Roche 'cobas ASTM host interface' مفعّل؟ وهل التواصل عبر cobas IT middleware (cobas infinity) إجباري؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-c501-c503",
+  "manufacturer": "Roche",
+  "model": "cobas c 501 / c 503",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed; not verified)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "c-series modules share the Roche application-code concept (c 311 manual) but per-model tables not verified"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No model-specific document opened; Roche cobas c 311 manual suggests ASTM/RS-232 lineage but this is NOT confirmed for this model.",
+  "askVendor": [
+   "البروتوكول (ASTM serial أم TCP أم HL7)؟",
+   "هل Roche 'cobas ASTM host interface' مفعّل؟ وهل التواصل عبر cobas IT middleware (cobas infinity) إجباري؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-6000-8000",
+  "manufacturer": "Roche",
+  "model": "cobas 6000 / cobas 8000 (c501+e601 / c701+e801)",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed; not verified)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "c-series modules share the Roche application-code concept (c 311 manual) but per-model tables not verified"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No model-specific document opened; Roche cobas c 311 manual suggests ASTM/RS-232 lineage but this is NOT confirmed for this model.",
+  "askVendor": [
+   "البروتوكول (ASTM serial أم TCP أم HL7)؟",
+   "هل Roche 'cobas ASTM host interface' مفعّل؟ وهل التواصل عبر cobas IT middleware (cobas infinity) إجباري؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-integra-400plus",
+  "manufacturer": "Roche",
+  "model": "cobas Integra 400 plus",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed; not verified)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "c-series modules share the Roche application-code concept (c 311 manual) but per-model tables not verified"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691"
+  ],
+  "confidence": "low",
+  "confidenceNote": "No model-specific document opened; Roche cobas c 311 manual suggests ASTM/RS-232 lineage but this is NOT confirmed for this model.",
+  "askVendor": [
+   "البروتوكول (ASTM serial أم TCP أم HL7)؟",
+   "هل Roche 'cobas ASTM host interface' مفعّل؟ وهل التواصل عبر cobas IT middleware (cobas infinity) إجباري؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-e411",
+  "manufacturer": "Roche",
+  "model": "cobas e 411",
+  "category": "immunoassay",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "Roche e-module test numbers: not obtained",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://photos.labwrench.com/equipmentManuals/14908-5848.pdf",
+   "https://www.slideshare.net/slideshow/cobas-c311-himv13enintranet/44454691"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Only a brochure-level mention of RS-232 bidirectional interface; baud/framing/test numbers not seen (c 311 trace used as indirect analog only).",
+  "askVendor": [
+   "كل المعاملات (baud/parity)؟ الكابل؟ مرجع Host Interface Manual للـ e 411؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-e601-e801",
+  "manufacturer": "Roche",
+  "model": "cobas e 601 / e 801",
+  "category": "immunoassay",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "abbott-architect-ci",
+  "manufacturer": "Abbott",
+  "model": "ARCHITECT c4000 / c8000 / i1000SR / i2000SR",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "Architect uses numeric assay numbers (not obtained)",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://medicaldevices.icij.org/events/bra-architec-analyzer-rs-232-standard-interface-manual-registration-number-10055311134-architec"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Only a regulatory notice found: RS-232 ASTM with Host Query, result field 15 chars in manual vs 20 actually sent (software >= 2.00). Baud, TCP, assay numbers not seen.",
+  "askVendor": [
+   "اطلب 'ARCHITECT Standard RS-232 Interface Manual' و 'ASTM Interface'",
+   "طول حقل النتيجة (15 مقابل 20 حرف)",
+   "جدول Assay Numbers",
+   "هل خيار TCP/IP متاح؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "abbott-alinity-c-i",
+  "manufacturer": "Abbott",
+  "model": "Alinity c / Alinity i",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "beckman-access2-dxi",
+  "manufacturer": "Beckman Coulter",
+  "model": "Access 2 / UniCel DxI 600 / DxI 800 (LIS vendor info doc C03112)",
+  "category": "immunoassay",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": 9600,
+     "dataBits": 8,
+     "parity": "none",
+     "stopBits": 1,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none (point-to-point serial)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "TSH3",
+    "name": "TSH (3rd IS)",
+    "loinc": "3016-3",
+    "unit": "uIU/mL",
+    "notes": "documented code; also TSH3d diluted"
+   },
+   {
+    "instrumentCode": "FRT4",
+    "name": "Free T4",
+    "loinc": "3024-7",
+    "unit": "ng/dL",
+    "notes": "Remisol/DxC code FRT4; Access code FRT4 listed (FT4II = newer Free T4)"
+   },
+   {
+    "instrumentCode": "FT4II",
+    "name": "Free T4 (II)",
+    "loinc": "3024-7",
+    "unit": "ng/dL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "FT3",
+    "name": "Free T3",
+    "loinc": "3051-0",
+    "unit": "pg/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "TotT3",
+    "name": "Total T3",
+    "loinc": "3053-6",
+    "unit": "ng/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "TotT4",
+    "name": "Total T4",
+    "loinc": "3026-2",
+    "unit": "ug/dL",
+    "notes": "documented code (unit ug/dL seen in manual sample)"
+   },
+   {
+    "instrumentCode": "PRL",
+    "name": "Prolactin",
+    "loinc": "2842-3",
+    "unit": "ng/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "hFSH",
+    "name": "FSH",
+    "loinc": "15067-2",
+    "unit": "mIU/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "hLH",
+    "name": "LH",
+    "loinc": "10501-5",
+    "unit": "mIU/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "E2",
+    "name": "Estradiol",
+    "loinc": "2243-4",
+    "unit": "pg/mL",
+    "notes": "documented code; SNSE2 = sensitive estradiol"
+   },
+   {
+    "instrumentCode": "Prog",
+    "name": "Progesterone",
+    "loinc": "2839-9",
+    "unit": "ng/mL",
+    "notes": "documented code; PROG2 = Progesterone II"
+   },
+   {
+    "instrumentCode": "Testo",
+    "name": "Testosterone",
+    "loinc": "2986-8",
+    "unit": "ng/dL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "Cortisol",
+    "name": "Cortisol",
+    "loinc": "2143-6",
+    "unit": "ug/dL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "B12II",
+    "name": "Vitamin B12 II",
+    "loinc": "2132-9",
+    "unit": "pg/mL",
+    "notes": "documented code; AcB12 = Active-B12 (holoTC, different analyte)"
+   },
+   {
+    "instrumentCode": "FOLW",
+    "name": "Folate (serum)",
+    "loinc": "2284-8",
+    "unit": "ng/mL",
+    "notes": "documented code (manual sample shows ng/mL)"
+   },
+   {
+    "instrumentCode": "Ferritin",
+    "name": "Ferritin",
+    "loinc": "2276-4",
+    "unit": "ng/mL",
+    "notes": "documented code (manual sample)"
+   },
+   {
+    "instrumentCode": "PSA-Hyb",
+    "name": "PSA total (Hybritech)",
+    "loinc": "2857-1",
+    "unit": "ng/mL",
+    "notes": "documented; PSA-WHO = WHO calibration option - confirm which one the lab uses"
+   },
+   {
+    "instrumentCode": "CEA2",
+    "name": "CEA",
+    "loinc": "2039-6",
+    "unit": "ng/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "AFP",
+    "name": "AFP",
+    "loinc": "1834-1",
+    "unit": "ng/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "OV125Ag",
+    "name": "CA 125",
+    "loinc": "10334-1",
+    "unit": "U/mL",
+    "notes": "documented code (OV Monitor)"
+   },
+   {
+    "instrumentCode": "GI19-9Ag",
+    "name": "CA 19-9",
+    "loinc": "24108-3",
+    "unit": "U/mL",
+    "notes": "documented code (GI Monitor)"
+   },
+   {
+    "instrumentCode": "HCG5",
+    "name": "Total beta-hCG (5th IS)",
+    "loinc": "21198-7",
+    "unit": "mIU/mL",
+    "notes": "documented; TBhCG2 = older calibration"
+   },
+   {
+    "instrumentCode": "hsTnI",
+    "name": "hs Troponin I (outside USA)",
+    "loinc": "89579-7",
+    "unit": "ng/L",
+    "notes": "documented; TnIhs for USA; TropI/AccuTnI = conventional"
+   },
+   {
+    "instrumentCode": "CK-MB",
+    "name": "CK-MB (mass)",
+    "loinc": "13969-1",
+    "unit": "ng/mL",
+    "notes": "documented code"
+   },
+   {
+    "instrumentCode": "HBsAgV3",
+    "name": "HBsAg",
+    "loinc": "5196-1",
+    "unit": "S/CO",
+    "notes": "documented; qualitative interpretation returned as value^text"
+   },
+   {
+    "instrumentCode": "HCV-V3",
+    "name": "HCV Ab",
+    "loinc": "16128-1",
+    "unit": "S/CO",
+    "notes": "documented"
+   },
+   {
+    "instrumentCode": "HIVco",
+    "name": "HIV combo (Ag/Ab)",
+    "loinc": "56888-1",
+    "unit": "S/CO",
+    "notes": "documented; HIVc2 = HIV combo V2"
+   },
+   {
+    "instrumentCode": "PTH",
+    "name": "Intact PTH",
+    "loinc": "2731-8",
+    "unit": "pg/mL",
+    "notes": "documented"
+   },
+   {
+    "instrumentCode": "Insulin",
+    "name": "Insulin",
+    "loinc": "20448-7",
+    "unit": "uIU/mL",
+    "notes": "documented"
+   }
+  ],
+  "samples": [
+   {
+    "title": "Beckman Access/DxI header frame with checksum (documented example)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://www.beckmancoulter.com/download/file/wsr-228138/C03112AE?type=pdf",
+    "message": "<STX>1H|\\^&|||ACCESS^500001|||||LIS||P|1|20111231235959\\r<ETX>20\\r\\n"
+   },
+   {
+    "title": "Beckman Access upload single TSH result (records only)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://www.beckmancoulter.com/download/file/wsr-228138/C03112AE?type=pdf",
+    "message": "H|\\^&|||ACCESS^500001|||||LIS||P|1|20111010131522\\rP|1|AbelCindy\\rO|1|123456|^9^1|^^^TSH^1|||||||||||Serum||||||||||F\\rR|1|^^^TSH^1|0.18|uIU/mL||N||F||||20111010113536\\rL|1|F\\r"
+   },
+   {
+    "title": "Beckman Access host download of TSH order (records only)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://www.beckmancoulter.com/download/file/wsr-228138/C03112AE?type=pdf",
+    "message": "H|\\^&|||Host LIS|||||||P|1|20111010080000\\rP|1|AbelCindy\\rO|1|123456||^^^TSH|R||||||A||||Serum\\rL|1|F\\r"
+   },
+   {
+    "title": "Beckman query by specimen ID",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://www.beckmancoulter.com/download/file/wsr-228138/C03112AE?type=pdf",
+    "message": "<STX>2Q|1|^Samp45||ALL||||||||O\\r<ETX>15\\r\\n"
+   }
+  ],
+  "sources": [
+   "https://www.beckmancoulter.com/download/file/wsr-228138/C03112AE?type=pdf"
+  ],
+  "confidence": "high",
+  "confidenceNote": "Official LIS Vendor Information (C03112-AF) read: serial fixed 8N1, baud 1200-19200 default 9600, DB-9 male DTE (null modem), ASTM E1381-95/E1394-97, full test-code appendix. TCP not described in the part read (a network mention at line ~3044 is cabling only). DxI 600/800 assumed to share this doc (title says so).",
+  "askVendor": [
+   "هل يوجد خيار LIS over TCP في النسخة المركبة؟",
+   "LIS Send Mode (By Sample Container / By Result / By Test) المضبوط على الجهاز",
+   "أي كود Dil-/d- للتخفيف مستخدم"
+  ]
+ },
+ {
+  "id": "beckman-au480-au680-au5800",
+  "manufacturer": "Beckman Coulter",
+  "model": "AU480 / AU680 / AU5800 (Olympus AU400/640 lineage)",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "AU channel numbers are lab-configured per analyzer"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة",
+   "هل يتطلب وسيط Beckman (Remisol)؟"
+  ]
+ },
+ {
+  "id": "olympus-au400-au640",
+  "manufacturer": "Olympus (Beckman)",
+  "model": "AU400 / AU640",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "siemens-dimension",
+  "manufacturer": "Siemens Healthineers",
+  "model": "Dimension EXL / RxL",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "siemens-atellica-ch",
+  "manufacturer": "Siemens Healthineers",
+  "model": "Atellica CH",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "siemens-immulite-1000-2000",
+  "manufacturer": "Siemens Healthineers",
+  "model": "Immulite 1000 / 2000",
+  "category": "immunoassay",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.scribd.com/document/235977390/interface1-1000-2000"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Only an unopened listing for the DPC Immulite LIS manual (1000/2000) was seen; nothing verified.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "siemens-centaur-atellica-im",
+  "manufacturer": "Siemens Healthineers",
+  "model": "ADVIA Centaur XP / Atellica IM",
+  "category": "immunoassay",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "siemens-rapidpoint",
+  "manufacturer": "Siemens Healthineers",
+  "model": "RAPIDPoint 400/500",
+  "category": "blood-gas",
+  "egyptMarket": "rare",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "siemens-dca-vantage",
+  "manufacturer": "Siemens Healthineers",
+  "model": "DCA Vantage",
+  "category": "hba1c",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "mindray-bs-120-200e",
+  "manufacturer": "Mindray",
+  "model": "BS-120 / BS-200E",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "Mindray BS test channel names (e.g. ALT, AST, GLU) are lab-configurable in the analyzer test list; HL7 OBX-3 content not verified. Ask for the test-code export/ 'Test Setup' printout."
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic HL7 v2.3.1 ORU^R01 in MLLP (framing illustration; OBX-3 content is a placeholder, real BS test identifiers unknown)",
+    "protocol": "hl7",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://www.aggsoft.com/serial-data-logger/tutorials/hl7.htm",
+    "message": "<VT>MSH|^~\\&|LAB|LAB|LIS|LIS|20260101120000||ORU^R01|MSG0001|P|2.3.1\\rPID|1||PID001\\rOBR|1||SAMPLE001\\rOBX|1|NM|TESTCODE^TESTNAME||5.2|mmol/L|||||F\\r<FS><CR>"
+   }
+  ],
+  "sources": [
+   "https://studylib.net/doc/25771875/bs-200-host-interface-manual-v1-2",
+   "https://www.aggsoft.com/serial-data-logger/tutorials/hl7.htm"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "Search summary of 'BS Chemistry Analyzer Host Interface Manual v1.2' (BS-200 family): TCP/IP + HL7 2.3.1, bidirectional; the manual body itself could NOT be opened, so role/port/test codes unknown. A user forum says BS-200 has serial not RJ45 (conflict).",
+  "askVendor": [
+   "هل الجهاز TCP client أم server وما الـ port؟",
+   "هل Host Interface Manual للنسخة المركبة HL7 أم ASTM؟",
+   "ملف تعريف الاختبارات (Test names/Channel numbers) كما في شاشة Test Setup",
+   "هل الاتصال serial أم شبكة على هذا الموديل؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "mindray-bs-240-300-330",
+  "manufacturer": "Mindray",
+  "model": "BS-240 / BS-240Pro / BS-300 / BS-330E",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "Mindray BS test channel names (e.g. ALT, AST, GLU) are lab-configurable in the analyzer test list; HL7 OBX-3 content not verified. Ask for the test-code export/ 'Test Setup' printout."
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic HL7 v2.3.1 ORU^R01 in MLLP (framing illustration; OBX-3 content is a placeholder, real BS test identifiers unknown)",
+    "protocol": "hl7",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://www.aggsoft.com/serial-data-logger/tutorials/hl7.htm",
+    "message": "<VT>MSH|^~\\&|LAB|LAB|LIS|LIS|20260101120000||ORU^R01|MSG0001|P|2.3.1\\rPID|1||PID001\\rOBR|1||SAMPLE001\\rOBX|1|NM|TESTCODE^TESTNAME||5.2|mmol/L|||||F\\r<FS><CR>"
+   }
+  ],
+  "sources": [
+   "https://studylib.net/doc/25771875/bs-200-host-interface-manual-v1-2",
+   "https://www.aggsoft.com/serial-data-logger/tutorials/hl7.htm"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Extrapolated from BS-200 family snippet only; model-specific manual not seen. Some Mindray BS units/firmwares may use ASTM instead - unverified.",
+  "askVendor": [
+   "هل الجهاز TCP client أم server وما الـ port؟",
+   "هل Host Interface Manual للنسخة المركبة HL7 أم ASTM؟",
+   "ملف تعريف الاختبارات (Test names/Channel numbers) كما في شاشة Test Setup",
+   "هل الاتصال serial أم شبكة على هذا الموديل؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "mindray-bs-400-600-800",
+  "manufacturer": "Mindray",
+  "model": "BS-400 / BS-600 / BS-800 / BS-2000",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "Mindray BS test channel names (e.g. ALT, AST, GLU) are lab-configurable in the analyzer test list; HL7 OBX-3 content not verified. Ask for the test-code export/ 'Test Setup' printout."
+   }
+  ],
+  "samples": [
+   {
+    "title": "Generic HL7 v2.3.1 ORU^R01 in MLLP (framing illustration; OBX-3 content is a placeholder, real BS test identifiers unknown)",
+    "protocol": "hl7",
+    "provenance": "reconstructed-from-spec",
+    "source": "https://www.aggsoft.com/serial-data-logger/tutorials/hl7.htm",
+    "message": "<VT>MSH|^~\\&|LAB|LAB|LIS|LIS|20260101120000||ORU^R01|MSG0001|P|2.3.1\\rPID|1||PID001\\rOBR|1||SAMPLE001\\rOBX|1|NM|TESTCODE^TESTNAME||5.2|mmol/L|||||F\\r<FS><CR>"
+   }
+  ],
+  "sources": [
+   "https://studylib.net/doc/25771875/bs-200-host-interface-manual-v1-2",
+   "https://www.aggsoft.com/serial-data-logger/tutorials/hl7.htm"
+  ],
+  "confidence": "low",
+  "confidenceNote": "Extrapolated from BS-200 family snippet only; model-specific manual not seen. Some Mindray BS units/firmwares may use ASTM instead - unverified.",
+  "askVendor": [
+   "هل الجهاز TCP client أم server وما الـ port؟",
+   "هل Host Interface Manual للنسخة المركبة HL7 أم ASTM؟",
+   "ملف تعريف الاختبارات (Test names/Channel numbers) كما في شاشة Test Setup",
+   "هل الاتصال serial أم شبكة على هذا الموديل؟",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "erba-xl-200-300-640",
+  "manufacturer": "Erba Mannheim",
+  "model": "XL-200 / XL-300 / XL-640",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "erba-em200",
+  "manufacturer": "Erba Mannheim",
+  "model": "EM 200 (electrolyte)",
+  "category": "electrolytes",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "biosystems-ba200-ba400",
+  "manufacturer": "Biosystems",
+  "model": "BA200 / BA400 / A15 / A25",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "dirui-cs",
+  "manufacturer": "Dirui",
+  "model": "CS-300 / CS-400 / CS-600",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "urit-8021-8030",
+  "manufacturer": "Urit",
+  "model": "8021 / 8030",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "human-humastar",
+  "manufacturer": "Human",
+  "model": "HumaStar 100/200/600 / HumaLyzer",
+  "category": "chemistry",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "vitros-350-5600",
+  "manufacturer": "Ortho (Vitros)",
+  "model": "350 / 5600",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "vital-selectra",
+  "manufacturer": "Vital Scientific / ELITech",
+  "model": "Selectra Pro",
+  "category": "chemistry",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "cobas-mira",
+  "manufacturer": "Roche",
+  "model": "Cobas Mira",
+  "category": "chemistry",
+  "egyptMarket": "rare",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No document opened; Erba/Dirui/Human searches returned nothing relevant.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "snibe-maglumi",
+  "manufacturer": "Snibe",
+  "model": "Maglumi 600 / 800 / 2000 / 4000 (Plus)",
+  "category": "immunoassay",
+  "egyptMarket": "common",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": true,
+  "authentication": "none",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "Maglumi uses short assay codes defined in the analyzer's assay list (not obtained)"
+   }
+  ],
+  "samples": [],
+  "sources": [
+   "https://www.scribd.com/document/670589632/Network-Interface-Specifications"
+  ],
+  "confidence": "low",
+  "confidenceNote": "A tender listing says Maglumi-800 is bidirectional via ASTM; a Scribd 'Network Interface Specification' for Maglumi 4000 Plus exists but could not be opened. TCP vs serial and port unknown.",
+  "askVendor": [
+   "هل TCP أم serial؟ من server؟ port؟",
+   "Network Interface Specification الرسمي",
+   "جدول Assay Short Codes",
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "mindray-cl-900i-2000i",
+  "manufacturer": "Mindray",
+  "model": "CL-900i / CL-1000i / CL-2000i",
+  "category": "immunoassay",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "biomerieux-vidas",
+  "manufacturer": "bioMerieux",
+  "model": "Mini VIDAS / VIDAS 3",
+  "category": "immunoassay",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "diasorin-liaison",
+  "manufacturer": "DiaSorin",
+  "model": "LIAISON / LIAISON XL",
+  "category": "immunoassay",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "fujirebio-lumipulse",
+  "manufacturer": "Fujirebio",
+  "model": "Lumipulse G",
+  "category": "immunoassay",
+  "egyptMarket": "rare",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "biorad-imark-chorus",
+  "manufacturer": "Bio-Rad / DIESSE",
+  "model": "iMark / Chorus",
+  "category": "elisa",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "thermo-multiskan",
+  "manufacturer": "Thermo",
+  "model": "Multiskan FC / GO",
+  "category": "elisa",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "dynex-ds2",
+  "manufacturer": "Dynex",
+  "model": "DS2",
+  "category": "elisa",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "human-humareader",
+  "manufacturer": "Human",
+  "model": "HumaReader HS",
+  "category": "elisa",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "mindray-mr96a-dnm9602",
+  "manufacturer": "Mindray",
+  "model": "MR-96A / DNM-9602",
+  "category": "elisa",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "custom",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-b121-b221",
+  "manufacturer": "Roche",
+  "model": "cobas b 121 / b 221",
+  "category": "blood-gas",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "avl-9180",
+  "manufacturer": "Roche (AVL)",
+  "model": "AVL 9180 / electrolyte",
+  "category": "electrolytes",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "medica-easylyte",
+  "manufacturer": "Medica",
+  "model": "EasyLyte / EasyStat",
+  "category": "electrolytes",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "radiometer-abl",
+  "manufacturer": "Radiometer",
+  "model": "ABL80 / ABL90 / ABL800 FLEX",
+  "category": "blood-gas",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened. Manual chapter 'Interfacing facilities' exists (ABL80 FLEX Reference Manual Ed. K on bioclinicalservices.com.au) but was not opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "abbott-istat",
+  "manufacturer": "Abbott",
+  "model": "i-STAT 1",
+  "category": "poct",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "tosoh-g8-g11",
+  "manufacturer": "Tosoh",
+  "model": "G8 / G11",
+  "category": "hba1c",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "biorad-d10-variant2",
+  "manufacturer": "Bio-Rad",
+  "model": "D-10 / VARIANT II",
+  "category": "hba1c",
+  "egyptMarket": "common",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened. D-10 offers file transfer/USB/network folder; LIS link protocol not found.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "arkray-adams",
+  "manufacturer": "Arkray",
+  "model": "ADAMS A1c",
+  "category": "hba1c",
+  "egyptMarket": "rare",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "roche-cobas-b101",
+  "manufacturer": "Roche",
+  "model": "cobas b 101",
+  "category": "poct",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "abbott-afinion2",
+  "manufacturer": "Abbott",
+  "model": "Afinion 2",
+  "category": "poct",
+  "egyptMarket": "moderate",
+  "protocols": [],
+  "transports": [],
+  "lisOptionRequired": null,
+  "bidirectional": null,
+  "authentication": "none (assumed)",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "غير مؤكد — اسأل المورد",
+    "loinc": "",
+    "unit": "",
+    "notes": "ask vendor for the host test-code table / assay-number list"
+   }
+  ],
+  "samples": [],
+  "sources": [],
+  "confidence": "low",
+  "confidenceNote": "No device-level interface document opened.",
+  "askVendor": [
+   "هل خيار/ترخيص واجهة LIS (host interface) مفعّل أو يحتاج تفعيل؟ وكم تكلفته؟",
+   "مرجع Host Interface / LIS Interface Specification لنسخة السوفتوير المركبة (PDF)",
+   "البروتوكول (ASTM/HL7) والنقل (serial/TCP) والإعدادات الافتراضية، ومن هو الـ client ومن الـ server وأي port",
+   "جدول أكواد الاختبارات (host test numbers) وملف تصدير إعدادات الاختبارات من الجهاز",
+   "هل يدعم Host Query (bi-directional) وكيف يُفعّل؟ وكيف تُرسل نتائج الـ QC؟",
+   "كابل الـ serial المطلوب (null modem / pinout) أو موصل الشبكة"
+  ]
+ },
+ {
+  "id": "tosoh-aia-360-900",
+  "manufacturer": "Tosoh",
+  "model": "AIA-360 / AIA-900",
+  "category": "immunoassay",
+  "egyptMarket": "moderate",
+  "protocols": [
+   "astm"
+  ],
+  "transports": [
+   {
+    "type": "serial",
+    "defaults": {
+     "baud": 9600,
+     "dataBits": 8,
+     "parity": "none",
+     "stopBits": 1,
+     "port": null,
+     "role": null
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": false,
+  "authentication": "none",
+  "framing": "astm-frames",
+  "testMap": [
+   {
+    "instrumentCode": "001-999 (user-defined)",
+    "name": "AIA test number / test name",
+    "loinc": "",
+    "unit": "",
+    "notes": "Manual samples use ^^^001 .. ^^^003 (numeric); mapping test number->assay is set on the analyzer. Units are what the analyzer prints (e.g. ng/ml, mg/ml)."
+   }
+  ],
+  "samples": [
+   {
+    "title": "AIA-360 result upload (record text)",
+    "protocol": "astm",
+    "provenance": "manufacturer-documented",
+    "source": "https://default.assets-tosoh-prod.roccommercecloud.com/assets%2F39a3cb4979f058d8d6519b1ef0303f81/AIA-360-Host-Computer-Connection-Specifications-Rev.6.pdf",
+    "message": "H|\\^&|||AIA-360|||||||||19960910130500\\rP|1||||^|||\\rO|1|96000100000001||^^^001^1|||||||||||\\rR|1|^^^001|15.265|mg/ml|10.000 to 50.000|N||F||Operator||19960910121530\\rL|1\\r"
+   }
+  ],
+  "sources": [
+   "https://default.assets-tosoh-prod.roccommercecloud.com/assets%2F39a3cb4979f058d8d6519b1ef0303f81/AIA-360-Host-Computer-Connection-Specifications-Rev.6.pdf"
+  ],
+  "confidence": "medium",
+  "confidenceNote": "AIA-360 Rev.6 spec read: ASTM E1381-91/E1394-91 over RS-232C half duplex, DB-9 socket, rates 1200-19200, 7/8 data bits, parity E/O/N, 1/2 stop; Q record 'Not used' (upload only). 9600/8/N/1 is the usual choice but the spec's 'standard value' marks were lost in text extraction; AIA-900 not verified.",
+  "askVendor": [
+   "القيم القياسية للـ baud/parity على AIA-900",
+   "هل AIA-900 يدعم host query؟",
+   "جدول Test Numbers (001..)"
+  ]
+ },
+ {
+  "id": "roche-cobas-liat",
+  "manufacturer": "Roche",
+  "model": "cobas Liat",
+  "category": "poct",
+  "egyptMarket": "rare",
+  "protocols": [
+   "hl7"
+  ],
+  "transports": [
+   {
+    "type": "tcp-client",
+    "defaults": {
+     "baud": null,
+     "dataBits": null,
+     "parity": null,
+     "stopBits": null,
+     "port": null,
+     "role": "instrument-is-client"
+    }
+   }
+  ],
+  "lisOptionRequired": null,
+  "bidirectional": false,
+  "authentication": "none by default; TLS option exists on newer software (host manual mentions Transport Layer Security)",
+  "framing": "mllp",
+  "testMap": [
+   {
+    "instrumentCode": "",
+    "name": "Per-assay OBX identifiers (e.g. \"Target 1 (TEST)\")",
+    "loinc": "",
+    "unit": "",
+    "notes": "identifiers are assay/target names; not a fixed numeric table"
+   }
+  ],
+  "samples": [
+   {
+    "title": "cobas Liat generic ORU^R30 result (from manual; MLLP wrapped <VT>...<FS><CR>)",
+    "protocol": "hl7",
+    "provenance": "manufacturer-documented",
+    "source": "https://diagnostics.roche.com/content/dam/diagnostics/us/en/products/c/cobas-liat-support/host-interface-manual-hl7-sw-v3.4-v3.5-v11.pdf",
+    "message": "<VT>MSH|^~\\&|cobas Liat|Roche|Host|Healthcare Provider|20200301131214+0100||ORU^R30^ORU_R30|898e9e28-992b-40f1-bea8-558085ea958b|P|2.5||||||UNICODE UTF-8\\rPID|||PAT030||unknown|||U\\rORC|NW\\rOBR||||Liat Generic Assay|||||||O||||||||||||||F|||||||N/A||ADMIN\\rOBX||ST|Target 1 (TEST)||Detected||||||F\\r<FS><CR>"
+   }
+  ],
+  "sources": [
+   "https://diagnostics.roche.com/content/dam/diagnostics/us/en/products/c/cobas-liat-support/host-interface-manual-hl7-sw-v3.4-v3.5-v11.pdf"
+  ],
+  "confidence": "high",
+  "confidenceNote": "Host Interface Manual HL7 sw 3.4/3.5 read: analyzer is always TCP client, MLLP, HL7 2.5, host port configured in analyzer. Default port not documented (host chooses). Not a chemistry analyzer; relevant as HL7/MLLP reference.",
+  "askVendor": [
+   "هل Liat مستعمل فعلاً بالمعمل؟ إن نعم: TLS مطلوب؟"
+  ]
+ }
+]

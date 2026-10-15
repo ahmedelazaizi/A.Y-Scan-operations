@@ -9,7 +9,7 @@ const AUDIT_LABEL_PATTERN = /^[a-z][a-z0-9_.:-]{0,99}$/
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const SAFE_METADATA_KEYS = new Set([
   'status', 'priority', 'modality', 'method', 'source', 'specimenType', 'resultFlag',
-  'itemType', 'movementType', 'reasonCode', 'role', 'authResult', 'errorCode',
+  'itemType', 'movementType', 'reasonCode', 'reason', 'orderItemId', 'orderId', 'role', 'authResult', 'errorCode',
   'quantity', 'amount', 'count',
 ])
 const SAFE_METADATA_STRING_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$/
@@ -64,8 +64,10 @@ function normalizeLabel(value: string, name: string): string {
 function sanitizeMetadataValue(key: string, value: unknown): AuditMetadataValue | undefined {
   if (value === null || typeof value === 'boolean') return value
   if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : undefined
-  if (typeof value !== 'string' || !SAFE_METADATA_STRING_KEYS.has(key)) return undefined
+  if (typeof value !== 'string') return undefined
   const normalized = value.trim()
+  if (key === 'reason') return normalized.length >= 1 && normalized.length <= 500 && !/[\\u0000-\\u001f\\u007f]/.test(normalized) ? normalized : undefined
+  if (!SAFE_METADATA_STRING_KEYS.has(key)) return undefined
   return SAFE_METADATA_STRING_PATTERN.test(normalized) ? normalized : undefined
 }
 
